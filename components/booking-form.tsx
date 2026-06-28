@@ -175,6 +175,11 @@ export function BookingForm({
   const selectedPickup = pickupPlaces.find((p) => String(p.id) === pickupId)
   const needsRoomNumber = Boolean(selectedPickup?.askForRoomNumber)
 
+  // Remaining seats for the active slot (Infinity when unlimited).
+  const seatsLeft =
+    !slot || slot.unlimited ? Number.POSITIVE_INFINITY : slot.seats - totalPax
+  const atCapacity = seatsLeft <= 0
+
   function setQty(lineId: number, next: number) {
     setQtyByLine((prev) => ({ ...prev, [lineId]: Math.max(0, next) }))
   }
@@ -375,8 +380,9 @@ export function BookingForm({
                   <button
                     type="button"
                     onClick={() => setQty(line.id, qty + 1)}
+                    disabled={atCapacity}
                     aria-label={`Increase ${line.title}`}
-                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground"
+                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
                   >
                     <Plus className="size-4" aria-hidden="true" />
                   </button>
@@ -384,6 +390,17 @@ export function BookingForm({
               </div>
             )
           })}
+          {!slot.unlimited && seatsLeft <= 5 && (
+            <p
+              className={`text-xs ${
+                atCapacity ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {atCapacity
+                ? "No more seats available for this departure."
+                : `${seatsLeft} ${seatsLeft === 1 ? "seat" : "seats"} left for this departure.`}
+            </p>
+          )}
         </div>
       )}
 
@@ -557,17 +574,65 @@ export function BookingForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Pickup location, dietary needs, etc."
+            placeholder="Dietary needs, accessibility, special requests, etc."
           />
         </div>
       </div>
 
-      {/* Total + submit */}
-      <div className="flex items-center justify-between border-t border-border pt-4">
-        <span className="text-sm text-muted-foreground">Total</span>
-        <span className="font-heading text-2xl font-extrabold text-foreground">
-          <Price isk={total} />
-        </span>
+      {/* Itemized order summary + total */}
+      <div className="flex flex-col gap-2 border-t border-border pt-4">
+        {totalPax > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {lines.map((line) => {
+              const qty = qtyByLine[line.id] ?? 0
+              if (qty <= 0) return null
+              const tier =
+                line.tiers.find(
+                  (t) => totalPax >= t.minPax && totalPax <= t.maxPax,
+                ) ?? line.tiers[0]
+              const lineTotal = slot?.pricedPerPerson
+                ? (tier?.unitIsk ?? 0) * qty
+                : (slot?.flatPriceIsk ?? 0)
+              return (
+                <div
+                  key={line.id}
+                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                >
+                  <span>
+                    {line.title}
+                    {slot?.pricedPerPerson && ` × ${qty}`}
+                  </span>
+                  <span className="text-foreground">
+                    <Price isk={lineTotal} />
+                  </span>
+                </div>
+              )
+            })}
+            {extras.map((extra) => {
+              const qty = qtyByAddon[extra.id] ?? 0
+              if (qty <= 0) return null
+              return (
+                <div
+                  key={extra.id}
+                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                >
+                  <span>
+                    {extra.title} × {qty}
+                  </span>
+                  <span className="text-foreground">
+                    <Price isk={extra.unitIsk * qty} />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-sm text-muted-foreground">Total</span>
+          <span className="font-heading text-2xl font-extrabold text-foreground">
+            <Price isk={total} />
+          </span>
+        </div>
       </div>
 
       {slot?.cancellation && (
