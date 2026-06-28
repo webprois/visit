@@ -154,11 +154,13 @@ export function BookingForm({
 
   const [qtyByLine, setQtyByLine] = useState<Record<number, number>>({})
   const [qtyByAddon, setQtyByAddon] = useState<Record<number, number>>({})
-  const [nameByGuest, setNameByGuest] = useState<Record<string, string>>({})
+  const [firstByGuest, setFirstByGuest] = useState<Record<string, string>>({})
+  const [lastByGuest, setLastByGuest] = useState<Record<string, string>>({})
   const [pickupId, setPickupId] = useState<string>("")
   const [dropoffId, setDropoffId] = useState<string>("")
   const [roomNumber, setRoomNumber] = useState("")
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [notes, setNotes] = useState("")
@@ -219,7 +221,8 @@ export function BookingForm({
     setSlotId(first?.id ?? "")
     setQtyByLine({})
     setQtyByAddon({})
-    setNameByGuest({})
+    setFirstByGuest({})
+    setLastByGuest({})
     setError(null)
   }
 
@@ -250,8 +253,14 @@ export function BookingForm({
       setError("Please enter your room number for the pickup.")
       return
     }
-    if (guestSlots.some((g) => !(nameByGuest[g.key] ?? "").trim())) {
-      setError("Please enter a name for each participant.")
+    if (
+      guestSlots.some(
+        (g) =>
+          !(firstByGuest[g.key] ?? "").trim() ||
+          !(lastByGuest[g.key] ?? "").trim(),
+      )
+    ) {
+      setError("Please enter a first and last name for each participant.")
       return
     }
 
@@ -267,7 +276,7 @@ export function BookingForm({
 
     const participants = guestSlots.map((g) => ({
       category: g.label,
-      name: (nameByGuest[g.key] ?? "").trim(),
+      name: `${(firstByGuest[g.key] ?? "").trim()} ${(lastByGuest[g.key] ?? "").trim()}`.trim(),
     }))
 
     const payload: BookingInput = {
@@ -282,7 +291,7 @@ export function BookingForm({
       pickupId: selectedPickup ? selectedPickup.id : undefined,
       dropoffId: dropoffId ? Number(dropoffId) : undefined,
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
-      customerName: name,
+      customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
       customerPhone: phone,
       notes,
@@ -573,20 +582,37 @@ export function BookingForm({
           </p>
           {guestSlots.map((g) => (
             <div key={g.key} className="flex flex-col gap-1.5">
-              <Label htmlFor={`guest-${g.key}`}>{g.label}</Label>
-              <Input
-                id={`guest-${g.key}`}
-                value={nameByGuest[g.key] ?? ""}
-                onChange={(e) =>
-                  setNameByGuest((prev) => ({
-                    ...prev,
-                    [g.key]: e.target.value,
-                  }))
-                }
-                required
-                autoComplete="off"
-                placeholder="Full name"
-              />
+              <Label>{g.label}</Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Input
+                  id={`guest-${g.key}-first`}
+                  value={firstByGuest[g.key] ?? ""}
+                  onChange={(e) =>
+                    setFirstByGuest((prev) => ({
+                      ...prev,
+                      [g.key]: e.target.value,
+                    }))
+                  }
+                  required
+                  autoComplete="off"
+                  placeholder="First name"
+                  aria-label={`${g.label} first name`}
+                />
+                <Input
+                  id={`guest-${g.key}-last`}
+                  value={lastByGuest[g.key] ?? ""}
+                  onChange={(e) =>
+                    setLastByGuest((prev) => ({
+                      ...prev,
+                      [g.key]: e.target.value,
+                    }))
+                  }
+                  required
+                  autoComplete="off"
+                  placeholder="Last name"
+                  aria-label={`${g.label} last name`}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -595,15 +621,27 @@ export function BookingForm({
       {/* Customer details */}
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <p className="text-sm font-semibold text-foreground">Contact details</p>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-name">Full name</Label>
-          <Input
-            id="booking-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoComplete="name"
-          />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="booking-first-name">First name</Label>
+            <Input
+              id="booking-first-name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              autoComplete="given-name"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="booking-last-name">Last name</Label>
+            <Input
+              id="booking-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              autoComplete="family-name"
+            />
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-email">Email</Label>
