@@ -6,8 +6,36 @@ import { Price } from "@/components/price"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { startBooking, type BookingInput } from "@/app/actions/booking"
+
+/** Phone area codes (Iceland first, then common visitor origins). */
+const PHONE_CODES: { code: string; label: string }[] = [
+  { code: "+354", label: "Iceland (+354)" },
+  { code: "+1", label: "USA / Canada (+1)" },
+  { code: "+44", label: "United Kingdom (+44)" },
+  { code: "+49", label: "Germany (+49)" },
+  { code: "+33", label: "France (+33)" },
+  { code: "+34", label: "Spain (+34)" },
+  { code: "+39", label: "Italy (+39)" },
+  { code: "+31", label: "Netherlands (+31)" },
+  { code: "+45", label: "Denmark (+45)" },
+  { code: "+46", label: "Sweden (+46)" },
+  { code: "+47", label: "Norway (+47)" },
+  { code: "+358", label: "Finland (+358)" },
+  { code: "+41", label: "Switzerland (+41)" },
+  { code: "+43", label: "Austria (+43)" },
+  { code: "+32", label: "Belgium (+32)" },
+  { code: "+353", label: "Ireland (+353)" },
+  { code: "+351", label: "Portugal (+351)" },
+  { code: "+48", label: "Poland (+48)" },
+  { code: "+61", label: "Australia (+61)" },
+  { code: "+64", label: "New Zealand (+64)" },
+  { code: "+81", label: "Japan (+81)" },
+  { code: "+82", label: "South Korea (+82)" },
+  { code: "+86", label: "China (+86)" },
+  { code: "+91", label: "India (+91)" },
+  { code: "+55", label: "Brazil (+55)" },
+]
 
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
@@ -162,8 +190,8 @@ export function BookingForm({
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
+  const [phoneCode, setPhoneCode] = useState("+354")
   const [phone, setPhone] = useState("")
-  const [notes, setNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -293,8 +321,7 @@ export function BookingForm({
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
       customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
-      customerPhone: phone,
-      notes,
+      customerPhone: phone.trim() ? `${phoneCode} ${phone.trim()}` : undefined,
     }
 
     startTransition(async () => {
@@ -656,23 +683,29 @@ export function BookingForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-phone">Phone (optional)</Label>
-          <Input
-            id="booking-phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            autoComplete="tel"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-notes">Notes (optional)</Label>
-          <Textarea
-            id="booking-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            placeholder="Dietary needs, accessibility, special requests, etc."
-          />
+          <div className="flex gap-2">
+            <select
+              value={phoneCode}
+              onChange={(e) => setPhoneCode(e.target.value)}
+              aria-label="Phone area code"
+              className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {PHONE_CODES.map((c) => (
+                <option key={c.code + c.label} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <Input
+              id="booking-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel-national"
+              placeholder="Phone number"
+              className="flex-1"
+            />
+          </div>
         </div>
       </div>
 
