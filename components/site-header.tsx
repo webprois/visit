@@ -1,0 +1,99 @@
+"use client"
+
+import { useState } from "react"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Menu, X, Phone } from "lucide-react"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { CurrencySwitcher } from "@/components/currency-switcher"
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
+
+const navLinks = [
+  { label: "All Tours", href: "/tours" },
+  { label: "Transfers", href: "/#transfers" },
+  { label: "Why Us", href: "/#why" },
+]
+
+export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
+        <a href="/" className="flex items-center">
+          <Image
+            src="/images/visit-logo.webp"
+            alt="Visit.is"
+            width={120}
+            height={32}
+            priority
+            className="h-7 w-auto md:h-8"
+          />
+        </a>
+
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+          {navLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <CurrencySwitcher />
+          <LanguageSwitcher locale={locale} />
+          <a
+            href="tel:+3544191600"
+            className="flex items-center gap-2 text-sm font-medium text-foreground"
+          >
+            <Phone className="size-4 text-primary" aria-hidden="true" />
+            +354 419 1600
+          </a>
+          <Button className="rounded-full">Book a Tour</Button>
+        </div>
+
+        <button
+          className="flex size-11 items-center justify-center rounded-md text-foreground md:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+        >
+          {open ? <X className="size-6" /> : <Menu className="size-6" />}
+        </button>
+      </div>
+
+      {open && (
+        <div className="border-t border-border/60 bg-background md:hidden">
+          <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3" aria-label="Mobile">
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-base font-medium text-foreground hover:bg-secondary"
+              >
+                {link.label}
+              </a>
+            ))}
+            <a
+              href="tel:+3544191600"
+              className="flex items-center gap-2 px-3 py-3 text-base font-medium text-foreground"
+            >
+              <Phone className="size-4 text-primary" aria-hidden="true" />
+              +354 419 1600
+            </a>
+            <div className="flex items-center gap-3 px-3 py-2">
+              <CurrencySwitcher />
+              <LanguageSwitcher locale={locale} />
+            </div>
+            <Button className="mt-2 w-full rounded-full">Book a Tour</Button>
+          </nav>
+        </div>
+      )}
+    </header>
+  )
+}

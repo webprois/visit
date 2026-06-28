@@ -1,0 +1,485 @@
+"use server"
+
+import { requireAuth } from "@/lib/require-auth"
+import { db } from "@/lib/db"
+import {
+  tourOverride,
+  tourCategory,
+  tourCategoryLink,
+  startingLocation,
+  tourStartingLocation,
+  tourTranslation,
+  type TourTranslation as TourTranslationRow,
+} from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { fetchTourTranslations, type TourTranslation } from "@/lib/bokun"
+import { autoCategorizeTours } from "@/lib/tours"
+import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
+import { generateText, Output } from "ai"
+import { z } from "zod"
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+}
+
+function revalidateAll() {
+  revalidatePath("/")
+  revalidatePath("/admin")
+}
+
+/** Upsert helper: ensures a row exists for this Bokun id, then patches it. */
+async function upsertOverride(
+  bokunId: string,
+  values: Partial<typeof tourOverride.$inferInsert>,
+) {
+  await db
+    .insert(tourOverride)
+    .values({ bokunId, ...values })
+    .onConflictDoUpdate({
+      target: tourOverride.bokunId,
+      set: { ...values, updatedAt: new Date() },
+    })
+}
+
+export async function setTourVisibility(bokunId: string, visible: boolean) {
+  await requireAuth()
+  await upsertOverride(bokunId, { visible })
+  revalidateAll()
+}
+
+export async function setTourFeatured(bokunId: string, featured: boolean) {
+  await requireAuth()
+  await upsertOverride(bokunId, { featured })
+  revalidateAll()
+}
+
+export type TourOverrideInput = {
+  title?: string | null
+  excerpt?: string | null
+  description?: string | null
+  location?: string | null
+  duration?: string | null
+  difficulty?: string | null
+  groupSize?: string | null
+  imageUrl?: string | null
+  categoryIds?: number[]
+  /**
+   * Starting-location assignments. When provided (even as an empty array) the
+   * tour's location links are replaced. Pass `undefined` to leave existing
+   * location links untouched.
+   */
+  locationIds?: number[]
+  tourType?: string
+  /** Optional publish state. true = Published, false = Draft. */
+  visible?: boolean
+}
+
+export async function saveTourOverride(bokunId: string, input: TourOverrideInput) {
+  await requireAuth()
+  const categoryIds = (input.categoryIds ?? []).filter(
+    (id, i, arr) => Number.isFinite(id) && arr.indexOf(id) === i,
+  )
+  await upsertOverride(bokunId, {
+    title: input.title?.trim() || null,
+    excerpt: input.excerpt?.trim() || null,
+    description: input.description?.trim() || null,
+    location: input.location?.trim() || null,
+    duration: input.duration?.trim() || null,
+    difficulty: input.difficulty?.trim() || null,
+    groupSize: input.groupSize?.trim() || null,
+    imageUrl: input.imageUrl?.trim() || null,
+    // Keep the legacy single-category column in sync with the first selection.
+    categoryId: categoryIds[0] ?? null,
+    tourType: input.tourType === "multi-day" ? "multi-day" : "day",
+    ...(typeof input.visible === "boolean" ? { visible: input.visible } : {}),
+  })
+  // Replace the tour's category links with the new selection.
+  await db.delete(tourCategoryLink).where(eq(tourCategoryLink.bokunId, bokunId))
+  if (categoryIds.length > 0) {
+    await db
+      .insert(tourCategoryLink)
+      .values(categoryIds.map((categoryId) => ({ bokunId, categoryId })))
+      .onConflictDoNothing()
+  }
+  // Replace the tour's starting-location links when locations were provided.
+  if (input.locationIds !== undefined) {
+    const locationIds = Array.from(
+      new Set(input.locationIds.filter((id) => Number.isFinite(id))),
+    )
+    await db
+      .delete(tourStartingLocation)
+      .where(eq(tourStartingLocation.bokunId, bokunId))
+    if (locationIds.length > 0) {
+      await db
+        .insert(tourStartingLocation)
+        .values(locationIds.map((locationId) => ({ bokunId, locationId })))
+        .onConflictDoNothing()
+    }
+  }
+  revalidateAll()
+}
+
+export async function createCategory(name: string) {
+  await requireAuth()
+  const trimmed = name.trim()
+  if (!trimmed) return
+  // Place new categories at the end of the current order.
+  const existing = await db.select().from(tourCategory)
+  const nextOrder =
+    existing.reduce((max, c) => Math.max(max, c.sortOrder), -1) + 1
+  await db
+    .insert(tourCategory)
+    .values({ name: trimmed, slug: slugify(trimmed), sortOrder: nextOrder })
+    .onConflictDoNothing({ target: tourCategory.slug })
+  revalidateAll()
+}
+
+export async function renameCategory(id: number, name: string) {
+  await requireAuth()
+  const trimmed = name.trim()
+  if (!trimmed) return
+  await db
+    .update(tourCategory)
+    .set({ name: trimmed, slug: slugify(trimmed) })
+    .where(eq(tourCategory.id, id))
+  revalidateAll()
+}
+
+export type CategoryDetailsInput = {
+  name?: string | null
+  slug?: string | null
+  description?: string | null
+  sortOrder?: number | null
+  imageUrl?: string | null
+  nameEn?: string | null
+  nameEs?: string | null
+  namePt?: string | null
+  nameIt?: string | null
+}
+
+/**
+ * Update all of a category's editable fields in one go: name, slug,
+ * short description, sort order, image and translated display names.
+ */
+export async function updateCategory(id: number, input: CategoryDetailsInput) {
+  await requireAuth()
+  const values: Partial<typeof tourCategory.$inferInsert> = {
+    description: input.description?.trim() || null,
+    imageUrl: input.imageUrl?.trim() || null,
+    nameEn: input.nameEn?.trim() || null,
+    nameEs: input.nameEs?.trim() || null,
+    namePt: input.namePt?.trim() || null,
+    nameIt: input.nameIt?.trim() || null,
+  }
+  // Name / slug are optional; only update when a non-empty name is provided.
+  const name = input.name?.trim()
+  if (name) {
+    values.name = name
+    values.slug = input.slug?.trim() ? slugify(input.slug) : slugify(name)
+  }
+  if (typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)) {
+    values.sortOrder = Math.max(0, Math.round(input.sortOrder))
+  }
+  await db.update(tourCategory).set(values).where(eq(tourCategory.id, id))
+  revalidateAll()
+}
+
+/**
+ * Persist a new category ordering. `orderedIds` is the full list of category
+ * ids in the order they should appear on the site.
+ */
+export async function reorderCategories(orderedIds: number[]) {
+  await requireAuth()
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      db
+        .update(tourCategory)
+        .set({ sortOrder: index })
+        .where(eq(tourCategory.id, id)),
+    ),
+  )
+  revalidateAll()
+}
+
+export async function deleteCategory(id: number) {
+  await requireAuth()
+  await db.delete(tourCategory).where(eq(tourCategory.id, id))
+  // Clear the category from any tours that referenced it.
+  await db
+    .update(tourOverride)
+    .set({ categoryId: null })
+    .where(eq(tourOverride.categoryId, id))
+  revalidateAll()
+}
+
+/* ---------------- Starting locations CRUD ---------------- */
+
+export async function createStartingLocation(name: string) {
+  await requireAuth()
+  const trimmed = name.trim()
+  if (!trimmed) return
+  const existing = await db.select().from(startingLocation)
+  const nextOrder =
+    existing.reduce((max, l) => Math.max(max, l.sortOrder), -1) + 1
+  await db
+    .insert(startingLocation)
+    .values({ name: trimmed, slug: slugify(trimmed), sortOrder: nextOrder })
+    .onConflictDoNothing({ target: startingLocation.slug })
+  revalidateAll()
+}
+
+export async function renameStartingLocation(id: number, name: string) {
+  await requireAuth()
+  const trimmed = name.trim()
+  if (!trimmed) return
+  await db
+    .update(startingLocation)
+    .set({ name: trimmed, slug: slugify(trimmed) })
+    .where(eq(startingLocation.id, id))
+  revalidateAll()
+}
+
+/**
+ * Persist a new starting-location ordering. `orderedIds` is the full list of
+ * location ids in the order they should appear.
+ */
+export async function reorderStartingLocations(orderedIds: number[]) {
+  await requireAuth()
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      db
+        .update(startingLocation)
+        .set({ sortOrder: index })
+        .where(eq(startingLocation.id, id)),
+    ),
+  )
+  revalidateAll()
+}
+
+export async function deleteStartingLocation(id: number) {
+  await requireAuth()
+  // tour_starting_location rows are removed automatically via ON DELETE CASCADE.
+  await db.delete(startingLocation).where(eq(startingLocation.id, id))
+  revalidateAll()
+}
+
+export async function refreshBokun() {
+  await requireAuth()
+  revalidateTag("bokun-tours", "max")
+  // Auto-categorize from Bokun categories. Tours that already have categories
+  // (e.g. set manually) are left untouched; missing categories are created.
+  const result = await autoCategorizeTours()
+  revalidateAll()
+  return result
+}
+
+/** Original Bokun texts for a tour in every published language (admin only). */
+export async function getTourTranslations(
+  bokunId: string,
+): Promise<TourTranslation[]> {
+  await requireAuth()
+  return fetchTourTranslations(bokunId)
+}
+
+/* ---------------- Per-language editable content ---------------- */
+
+export type TourTranslationInput = {
+  title?: string | null
+  excerpt?: string | null
+  description?: string | null
+  included?: string | null
+  excluded?: string | null
+  goodToKnow?: string | null
+  /** JSON-encoded array of { title, body } itinerary steps. */
+  itinerary?: string | null
+}
+
+function cleanText(value?: string | null): string | null {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
+/**
+ * Validate and normalize an itinerary JSON string. Returns canonical JSON of a
+ * `{ title, body }[]` array, or null when empty/invalid so the column clears.
+ */
+function cleanItinerary(value?: string | null): string | null {
+  if (!value?.trim()) return null
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return null
+    const steps = parsed
+      .map((s) => ({
+        title: typeof s?.title === "string" ? s.title.trim() : "",
+        body: typeof s?.body === "string" ? s.body.trim() : "",
+      }))
+      .filter((s) => s.title || s.body)
+    return steps.length > 0 ? JSON.stringify(steps) : null
+  } catch {
+    return null
+  }
+}
+
+/** Load saved per-language content for a tour, keyed by locale (admin). */
+export async function getTourTranslationContent(
+  bokunId: string,
+): Promise<Partial<Record<Locale, TourTranslationRow>>> {
+  await requireAuth()
+  const rows = await db
+    .select()
+    .from(tourTranslation)
+    .where(eq(tourTranslation.bokunId, bokunId))
+  const map: Partial<Record<Locale, TourTranslationRow>> = {}
+  for (const row of rows) {
+    if ((LOCALES as readonly string[]).includes(row.lang)) {
+      map[row.lang as Locale] = row
+    }
+  }
+  return map
+}
+
+/**
+ * Save editable content for a tour across every language. The English values
+ * are also mirrored onto tour_override so product cards keep working without
+ * needing a locale lookup.
+ */
+export async function saveTourTranslations(
+  bokunId: string,
+  byLang: Partial<Record<Locale, TourTranslationInput>>,
+) {
+  await requireAuth()
+
+  for (const lang of LOCALES) {
+    const input = byLang[lang]
+    if (!input) continue
+    const values = {
+      title: cleanText(input.title),
+      excerpt: cleanText(input.excerpt),
+      description: cleanText(input.description),
+      included: cleanText(input.included),
+      excluded: cleanText(input.excluded),
+      goodToKnow: cleanText(input.goodToKnow),
+      itinerary: cleanItinerary(input.itinerary),
+    }
+    await db
+      .insert(tourTranslation)
+      .values({ bokunId, lang, ...values })
+      .onConflictDoUpdate({
+        target: [tourTranslation.bokunId, tourTranslation.lang],
+        set: { ...values, updatedAt: new Date() },
+      })
+  }
+
+  // Keep the legacy English columns on tour_override in sync for cards/lists.
+  const en = byLang.en
+  if (en) {
+    await upsertOverride(bokunId, {
+      title: cleanText(en.title),
+      excerpt: cleanText(en.excerpt),
+      description: cleanText(en.description),
+    })
+  }
+
+  revalidateAll()
+}
+
+/* ---------------- AI translation ---------------- */
+
+const translationSchema = z.object({
+  title: z.string().describe("Translated tour title"),
+  excerpt: z.string().describe("Translated short description"),
+  description: z.string().describe("Translated full description"),
+  included: z
+    .string()
+    .describe("Translated 'what is included' list, one item per line"),
+  excluded: z
+    .string()
+    .describe("Translated 'not included' list, one item per line"),
+  goodToKnow: z
+    .string()
+    .describe("Translated 'good to know' list, one item per line"),
+  itinerary: z
+    .array(
+      z.object({
+        title: z.string().describe("Translated step title"),
+        body: z.string().describe("Translated step description"),
+      }),
+    )
+    .describe(
+      "Translated itinerary steps, same number and order as the input",
+    ),
+})
+
+/**
+ * Translate the English content of a tour into the target language with AI.
+ * Returns the translated fields; the caller decides whether to apply/save them.
+ * Empty English fields are returned empty (nothing invented).
+ */
+export async function translateTourContent(
+  source: TourTranslationInput,
+  target: Locale,
+): Promise<TourTranslationInput> {
+  await requireAuth()
+
+  if (target === "en") return source
+
+  const languageName = LOCALE_LABELS[target]
+
+  // Parse the incoming itinerary JSON so the model gets structured steps.
+  let sourceItinerary: { title: string; body: string }[] = []
+  if (source.itinerary?.trim()) {
+    try {
+      const parsed = JSON.parse(source.itinerary)
+      if (Array.isArray(parsed)) {
+        sourceItinerary = parsed.map((s) => ({
+          title: typeof s?.title === "string" ? s.title : "",
+          body: typeof s?.body === "string" ? s.body : "",
+        }))
+      }
+    } catch {
+      sourceItinerary = []
+    }
+  }
+
+  const payload = {
+    title: source.title ?? "",
+    excerpt: source.excerpt ?? "",
+    description: source.description ?? "",
+    included: source.included ?? "",
+    excluded: source.excluded ?? "",
+    goodToKnow: source.goodToKnow ?? "",
+    itinerary: sourceItinerary,
+  }
+
+  const { output } = await generateText({
+    model: "openai/gpt-5.4-mini",
+    system:
+      `You are a professional translator for an Icelandic travel/tours website. ` +
+      `Translate the provided tour content from English into ${languageName}. ` +
+      `Rules: keep the tone natural and engaging for travellers; preserve the ` +
+      `meaning and any names of places, tours, and brands; do NOT translate proper ` +
+      `nouns that are place names unless they have a well-known local form; for the ` +
+      `list fields (included, excluded, goodToKnow) keep exactly one item per line ` +
+      `and the same number of lines; for the itinerary, keep exactly the same number ` +
+      `and order of steps; if an input field is empty, return it empty. ` +
+      `Return only the translation, no extra commentary.`,
+    prompt: JSON.stringify(payload),
+    output: Output.object({ schema: translationSchema }),
+  })
+
+  // Serialize the translated itinerary back into the JSON string format used
+  // throughout the editor and storage.
+  const { itinerary, ...rest } = output
+  return {
+    ...rest,
+    itinerary: Array.isArray(itinerary) && itinerary.length > 0
+      ? JSON.stringify(itinerary)
+      : null,
+  }
+}
