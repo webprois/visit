@@ -154,6 +154,7 @@ export function BookingForm({
 
   const [qtyByLine, setQtyByLine] = useState<Record<number, number>>({})
   const [qtyByAddon, setQtyByAddon] = useState<Record<number, number>>({})
+  const [nameByGuest, setNameByGuest] = useState<Record<string, string>>({})
   const [pickupId, setPickupId] = useState<string>("")
   const [dropoffId, setDropoffId] = useState<string>("")
   const [roomNumber, setRoomNumber] = useState("")
@@ -172,6 +173,21 @@ export function BookingForm({
   )
   const total = baseTotal + addonsTotal
 
+  // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
+  const guestSlots = useMemo(() => {
+    const slotsOut: { key: string; label: string }[] = []
+    for (const line of lines) {
+      const qty = qtyByLine[line.id] ?? 0
+      for (let i = 0; i < qty; i++) {
+        slotsOut.push({
+          key: `${line.id}-${i}`,
+          label: qty > 1 ? `${line.title} ${i + 1}` : line.title,
+        })
+      }
+    }
+    return slotsOut
+  }, [lines, qtyByLine])
+
   const selectedPickup = pickupPlaces.find((p) => String(p.id) === pickupId)
   const needsRoomNumber = Boolean(selectedPickup?.askForRoomNumber)
 
@@ -180,8 +196,12 @@ export function BookingForm({
     !slot || slot.unlimited ? Number.POSITIVE_INFINITY : slot.seats - totalPax
   const atCapacity = seatsLeft <= 0
 
-  function setQty(lineId: number, next: number) {
-    setQtyByLine((prev) => ({ ...prev, [lineId]: Math.max(0, next) }))
+  // Functional delta update so rapid clicks accumulate correctly.
+  function bumpQty(lineId: number, delta: number) {
+    setQtyByLine((prev) => ({
+      ...prev,
+      [lineId]: Math.max(0, (prev[lineId] ?? 0) + delta),
+    }))
   }
 
   function setAddonQty(extra: BookingExtra, next: number) {
@@ -199,6 +219,7 @@ export function BookingForm({
     setSlotId(first?.id ?? "")
     setQtyByLine({})
     setQtyByAddon({})
+    setNameByGuest({})
     setError(null)
   }
 
@@ -229,6 +250,10 @@ export function BookingForm({
       setError("Please enter your room number for the pickup.")
       return
     }
+    if (guestSlots.some((g) => !(nameByGuest[g.key] ?? "").trim())) {
+      setError("Please enter a name for each participant.")
+      return
+    }
 
     const selections = slot.pricedPerPerson
       ? slot.lines
@@ -240,6 +265,11 @@ export function BookingForm({
       .map((e) => ({ extraId: e.id, qty: qtyByAddon[e.id] ?? 0 }))
       .filter((a) => a.qty > 0)
 
+    const participants = guestSlots.map((g) => ({
+      category: g.label,
+      name: (nameByGuest[g.key] ?? "").trim(),
+    }))
+
     const payload: BookingInput = {
       bokunId,
       slotId: slot.id,
@@ -248,6 +278,7 @@ export function BookingForm({
       startTimeId: slot.startTimeId,
       selections,
       addons,
+      participants,
       pickupId: selectedPickup ? selectedPickup.id : undefined,
       dropoffId: dropoffId ? Number(dropoffId) : undefined,
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
@@ -367,7 +398,7 @@ export function BookingForm({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setQty(line.id, qty - 1)}
+                    onClick={() => bumpQty(line.id, -1)}
                     disabled={qty <= 0}
                     aria-label={`Decrease ${line.title}`}
                     className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
@@ -379,7 +410,7 @@ export function BookingForm({
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQty(line.id, qty + 1)}
+                    onClick={() => bumpQty(line.id, 1)}
                     disabled={atCapacity}
                     aria-label={`Increase ${line.title}`}
                     className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
@@ -534,8 +565,36 @@ export function BookingForm({
         </div>
       )}
 
+      {/* Participant names (one per seat) */}
+      {guestSlots.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <p className="text-sm font-semibold text-foreground">
+            {guestSlots.length === 1 ? "Participant name" : "Participant names"}
+          </p>
+          {guestSlots.map((g) => (
+            <div key={g.key} className="flex flex-col gap-1.5">
+              <Label htmlFor={`guest-${g.key}`}>{g.label}</Label>
+              <Input
+                id={`guest-${g.key}`}
+                value={nameByGuest[g.key] ?? ""}
+                onChange={(e) =>
+                  setNameByGuest((prev) => ({
+                    ...prev,
+                    [g.key]: e.target.value,
+                  }))
+                }
+                required
+                autoComplete="off"
+                placeholder="Full name"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Customer details */}
       <div className="flex flex-col gap-3 border-t border-border pt-4">
+        <p className="text-sm font-semibold text-foreground">Contact details</p>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-name">Full name</Label>
           <Input
