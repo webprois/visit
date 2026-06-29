@@ -4,7 +4,9 @@ import { TourCategories } from "@/components/tour-categories"
 import { FeaturedTours } from "@/components/featured-tours"
 import { Transportation } from "@/components/transportation"
 import { WhyBook } from "@/components/why-book"
+import { GoogleReviews } from "@/components/google-reviews"
 import { SiteFooter } from "@/components/site-footer"
+import { getGoogleReviews } from "@/lib/google-reviews"
 import {
   getVisibleTours,
   getHomeCategories,
@@ -30,6 +32,9 @@ export default async function Page() {
     .filter((c) => usedCategoryIds.has(c.id))
     .map((c) => ({ slug: c.slug, label: categoryName(c, locale) }))
 
+  // Google reviews for the business (null when the integration isn't configured).
+  const googleReviews = await getGoogleReviews()
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
@@ -39,6 +44,7 @@ export default async function Page() {
         <FeaturedTours tours={handpicked} />
         <Transportation />
         <WhyBook />
+        {googleReviews ? <GoogleReviews data={googleReviews} /> : null}
       </main>
       <SiteFooter />
     </div>
