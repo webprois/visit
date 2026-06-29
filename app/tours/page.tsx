@@ -105,7 +105,7 @@ export default async function ToursPage({
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1">
-        <section className="border-b border-border bg-secondary/40">
+        <section className="bg-secondary/40">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
             <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
               Tours & adventures
