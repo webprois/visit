@@ -20,7 +20,7 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
 
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-32">
-        <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground ring-1 ring-foreground/25 backdrop-blur">
+        <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground backdrop-blur">
           <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
           Trusted by 500+ travellers
         </span>
@@ -48,7 +48,7 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
           <Button
             size="lg"
             variant="secondary"
-            className="rounded-full bg-foreground/10 text-foreground ring-1 ring-foreground/25 backdrop-blur hover:bg-foreground/20"
+            className="rounded-full bg-foreground/10 text-foreground backdrop-blur hover:bg-foreground/20"
           >
             Plan a Private Trip
           </Button>
