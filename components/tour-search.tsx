@@ -184,7 +184,9 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
                 <Search className="size-5 shrink-0 text-primary" aria-hidden="true" />
                 Any experience
               </button>
-              {experiences.map((exp) => {
+              {[...experiences]
+                .sort((a, b) => a.label.localeCompare(b.label, "is"))
+                .map((exp) => {
                 const Icon = experienceIcon(exp.label)
                 const active = experience?.slug === exp.slug
                 return (

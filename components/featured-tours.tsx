@@ -43,7 +43,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
             <a
               key={tour.id ?? tour.title}
               href={tour.id ? `/tours/${tour.id}` : "/tours"}
-              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-[#1E2738] shadow-sm"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image

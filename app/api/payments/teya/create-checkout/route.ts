@@ -77,7 +77,6 @@ export async function POST(req: Request) {
       customerEmail: row.customerEmail,
       successUrl: `${origin}/payment/success?bookingId=${row.id}`,
       cancelUrl: `${origin}/payment/cancel?bookingId=${row.id}`,
-      webhookUrl: `${origin}/api/payments/teya/webhook`,
     })
 
     // Store Teya's session id on the booking for reconciliation.

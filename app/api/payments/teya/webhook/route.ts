@@ -11,8 +11,10 @@ import { markBookingConfirmed } from "@/app/actions/booking"
  * result). We verify the signature against TEYA_WEBHOOK_SECRET and only confirm
  * on a verified "paid" event.
  *
- * TODO(teya): confirm the signature header name and the event payload shape
- * against https://docs.teya.com/online-payments/webhooks once credentials exist.
+ * Teya signs the request with `x-teya-signature` (SHA256withRSA, Base64) over
+ * the raw body; we verify it against TEYA_WEBHOOK_PUBLIC_KEY. The success event
+ * is `payment.succeeded.v1` and carries our booking id as `merchant_reference`.
+ * See https://docs.teya.com/online-payments/webhooks.
  */
 export async function POST(req: Request) {
   const raw = await req.text()

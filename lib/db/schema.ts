@@ -80,7 +80,7 @@ export const tourCategory = pgTable("tour_category", {
 
 export const tourOverride = pgTable("tour_override", {
   bokunId: text("bokunId").primaryKey(),
-  visible: boolean("visible").notNull().default(true),
+  visible: boolean("visible").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
   // Tour type shown on the product card: "day" or "multi-day".
   tourType: text("tourType").notNull().default("day"),

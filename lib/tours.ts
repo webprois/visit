@@ -340,7 +340,10 @@ export async function getMergedTours(
       description: tr("description") || o?.description?.trim() || null,
       difficulty: o?.difficulty ?? null,
       groupSize: o?.groupSize ?? null,
-      visible: o?.visible ?? true,
+      // Tours are unpublished (draft) by default. A tour only becomes visible
+      // on the public site once an admin explicitly publishes it, so anything
+      // newly synced from Bokun stays hidden until reviewed.
+      visible: o?.visible ?? false,
       featured: o?.featured ?? false,
       categoryId,
       categoryName: categoryId != null ? (categoryMap.get(categoryId) ?? null) : null,

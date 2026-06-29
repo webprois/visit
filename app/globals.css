@@ -53,9 +53,9 @@
   color-scheme: dark;
   --background: #121823;
   --foreground: #e7ecf3;
-  --card: #182030;
+  --card: #212c40;
   --card-foreground: #e7ecf3;
-  --popover: #182030;
+  --popover: #212c40;
   --popover-foreground: #e7ecf3;
   --primary: #ec4647;
   --primary-foreground: #fff5f5;
@@ -66,8 +66,8 @@
   --accent: #ec4647;
   --accent-foreground: #fff5f5;
   --destructive: #ec4647;
-  --border: #26303f;
-  --input: #26303f;
+  --border: transparent;
+  --input: transparent;
   --ring: #ec4647;
   --chart-1: #ec4647;
   --chart-2: #4a90c2;
@@ -194,12 +194,9 @@
     border-color 0.3s ease;
   &:hover {
     transform: translateY(-4px);
-    /* Brand-red highlight: a crisp red border + ring, over a deeper drop shadow
-       with a red-tinted glow for more presence. */
-    border-color: var(--primary);
+    /* Neutral lift: a deeper drop shadow on hover, no colored border or ring. */
     box-shadow:
-      0 0 0 1px color-mix(in oklch, var(--primary) 70%, transparent),
-      0 26px 55px -18px color-mix(in oklch, black 78%, transparent),
-      0 14px 40px -14px color-mix(in oklch, var(--primary) 50%, transparent);
+      0 26px 55px -18px color-mix(in oklch, black 80%, transparent),
+      0 14px 40px -14px color-mix(in oklch, black 55%, transparent);
   }
 }
