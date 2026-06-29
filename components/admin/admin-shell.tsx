@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
@@ -26,6 +26,22 @@ export function AdminShell({
   const router = useRouter()
   const [section, setSection] = useState<AdminSection>("tours")
   const [refreshing, startRefresh] = useTransition()
+
+  // The admin shell owns its own height (h-svh) and scrolls internally per
+  // column. Lock the document scrollport while it is mounted so the whole
+  // layout can't scroll as one block, then restore on unmount.
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtml = html.style.overflow
+    const prevBody = body.style.overflow
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    return () => {
+      html.style.overflow = prevHtml
+      body.style.overflow = prevBody
+    }
+  }, [])
 
   function handleRefresh() {
     startRefresh(async () => {

@@ -115,7 +115,7 @@ export function LocationsWorkspace({
           <div className="flex flex-col gap-3 border-b border-border p-4">
             <p className="text-xs text-muted-foreground">
               Create and manage starting locations here. Assign them to tours
-              from the Tours editor — a tour can belong to several at once.
+              from the Tours editor. A tour can belong to several at once.
             </p>
             {adding ? (
               <div className="flex gap-2">

@@ -32,8 +32,6 @@ import {
   Trash2,
   Plus,
   Search,
-  AlertCircle,
-  ImageIcon,
   Globe,
   RefreshCw,
 } from "lucide-react"
@@ -44,10 +42,11 @@ import {
   setTourFeatured,
   getTourTranslations,
   getTourTranslationContent,
+  getBokunGallery,
   translateTourContent,
   type TourTranslationInput,
 } from "@/app/actions/admin"
-import type { MergedTour } from "@/lib/tours"
+import type { MergedTour, GalleryImage } from "@/lib/tours"
 import type { TourCategory, StartingLocation } from "@/lib/db/schema"
 import type { TourTranslation } from "@/lib/bokun"
 import { LOCALES, LOCALE_LABELS, LOCALE_SHORT, type Locale } from "@/lib/i18n"
@@ -71,7 +70,6 @@ type EditorTab =
   | "overview"
   | "content"
   | "categories"
-  | "translations"
   | "images"
   | "seo"
   | "bokun"
@@ -80,8 +78,7 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
-  { id: "translations", label: "Translations" },
-  { id: "images", label: "Images", soon: true },
+  { id: "images", label: "Images" },
   { id: "seo", label: "SEO", soon: true },
   { id: "bokun", label: "Bokun", soon: true },
 ]
@@ -160,6 +157,12 @@ export function TourEditor({
   const [difficulty, setDifficulty] = useState(tour.difficulty ?? "")
   const [groupSize, setGroupSize] = useState(tour.groupSize ?? "")
   const [imageUrl, setImageUrl] = useState(tour.image)
+  // Curated gallery (first item is the hero used on cards/gallery).
+  const [gallery, setGallery] = useState<GalleryImage[]>(tour.gallery ?? [])
+  const [galleryUploading, setGalleryUploading] = useState(false)
+  // Original Bokun photos, loaded lazily when the Images tab is first opened.
+  const [bokunGallery, setBokunGallery] = useState<string[] | null>(null)
+  const [loadingBokun, setLoadingBokun] = useState(false)
   const [categoryIds, setCategoryIds] = useState<number[]>(tour.categoryIds ?? [])
   const [locationIds, setLocationIds] = useState<number[]>(
     tour.locationIds ?? [],
@@ -173,6 +176,7 @@ export function TourEditor({
   >(null)
   const [isPending, startTransition] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
+  const galleryFileRef = useRef<HTMLInputElement>(null)
 
   // Editor chrome: active tab, dirty tracking, last-saved time, category search.
   const [tab, setTab] = useState<EditorTab>("overview")
@@ -214,6 +218,22 @@ export function TourEditor({
       cancelled = true
     }
   }, [tour.bokunId])
+
+  // Lazily load the original Bokun photos the first time the Images tab opens.
+  // We key the request to the tour id via a ref so it runs once per tour and
+  // — crucially — does NOT depend on the loading/result state, which would
+  // otherwise make the effect cancel the very request it just started.
+  const loadedBokunFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (tab !== "images") return
+    if (loadedBokunFor.current === tour.bokunId) return
+    loadedBokunFor.current = tour.bokunId
+    setLoadingBokun(true)
+    getBokunGallery(tour.bokunId)
+      .then((urls) => setBokunGallery(urls))
+      .catch(() => setBokunGallery([]))
+      .finally(() => setLoadingBokun(false))
+  }, [tab, tour.bokunId])
 
   function setField(
     field: "title" | "excerpt" | "description" | "included" | "excluded" | "goodToKnow",
@@ -299,11 +319,91 @@ export function TourEditor({
     }
   }
 
+  /* ---------------- Gallery management ---------------- */
+
+  /** Append photo URLs that aren't already in the gallery. */
+  function addToGallery(urls: string[]) {
+    const have = new Set(gallery.map((g) => g.url))
+    const additions = urls
+      .filter((u) => u && !have.has(u))
+      .map((url) => ({ url, alt: null as string | null }))
+    if (additions.length === 0) return
+    markDirty()
+    setGallery((prev) => [...prev, ...additions])
+  }
+
+  /** Upload one or more custom images and append them to the gallery. */
+  async function handleGalleryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ""
+    if (files.length === 0) return
+    setGalleryUploading(true)
+    try {
+      const urls: string[] = []
+      for (const file of files) {
+        const form = new FormData()
+        form.append("file", file)
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          body: form,
+        })
+        if (!res.ok) throw new Error("Upload failed")
+        const { url } = await res.json()
+        urls.push(url)
+      }
+      addToGallery(urls)
+      toast.success(
+        files.length > 1 ? `${files.length} images uploaded` : "Image uploaded",
+      )
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setGalleryUploading(false)
+    }
+  }
+
+  function moveImage(index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= gallery.length) return
+    markDirty()
+    setGallery((prev) => {
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
+  function makeHero(index: number) {
+    if (index === 0) return
+    markDirty()
+    setGallery((prev) => {
+      const next = [...prev]
+      const [item] = next.splice(index, 1)
+      next.unshift(item)
+      return next
+    })
+  }
+
+  function removeImage(index: number) {
+    markDirty()
+    setGallery((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function setAlt(index: number, alt: string) {
+    markDirty()
+    setGallery((prev) =>
+      prev.map((g, i) => (i === index ? { ...g, alt: alt || null } : g)),
+    )
+  }
+
   function save(visible: boolean, action: "save" | "publish" | "unpublish") {
     setPendingAction(action)
     const en = content.en
     const byLang: Partial<Record<Locale, TourTranslationInput>> = {}
     for (const l of LOCALES) byLang[l] = toInput(content[l])
+
+    // The first gallery image is the hero used on cards and the gallery.
+    const heroUrl = gallery[0]?.url || imageUrl
 
     startTransition(async () => {
       // Shared settings + English text mirrored onto the override for cards.
@@ -315,7 +415,8 @@ export function TourEditor({
         duration,
         difficulty,
         groupSize,
-        imageUrl,
+        imageUrl: heroUrl,
+        gallery,
         categoryIds,
         locationIds,
         tourType,
@@ -348,7 +449,6 @@ export function TourEditor({
   }
 
   const current = content[lang]
-  const filledCount = LOCALES.filter((l) => isLangFilled(content[l])).length
 
   // Hero image (shared across languages).
   const heroNode = (
@@ -562,104 +662,52 @@ export function TourEditor({
     </div>
   )
 
-  // Translations tab: per-language status + original Bokun reference texts.
-  const translationsNode = (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-foreground">
-            Translation status
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {filledCount} / {LOCALES.length} languages
-          </span>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {LOCALES.map((l) => {
-            const filled = isLangFilled(content[l])
-            return (
-              <button
-                key={l}
-                type="button"
-                onClick={() => {
-                  setLang(l)
-                  setTab("content")
-                }}
-                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
-              >
-                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Languages
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  {LOCALE_LABELS[l]}
-                </span>
-                {filled ? (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-semibold"
-                    style={{ color: "var(--chart-3)" }}
-                  >
-                    <Check className="size-3.5" /> Complete
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                    <AlertCircle className="size-3.5" /> Missing
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Select a language to edit its content, or use &ldquo;Translate from
-          English&rdquo; on the Content tab.
-        </p>
-      </div>
-
-      <BokunTexts
-        bokunId={tour.bokunId}
-        activeLangLabel={LOCALE_LABELS[lang]}
-        onApply={(field, value, mode) => {
-          setContent((prev) => {
-            const existing = prev[lang][field]
-            const next =
-              mode === "append" && existing.trim()
-                ? `${existing.trimEnd()}\n${value}`
-                : value
-            return {
-              ...prev,
-              [lang]: { ...prev[lang], [field]: next },
-            }
-          })
-          markDirty()
-          toast.success("Applied")
-        }}
-        onImportAll={(t) => {
-          const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .join("\n")
-          setContent((prev) => ({
+  // Import original texts from Bokun into the active language (English by
+  // default). Shown at the bottom of the Content tab.
+  const bokunImportNode = (
+    <BokunTexts
+      bokunId={tour.bokunId}
+      activeLangLabel={LOCALE_LABELS[lang]}
+      onApply={(field, value, mode) => {
+        setContent((prev) => {
+          const existing = prev[lang][field]
+          const next =
+            mode === "append" && existing.trim()
+              ? `${existing.trimEnd()}\n${value}`
+              : value
+          return {
             ...prev,
-            [lang]: {
-              title: t.title,
-              excerpt: t.excerpt,
-              description: t.description,
-              included: t.included,
-              excluded: t.excluded,
-              goodToKnow,
-              itinerary: t.itinerary ?? [],
-            },
-          }))
-          markDirty()
-          toast.success(`Imported all ${t.lang} texts from Bokun`)
-        }}
-        onApplyItinerary={(steps) => {
-          setItinerary(steps)
-          toast.success("Itinerary applied")
-        }}
-      />
-    </div>
+            [lang]: { ...prev[lang], [field]: next },
+          }
+        })
+        markDirty()
+        toast.success("Applied")
+      }}
+      onImportAll={(t) => {
+        const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join("\n")
+        setContent((prev) => ({
+          ...prev,
+          [lang]: {
+            title: t.title,
+            excerpt: t.excerpt,
+            description: t.description,
+            included: t.included,
+            excluded: t.excluded,
+            goodToKnow,
+            itinerary: t.itinerary ?? [],
+          },
+        }))
+        markDirty()
+        toast.success(`Imported all ${t.lang} texts from Bokun`)
+      }}
+      onApplyItinerary={(steps) => {
+        setItinerary(steps)
+        toast.success("Itinerary applied")
+      }}
+    />
   )
 
   // Sticky settings panel (right rail on desktop, inline on mobile).
@@ -844,22 +892,197 @@ export function TourEditor({
             onChange={(v) => setField("goodToKnow", v)}
           />
           <ItineraryField steps={current.itinerary} onChange={setItinerary} />
+          {lang === "en" && bokunImportNode}
         </>
       )
       break
     case "categories":
       tabContent = categoriesNode
       break
-    case "translations":
-      tabContent = translationsNode
-      break
     case "images":
       tabContent = (
-        <ComingSoon
-          icon={ImageIcon}
-          title="Image management"
-          desc="Reorder Bokun photos, pick a hero image, set alt text, and upload custom images. Coming in the next phase."
-        />
+        <div className="flex flex-col gap-6">
+          {/* Curated gallery */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Gallery
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                The first photo is the hero shown on cards and at the top of
+                the gallery. Reorder with the arrows.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={galleryUploading}
+              onClick={() => galleryFileRef.current?.click()}
+            >
+              {galleryUploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
+              Upload
+            </Button>
+            <input
+              ref={galleryFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleGalleryUpload}
+            />
+          </div>
+
+          {gallery.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              No images yet. Upload your own, or import the original photos
+              from Bokun below.
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {gallery.map((img, i) => (
+                <li
+                  key={img.url}
+                  className="flex gap-3 rounded-xl border border-border bg-card p-3"
+                >
+                  <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+                    <Image
+                      src={img.url || "/placeholder.svg"}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                    {i === 0 && (
+                      <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                        <Star className="size-3" aria-hidden="true" /> Hero
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <Input
+                      value={img.alt ?? ""}
+                      onChange={(e) => setAlt(i, e.target.value)}
+                      placeholder="Alt text (describe the photo for accessibility)"
+                      className="h-9"
+                    />
+                    <div className="flex flex-wrap items-center gap-1">
+                      {i !== 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => makeHero(i)}
+                        >
+                          <Star className="size-4" /> Make hero
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={i === 0}
+                        onClick={() => moveImage(i, -1)}
+                        aria-label="Move up"
+                      >
+                        <ChevronUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        disabled={i === gallery.length - 1}
+                        onClick={() => moveImage(i, 1)}
+                        aria-label="Move down"
+                      >
+                        <ChevronDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeImage(i)}
+                        className="text-destructive hover:text-destructive"
+                        aria-label="Remove image"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Import from Bokun */}
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                Original photos from Bokun
+              </h3>
+              {bokunGallery && bokunGallery.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addToGallery(bokunGallery)}
+                >
+                  <Download className="size-4" /> Add all
+                </Button>
+              )}
+            </div>
+            {loadingBokun ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /> Loading Bokun
+                photos…
+              </div>
+            ) : !bokunGallery || bokunGallery.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No photos found on Bokun for this tour.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {bokunGallery.map((url) => {
+                  const used = gallery.some((g) => g.url === url)
+                  return (
+                    <button
+                      key={url}
+                      type="button"
+                      disabled={used}
+                      onClick={() => addToGallery([url])}
+                      className={
+                        "group relative aspect-square overflow-hidden rounded-lg border transition-colors " +
+                        (used
+                          ? "border-primary opacity-60"
+                          : "border-border hover:border-primary")
+                      }
+                      aria-label={used ? "Already in gallery" : "Add photo"}
+                    >
+                      <Image
+                        src={url || "/placeholder.svg"}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="120px"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-background/0 transition-colors group-hover:bg-background/30">
+                        {used ? (
+                          <Check className="size-5 text-primary" />
+                        ) : (
+                          <Plus className="size-5 text-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       )
       break
     case "seo":

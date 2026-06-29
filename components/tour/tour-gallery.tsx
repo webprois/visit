@@ -11,12 +11,18 @@ import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react"
  */
 export function TourGallery({
   images,
+  alts,
   title,
 }: {
   images: string[]
+  /** Optional per-image alt text, parallel to `images`. */
+  alts?: (string | null)[]
   title: string
 }) {
   const photos = images.filter(Boolean)
+  // Resolve alt text for a photo: curated alt → a sensible generated default.
+  const altFor = (i: number) =>
+    alts?.[i]?.trim() || `${title} — photo ${i + 1}`
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const touchStartX = useRef<number | null>(null)
@@ -61,12 +67,12 @@ export function TourGallery({
         <button
           type="button"
           onClick={() => openAt(0)}
-          className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-border sm:aspect-[16/11]"
+          className="group relative aspect-[4/3] overflow-hidden rounded-2xl sm:aspect-[16/11]"
           aria-label={`Open ${title} photo 1 in full screen`}
         >
           <Image
             src={featured || "/placeholder.svg"}
-            alt={`${title} — featured photo`}
+            alt={altFor(0)}
             fill
             priority
             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -89,12 +95,12 @@ export function TourGallery({
                   key={src}
                   type="button"
                   onClick={() => openAt(photoIndex)}
-                  className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border sm:aspect-auto sm:h-full"
+                  className="group relative aspect-[4/3] overflow-hidden rounded-xl sm:aspect-auto sm:h-full"
                   aria-label={`Open ${title} photo ${photoIndex + 1} in full screen`}
                 >
                   <Image
                     src={src || "/placeholder.svg"}
-                    alt={`${title} — photo ${photoIndex + 1}`}
+                    alt={altFor(photoIndex)}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 50vw, 33vw"
@@ -145,7 +151,7 @@ export function TourGallery({
             <div className="relative h-full w-full">
               <Image
                 src={photos[index] || "/placeholder.svg"}
-                alt={`${title} — photo ${index + 1}`}
+                alt={altFor(index)}
                 fill
                 className="object-contain"
                 sizes="100vw"
