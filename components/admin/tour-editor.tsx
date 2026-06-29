@@ -31,6 +31,11 @@ import {
   ChevronUp,
   Trash2,
   Plus,
+  Search,
+  AlertCircle,
+  ImageIcon,
+  Globe,
+  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -61,6 +66,25 @@ type LangContent = {
 }
 
 type ContentByLang = Record<Locale, LangContent>
+
+type EditorTab =
+  | "overview"
+  | "content"
+  | "categories"
+  | "translations"
+  | "images"
+  | "seo"
+  | "bokun"
+
+const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "content", label: "Content" },
+  { id: "categories", label: "Categories" },
+  { id: "translations", label: "Translations" },
+  { id: "images", label: "Images", soon: true },
+  { id: "seo", label: "SEO", soon: true },
+  { id: "bokun", label: "Bokun", soon: true },
+]
 
 function emptyLang(): LangContent {
   return {
@@ -150,6 +174,13 @@ export function TourEditor({
   const [isPending, startTransition] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Editor chrome: active tab, dirty tracking, last-saved time, category search.
+  const [tab, setTab] = useState<EditorTab>("overview")
+  const [dirty, setDirty] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [categorySearch, setCategorySearch] = useState("")
+  const markDirty = () => setDirty(true)
+
   // Load any saved per-language content for this tour.
   useEffect(() => {
     let cancelled = false
@@ -188,6 +219,7 @@ export function TourEditor({
     field: "title" | "excerpt" | "description" | "included" | "excluded" | "goodToKnow",
     value: string,
   ) {
+    markDirty()
     setContent((prev) => ({
       ...prev,
       [lang]: { ...prev[lang], [field]: value },
@@ -195,6 +227,7 @@ export function TourEditor({
   }
 
   function setItinerary(steps: ItineraryStep[]) {
+    markDirty()
     setContent((prev) => ({
       ...prev,
       [lang]: { ...prev[lang], itinerary: steps },
@@ -211,6 +244,7 @@ export function TourEditor({
     setTranslating(true)
     try {
       const result = await translateTourContent(toInput(en), lang)
+      markDirty()
       setContent((prev) => ({
         ...prev,
         [lang]: {
@@ -232,12 +266,14 @@ export function TourEditor({
   }
 
   function toggleCategory(id: number) {
+    markDirty()
     setCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     )
   }
 
   function toggleLocation(id: number) {
+    markDirty()
     setLocationIds((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id],
     )
@@ -253,6 +289,7 @@ export function TourEditor({
       const res = await fetch("/api/admin/upload", { method: "POST", body: form })
       if (!res.ok) throw new Error("Upload failed")
       const { url } = await res.json()
+      markDirty()
       setImageUrl(url)
       toast.success("Image uploaded")
     } catch (err) {
@@ -294,6 +331,8 @@ export function TourEditor({
             : "Changes saved",
       )
       setPendingAction(null)
+      setDirty(false)
+      setLastSaved(new Date())
       router.refresh()
     })
   }
@@ -309,407 +348,615 @@ export function TourEditor({
   }
 
   const current = content[lang]
+  const filledCount = LOCALES.filter((l) => isLangFilled(content[l])).length
+
+  // Hero image (shared across languages).
+  const heroNode = (
+    <div className="flex flex-col gap-2">
+      <Label>Tour image</Label>
+      <div className="group relative aspect-[16/7] w-full overflow-hidden rounded-2xl bg-muted">
+        <Image
+          src={imageUrl || "/placeholder.svg"}
+          alt={content.en.title || tour.title}
+          fill
+          className="object-cover"
+          sizes="(max-width: 1024px) 100vw, 768px"
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 transition-opacity group-hover:opacity-100">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFile}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Upload className="size-4" />
+            )}
+            Replace image
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Language selector shown on content-editing tabs.
+  const languageBar = (
+    <div className="flex flex-col gap-3">
+      <div
+        role="tablist"
+        aria-label="Content language"
+        className="flex flex-wrap items-center gap-2"
+      >
+        {LOCALES.map((l) => {
+          const filled = isLangFilled(content[l])
+          return (
+            <button
+              key={l}
+              type="button"
+              role="tab"
+              aria-selected={lang === l}
+              onClick={() => setLang(l)}
+              className={
+                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
+                (lang === l
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
+              }
+            >
+              {LOCALE_LABELS[l]}
+              {filled && (
+                <span
+                  className={
+                    "size-1.5 rounded-full " +
+                    (lang === l ? "bg-primary-foreground" : "bg-primary")
+                  }
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          )
+        })}
+        {loadingContent && (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
+
+      {lang !== "en" && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Editing the {LOCALE_LABELS[lang]} version. Empty fields fall back to
+            English (or the original Bokun text) on the live site.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleTranslate}
+            disabled={translating || isPending}
+            className="shrink-0"
+          >
+            {translating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4 text-primary" />
+            )}
+            Translate from English
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+
+  // Categories tab: searchable category + starting-location selection.
+  const lowerSearch = categorySearch.trim().toLowerCase()
+  const filteredCategories = lowerSearch
+    ? categories.filter((c) => c.name.toLowerCase().includes(lowerSearch))
+    : categories
+  const categoriesNode = (
+    <div className="flex flex-col gap-6">
+      <Field label="Categories">
+        {categories.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No categories yet. Create some first.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                placeholder="Search categories"
+                className="h-10 pl-9"
+              />
+            </div>
+            {filteredCategories.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No categories match &ldquo;{categorySearch}&rdquo;.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {filteredCategories.map((c) => {
+                  const selected = categoryIds.includes(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleCategory(c.id)}
+                      aria-pressed={selected}
+                      className={
+                        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
+                        (selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
+                      }
+                    >
+                      {selected && <Check className="size-3.5" aria-hidden="true" />}
+                      {c.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {categoryIds.length === 0
+            ? "Tap to assign one or more categories."
+            : `${categoryIds.length} selected. The first one is shown as the badge.`}
+        </p>
+      </Field>
+
+      <Field label="Starting location">
+        {locations.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No starting locations yet. Create them in the Starting Locations
+            section.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {locations.map((loc) => {
+              const selected = locationIds.includes(loc.id)
+              return (
+                <button
+                  key={loc.id}
+                  type="button"
+                  onClick={() => toggleLocation(loc.id)}
+                  aria-pressed={selected}
+                  className={
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
+                    (selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
+                  }
+                >
+                  {selected ? (
+                    <Check className="size-3.5" aria-hidden="true" />
+                  ) : (
+                    <MapPin className="size-3.5" aria-hidden="true" />
+                  )}
+                  {loc.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {locationIds.length === 0
+            ? "No starting location set. Tap to assign one or more."
+            : `${locationIds.length} selected.`}
+        </p>
+      </Field>
+    </div>
+  )
+
+  // Translations tab: per-language status + original Bokun reference texts.
+  const translationsNode = (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-foreground">
+            Translation status
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {filledCount} / {LOCALES.length} languages
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {LOCALES.map((l) => {
+            const filled = isLangFilled(content[l])
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => {
+                  setLang(l)
+                  setTab("content")
+                }}
+                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Languages
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  {LOCALE_LABELS[l]}
+                </span>
+                {filled ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-semibold"
+                    style={{ color: "var(--chart-3)" }}
+                  >
+                    <Check className="size-3.5" /> Complete
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                    <AlertCircle className="size-3.5" /> Missing
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Select a language to edit its content, or use &ldquo;Translate from
+          English&rdquo; on the Content tab.
+        </p>
+      </div>
+
+      <BokunTexts
+        bokunId={tour.bokunId}
+        activeLangLabel={LOCALE_LABELS[lang]}
+        onApply={(field, value, mode) => {
+          setContent((prev) => {
+            const existing = prev[lang][field]
+            const next =
+              mode === "append" && existing.trim()
+                ? `${existing.trimEnd()}\n${value}`
+                : value
+            return {
+              ...prev,
+              [lang]: { ...prev[lang], [field]: next },
+            }
+          })
+          markDirty()
+          toast.success("Applied")
+        }}
+        onImportAll={(t) => {
+          const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .join("\n")
+          setContent((prev) => ({
+            ...prev,
+            [lang]: {
+              title: t.title,
+              excerpt: t.excerpt,
+              description: t.description,
+              included: t.included,
+              excluded: t.excluded,
+              goodToKnow,
+              itinerary: t.itinerary ?? [],
+            },
+          }))
+          markDirty()
+          toast.success(`Imported all ${t.lang} texts from Bokun`)
+        }}
+        onApplyItinerary={(steps) => {
+          setItinerary(steps)
+          toast.success("Itinerary applied")
+        }}
+      />
+    </div>
+  )
+
+  // Sticky settings panel (right rail on desktop, inline on mobile).
+  const settingsPanel = (
+    <div className="flex flex-col gap-5 p-5">
+      <span className="text-sm font-semibold text-foreground">Tour settings</span>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Status
+        </span>
+        <div className="flex items-center justify-between gap-2">
+          <StatusBadge visible={tour.visible} />
+          <Button
+            type="button"
+            variant={featured ? "default" : "outline"}
+            size="sm"
+            onClick={toggleFeatured}
+            disabled={isPending}
+          >
+            <Star className={featured ? "size-4 fill-current" : "size-4"} />
+            {featured ? "Featured" : "Feature"}
+          </Button>
+        </div>
+      </div>
+
+      <Field label="Tour type">
+        <Select
+          value={tourType}
+          onValueChange={(v) => {
+            markDirty()
+            setTourType(v ?? "day")
+          }}
+        >
+          <SelectTrigger className="h-11 w-full">
+            <SelectValue>
+              {(value: string) =>
+                value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="day">Day Tour</SelectItem>
+            <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <Field label="Difficulty">
+        <Select
+          value={difficulty || undefined}
+          onValueChange={(v) => {
+            markDirty()
+            setDifficulty(v ?? "")
+          }}
+        >
+          <SelectTrigger className="h-11 w-full">
+            <SelectValue placeholder="Select difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Easy">Easy</SelectItem>
+            <SelectItem value="Moderate">Moderate</SelectItem>
+            <SelectItem value="Challenging">Challenging</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <Field label="Location" htmlFor="location">
+        <Input
+          id="location"
+          value={location}
+          onChange={(e) => {
+            markDirty()
+            setLocation(e.target.value)
+          }}
+          className="h-11"
+        />
+      </Field>
+
+      <Field label="Duration" htmlFor="duration">
+        <Input
+          id="duration"
+          value={duration}
+          onChange={(e) => {
+            markDirty()
+            setDuration(e.target.value)
+          }}
+          className="h-11"
+        />
+      </Field>
+
+      <Field label="Group size" htmlFor="groupSize">
+        <Input
+          id="groupSize"
+          value={groupSize}
+          onChange={(e) => {
+            markDirty()
+            setGroupSize(e.target.value)
+          }}
+          placeholder="e.g. Up to 16 people"
+          className="h-11"
+        />
+      </Field>
+
+      <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Categories
+        </span>
+        <p className="text-sm text-muted-foreground">
+          {categoryIds.length === 0
+            ? "None selected"
+            : `${categoryIds.length} selected`}
+        </p>
+        <button
+          type="button"
+          onClick={() => setTab("categories")}
+          className="self-start text-xs font-semibold text-primary hover:underline"
+        >
+          Edit categories
+        </button>
+      </div>
+    </div>
+  )
+
+  let tabContent: React.ReactNode = null
+  switch (tab) {
+    case "overview":
+      tabContent = (
+        <>
+          {heroNode}
+          {languageBar}
+          <Field label="Title" htmlFor="title">
+            <Input
+              id="title"
+              value={current.title}
+              onChange={(e) => setField("title", e.target.value)}
+              className="h-11 text-base"
+              placeholder={`Title (${LOCALE_SHORT[lang]})`}
+            />
+          </Field>
+          <Field label="Short description" htmlFor="excerpt">
+            <Textarea
+              id="excerpt"
+              value={current.excerpt}
+              onChange={(e) => setField("excerpt", e.target.value)}
+              rows={2}
+              placeholder="One or two lines shown on the tour card"
+            />
+          </Field>
+        </>
+      )
+      break
+    case "content":
+      tabContent = (
+        <>
+          {languageBar}
+          <Field label="Full description" htmlFor="description">
+            <Textarea
+              id="description"
+              value={current.description}
+              onChange={(e) => setField("description", e.target.value)}
+              rows={6}
+              placeholder="Detailed description shown on the tour page"
+            />
+          </Field>
+          <ListField
+            label="What's included"
+            id="included"
+            value={current.included}
+            onChange={(v) => setField("included", v)}
+          />
+          <ListField
+            label="Not included"
+            id="excluded"
+            value={current.excluded}
+            onChange={(v) => setField("excluded", v)}
+          />
+          <ListField
+            label="Good to know"
+            id="goodToKnow"
+            value={current.goodToKnow}
+            onChange={(v) => setField("goodToKnow", v)}
+          />
+          <ItineraryField steps={current.itinerary} onChange={setItinerary} />
+        </>
+      )
+      break
+    case "categories":
+      tabContent = categoriesNode
+      break
+    case "translations":
+      tabContent = translationsNode
+      break
+    case "images":
+      tabContent = (
+        <ComingSoon
+          icon={ImageIcon}
+          title="Image management"
+          desc="Reorder Bokun photos, pick a hero image, set alt text, and upload custom images. Coming in the next phase."
+        />
+      )
+      break
+    case "seo":
+      tabContent = (
+        <ComingSoon
+          icon={Globe}
+          title="SEO settings"
+          desc="Custom URL slug, meta title and description, and social share previews. Coming in the next phase."
+        />
+      )
+      break
+    case "bokun":
+      tabContent = (
+        <ComingSoon
+          icon={RefreshCw}
+          title="Bokun sync"
+          desc="View sync history, see what changed, and re-sync this tour from Bokun on demand. Coming in the next phase."
+        />
+      )
+      break
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Editor header */}
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-6 py-3">
-        <div className="flex items-center gap-3">
-          <StatusBadge visible={tour.visible} />
-          <span className="text-sm text-muted-foreground">
-            Editing <span className="font-medium text-foreground">{tour.title}</span>
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant={featured ? "default" : "outline"}
-          size="sm"
-          onClick={toggleFeatured}
-          disabled={isPending}
-        >
-          <Star className={featured ? "size-4 fill-current" : "size-4"} />
-          {featured ? "Featured" : "Feature"}
-        </Button>
-      </div>
-
-      {/* Scrollable editor body */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-          {/* Hero image (shared across languages) */}
-          <div className="flex flex-col gap-2">
-            <Label>Tour image</Label>
-            <div className="group relative aspect-[16/7] w-full overflow-hidden rounded-2xl bg-muted">
-              <Image
-                src={imageUrl || "/placeholder.svg"}
-                alt={content.en.title || tour.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 768px"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFile}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Upload className="size-4" />
-                  )}
-                  Replace image
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Per-language content */}
-          <div className="flex flex-col gap-4 rounded-2xl border border-border p-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Languages className="size-4 text-primary" aria-hidden="true" />
-                Content & translations
-              </span>
-              {loadingContent && (
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              )}
-            </div>
-
-            {/* Language tabs */}
-            <div
-              role="tablist"
-              aria-label="Content language"
-              className="flex flex-wrap gap-2"
-            >
-              {LOCALES.map((l) => {
-                const filled = isLangFilled(content[l])
-                return (
-                  <button
-                    key={l}
-                    type="button"
-                    role="tab"
-                    aria-selected={lang === l}
-                    onClick={() => setLang(l)}
-                    className={
-                      "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
-                      (lang === l
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
-                    }
-                  >
-                    {LOCALE_LABELS[l]}
-                    {filled && (
-                      <span
-                        className={
-                          "size-1.5 rounded-full " +
-                          (lang === l ? "bg-primary-foreground" : "bg-primary")
-                        }
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            {lang !== "en" && (
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Editing the {LOCALE_LABELS[lang]} version. Empty fields fall
-                  back to English (or the original Bokun text) on the live site.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTranslate}
-                  disabled={translating || isPending}
-                  className="shrink-0"
-                >
-                  {translating ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="size-4 text-primary" />
-                  )}
-                  Translate from English
-                </Button>
-              </div>
-            )}
-
-            {/* Text fields for the active language */}
-            <Field label="Title" htmlFor="title">
-              <Input
-                id="title"
-                value={current.title}
-                onChange={(e) => setField("title", e.target.value)}
-                className="h-11 text-base"
-                placeholder={`Title (${LOCALE_SHORT[lang]})`}
-              />
-            </Field>
-
-            <Field label="Short description" htmlFor="excerpt">
-              <Textarea
-                id="excerpt"
-                value={current.excerpt}
-                onChange={(e) => setField("excerpt", e.target.value)}
-                rows={2}
-                placeholder="One or two lines shown on the tour card"
-              />
-            </Field>
-
-            <Field label="Full description" htmlFor="description">
-              <Textarea
-                id="description"
-                value={current.description}
-                onChange={(e) => setField("description", e.target.value)}
-                rows={6}
-                placeholder="Detailed description shown on the tour page"
-              />
-            </Field>
-
-            <ListField
-              label="What's included"
-              id="included"
-              value={current.included}
-              onChange={(v) => setField("included", v)}
-            />
-            <ListField
-              label="Not included"
-              id="excluded"
-              value={current.excluded}
-              onChange={(v) => setField("excluded", v)}
-            />
-            <ListField
-              label="Good to know"
-              id="goodToKnow"
-              value={current.goodToKnow}
-              onChange={(v) => setField("goodToKnow", v)}
-            />
-
-            <ItineraryField
-              steps={current.itinerary}
-              onChange={setItinerary}
-            />
-
-            {/* Bokun original texts (reference) */}
-            <BokunTexts
-              bokunId={tour.bokunId}
-              activeLangLabel={LOCALE_LABELS[lang]}
-              onApply={(field, value, mode) => {
-                setContent((prev) => {
-                  const existing = prev[lang][field]
-                  const next =
-                    mode === "append" && existing.trim()
-                      ? `${existing.trimEnd()}\n${value}`
-                      : value
-                  return {
-                    ...prev,
-                    [lang]: { ...prev[lang], [field]: next },
-                  }
-                })
-                toast.success("Applied")
-              }}
-              onImportAll={(t) => {
-                // Combine Requirements + Important/attention into "good to know".
-                const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-                  .join("\n")
-                setContent((prev) => ({
-                  ...prev,
-                  [lang]: {
-                    title: t.title,
-                    excerpt: t.excerpt,
-                    description: t.description,
-                    included: t.included,
-                    excluded: t.excluded,
-                    goodToKnow,
-                    itinerary: t.itinerary ?? [],
-                  },
-                }))
-                toast.success(`Imported all ${t.lang} texts from Bokun`)
-              }}
-              onApplyItinerary={(steps) => {
-                setItinerary(steps)
-                toast.success("Itinerary applied")
-              }}
-            />
-          </div>
-
-          {/* Shared settings */}
-          <div className="flex flex-col gap-6 rounded-2xl border border-border p-4">
-            <span className="text-sm font-semibold text-foreground">
-              Tour settings
+      <div className="flex shrink-0 flex-col gap-3 border-b border-border px-6 pt-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <StatusBadge visible={tour.visible} />
+            <span className="text-sm text-muted-foreground">
+              Editing{" "}
+              <span className="font-medium text-foreground">{tour.title}</span>
             </span>
-
-            {/* Location / Duration */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Location" htmlFor="location">
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="h-11"
-                />
-              </Field>
-              <Field label="Duration" htmlFor="duration">
-                <Input
-                  id="duration"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  className="h-11"
-                />
-              </Field>
-            </div>
-
-            {/* Difficulty / Group size */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Difficulty">
-                <Select
-                  value={difficulty || undefined}
-                  onValueChange={(v) => setDifficulty(v ?? "")}
-                >
-                  <SelectTrigger className="h-11 w-full">
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Easy">Easy</SelectItem>
-                    <SelectItem value="Moderate">Moderate</SelectItem>
-                    <SelectItem value="Challenging">Challenging</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Group size" htmlFor="groupSize">
-                <Input
-                  id="groupSize"
-                  value={groupSize}
-                  onChange={(e) => setGroupSize(e.target.value)}
-                  placeholder="e.g. Up to 16 people"
-                  className="h-11"
-                />
-              </Field>
-            </div>
-
-            {/* Tour type */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Tour type">
-                <Select value={tourType} onValueChange={(v) => setTourType(v ?? "day")}>
-                  <SelectTrigger className="h-11 w-full">
-                    <SelectValue>
-                      {(value: string) =>
-                        value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Day Tour</SelectItem>
-                    <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            {/* Categories */}
-            <Field label="Categories">
-              {categories.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No categories yet. Create some first.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((c) => {
-                    const selected = categoryIds.includes(c.id)
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleCategory(c.id)}
-                        aria-pressed={selected}
-                        className={
-                          "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
-                          (selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
-                        }
-                      >
-                        {selected && <Check className="size-3.5" aria-hidden="true" />}
-                        {c.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                {categoryIds.length === 0
-                  ? "Tap to assign one or more categories."
-                  : `${categoryIds.length} selected. The first one is shown as the badge.`}
-              </p>
-            </Field>
-
-            {/* Starting location */}
-            <Field label="Starting location">
-              {locations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No starting locations yet. Create them in the Starting
-                  Locations section.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {locations.map((loc) => {
-                    const selected = locationIds.includes(loc.id)
-                    return (
-                      <button
-                        key={loc.id}
-                        type="button"
-                        onClick={() => toggleLocation(loc.id)}
-                        aria-pressed={selected}
-                        className={
-                          "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
-                          (selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
-                        }
-                      >
-                        {selected ? (
-                          <Check className="size-3.5" aria-hidden="true" />
-                        ) : (
-                          <MapPin className="size-3.5" aria-hidden="true" />
-                        )}
-                        {loc.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                {locationIds.length === 0
-                  ? "No starting location set. Tap to assign one or more."
-                  : `${locationIds.length} selected.`}
-              </p>
-            </Field>
           </div>
         </div>
+        {/* Section tabs */}
+        <div
+          role="tablist"
+          aria-label="Editor sections"
+          className="-mb-px flex flex-wrap gap-1 overflow-x-auto"
+        >
+          {EDITOR_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={
+                "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors " +
+                (tab === t.id
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground")
+              }
+            >
+              {t.label}
+              {t.soon && (
+                <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                  Soon
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Body: main editor + settings rail */}
+      <div className="flex min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
+            {tabContent}
+            {/* Settings shown inline on small screens where the rail is hidden */}
+            <div className="border-t border-border lg:hidden">
+              {settingsPanel}
+            </div>
+          </div>
+        </div>
+        <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border lg:block">
+          {settingsPanel}
+        </aside>
+      </div>
+
 
       {/* Sticky action bar */}
       <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card/95 px-6 py-3 backdrop-blur">
-        <a
-          href={`/tours/${tour.bokunId}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Eye className="size-4" />
-          Preview
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href={`/tours/${tour.bokunId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Eye className="size-4" />
+            Preview
+          </a>
+          <SaveStatus dirty={dirty} lastSaved={lastSaved} />
+        </div>
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -959,6 +1206,64 @@ function StatusBadge({ visible }: { visible: boolean }) {
       />
       {visible ? "Published" : "Draft"}
     </span>
+  )
+}
+
+function SaveStatus({
+  dirty,
+  lastSaved,
+}: {
+  dirty: boolean
+  lastSaved: Date | null
+}) {
+  if (dirty) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <span
+          className="size-1.5 rounded-full"
+          style={{ backgroundColor: "var(--chart-1)" }}
+          aria-hidden="true"
+        />
+        Unsaved changes
+      </span>
+    )
+  }
+  if (lastSaved) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Saved{" "}
+        {lastSaved.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </span>
+    )
+  }
+  return null
+}
+
+function ComingSoon({
+  icon: Icon,
+  title,
+  desc,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  desc: string
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
+      <Icon className="size-8 text-muted-foreground" />
+      <div className="flex flex-col gap-1">
+        <p className="text-base font-semibold text-foreground">{title}</p>
+        <p className="max-w-sm text-pretty text-sm text-muted-foreground">
+          {desc}
+        </p>
+      </div>
+      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase text-muted-foreground">
+        Coming soon
+      </span>
+    </div>
   )
 }
 
