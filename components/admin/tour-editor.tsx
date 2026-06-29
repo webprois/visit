@@ -572,14 +572,20 @@ export function TourEditor({
 
             {/* Difficulty / Group size */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Difficulty" htmlFor="difficulty">
-                <Input
-                  id="difficulty"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value)}
-                  placeholder="e.g. Easy, Moderate, Challenging"
-                  className="h-11"
-                />
+              <Field label="Difficulty">
+                <Select
+                  value={difficulty || undefined}
+                  onValueChange={(v) => setDifficulty(v ?? "")}
+                >
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue placeholder="Select difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Easy">Easy</SelectItem>
+                    <SelectItem value="Moderate">Moderate</SelectItem>
+                    <SelectItem value="Challenging">Challenging</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Group size" htmlFor="groupSize">
                 <Input
@@ -593,21 +599,23 @@ export function TourEditor({
             </div>
 
             {/* Tour type */}
-            <Field label="Tour type">
-              <Select value={tourType} onValueChange={(v) => setTourType(v ?? "day")}>
-                <SelectTrigger className="h-11">
-                  <SelectValue>
-                    {(value: string) =>
-                      value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Day Tour</SelectItem>
-                  <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Tour type">
+                <Select value={tourType} onValueChange={(v) => setTourType(v ?? "day")}>
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue>
+                      {(value: string) =>
+                        value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day Tour</SelectItem>
+                    <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
             {/* Categories */}
             <Field label="Categories">
