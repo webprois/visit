@@ -220,12 +220,34 @@ export async function autoCategorizeTours(): Promise<{
   }
 }
 
+/** A single curated gallery image with optional alt text. */
+export type GalleryImage = { url: string; alt: string | null }
+
+/** Parse the stored gallery JSON into a clean `{ url, alt }[]`. */
+export function parseGallery(value?: string | null): GalleryImage[] {
+  if (!value?.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((g) => ({
+        url: typeof g?.url === "string" ? g.url.trim() : "",
+        alt: typeof g?.alt === "string" && g.alt.trim() ? g.alt.trim() : null,
+      }))
+      .filter((g) => g.url)
+  } catch {
+    return []
+  }
+}
+
 export type MergedTour = Tour & {
   bokunId: string
   visible: boolean
   featured: boolean
   excerpt: string | null
   description: string | null
+  /** Curated, ordered gallery managed in the admin. Empty = use Bokun photos. */
+  gallery: GalleryImage[]
   difficulty: string | null
   groupSize: string | null
   /** Primary category (first assigned), used for the card badge. */
@@ -338,6 +360,7 @@ export async function getMergedTours(
       duration: o?.duration?.trim() || t.duration,
       excerpt: tr("excerpt") || o?.excerpt?.trim() || null,
       description: tr("description") || o?.description?.trim() || null,
+      gallery: parseGallery(o?.gallery),
       difficulty: o?.difficulty ?? null,
       groupSize: o?.groupSize ?? null,
       // Tours are unpublished (draft) by default. A tour only becomes visible

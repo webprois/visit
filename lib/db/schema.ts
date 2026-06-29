@@ -92,6 +92,10 @@ export const tourOverride = pgTable("tour_override", {
   difficulty: text("difficulty"),
   groupSize: text("groupSize"),
   imageUrl: text("imageUrl"),
+  // Curated, ordered gallery as JSON: [{ url, alt }]. When set, this replaces
+  // the Bokun gallery on the public tour page. The hero (imageUrl) is shown
+  // first regardless of its position here.
+  gallery: text("gallery"),
   categoryId: integer("categoryId"),
   sortOrder: integer("sortOrder").notNull().default(0),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),

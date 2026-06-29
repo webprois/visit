@@ -113,9 +113,16 @@ export default async function TourPage({
     detail?.minAge ? { icon: Baby, text: `Min age ${detail.minAge}` } : null,
   ].filter((x): x is { icon: typeof Clock; text: string } => Boolean(x))
 
-  const gallery = detail?.gallery?.length
-    ? detail.gallery
-    : [tour.image].filter(Boolean)
+  // Prefer the admin-curated gallery; fall back to Bokun photos, then the hero.
+  const gallery = tour.gallery.length
+    ? tour.gallery.map((g) => g.url)
+    : detail?.gallery?.length
+      ? detail.gallery
+      : [tour.image].filter(Boolean)
+
+  const galleryAlts = tour.gallery.length
+    ? tour.gallery.map((g) => g.alt)
+    : undefined
 
   const heroImage = gallery[0] || tour.image || "/placeholder.svg"
 
@@ -233,7 +240,11 @@ export default async function TourPage({
             <div className="flex flex-col gap-12">
               {/* Gallery */}
               {gallery.length > 0 && (
-                <TourGallery images={gallery} title={tour.title} />
+                <TourGallery
+                  images={gallery}
+                  alts={galleryAlts}
+                  title={tour.title}
+                />
               )}
 
               {/* About */}

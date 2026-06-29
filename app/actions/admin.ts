@@ -13,7 +13,11 @@ import {
 } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath, revalidateTag } from "next/cache"
-import { fetchTourTranslations, type TourTranslation } from "@/lib/bokun"
+import {
+  fetchTourTranslations,
+  fetchTourDetail,
+  type TourTranslation,
+} from "@/lib/bokun"
 import { autoCategorizeTours } from "@/lib/tours"
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
 import { generateText, Output } from "ai"
@@ -147,6 +151,11 @@ export type TourOverrideInput = {
   difficulty?: string | null
   groupSize?: string | null
   imageUrl?: string | null
+  /**
+   * Curated, ordered gallery. When provided (even as an empty array) the
+   * tour's stored gallery is replaced. Pass `undefined` to leave it untouched.
+   */
+  gallery?: { url: string; alt?: string | null }[]
   categoryIds?: number[]
   /**
    * Starting-location assignments. When provided (even as an empty array) the
@@ -164,6 +173,18 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
   const categoryIds = (input.categoryIds ?? []).filter(
     (id, i, arr) => Number.isFinite(id) && arr.indexOf(id) === i,
   )
+  // Normalize the curated gallery, when provided. Empty array clears it.
+  let gallerySet: { gallery: string | null } | undefined
+  if (input.gallery !== undefined) {
+    const clean = input.gallery
+      .map((g) => ({
+        url: typeof g.url === "string" ? g.url.trim() : "",
+        ...(g.alt?.trim() ? { alt: g.alt.trim() } : {}),
+      }))
+      .filter((g) => g.url)
+    gallerySet = { gallery: clean.length > 0 ? JSON.stringify(clean) : null }
+  }
+
   await upsertOverride(bokunId, {
     title: input.title?.trim() || null,
     excerpt: input.excerpt?.trim() || null,
@@ -173,6 +194,7 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     difficulty: input.difficulty?.trim() || null,
     groupSize: input.groupSize?.trim() || null,
     imageUrl: input.imageUrl?.trim() || null,
+    ...(gallerySet ?? {}),
     // Keep the legacy single-category column in sync with the first selection.
     categoryId: categoryIds[0] ?? null,
     tourType: input.tourType === "multi-day" ? "multi-day" : "day",
@@ -356,6 +378,13 @@ export async function refreshBokun() {
   const result = await autoCategorizeTours()
   revalidateAll()
   return result
+}
+
+/** Original photo URLs for a tour from Bokun, for the Images tab (admin only). */
+export async function getBokunGallery(bokunId: string): Promise<string[]> {
+  await requireAuth()
+  const detail = await fetchTourDetail(bokunId)
+  return detail?.gallery ?? []
 }
 
 /** Original Bokun texts for a tour in every published language (admin only). */
