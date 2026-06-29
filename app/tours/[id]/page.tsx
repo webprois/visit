@@ -4,6 +4,8 @@ import Image from "next/image"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { BookingForm } from "@/components/booking-form"
+import { TourGallery } from "@/components/tour/tour-gallery"
+import { TourMapSection } from "@/components/tour/tour-map-section"
 import { getFullTour, getRelatedTours } from "@/lib/tours"
 import { fetchBookableSlots, fetchTourExtras, fetchTourPickup } from "@/lib/bokun"
 import { getLocale } from "@/lib/get-locale"
@@ -11,7 +13,6 @@ import { Price } from "@/components/price"
 import {
   Clock,
   MapPin,
-  Star,
   Users,
   Gauge,
   CalendarDays,
@@ -20,8 +21,9 @@ import {
   ChevronRight,
   Baby,
   Bus,
-  ShieldCheck,
-  Zap,
+  Info,
+  Backpack,
+  HeartPulse,
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -99,50 +101,69 @@ export default async function TourPage({
     .map((p) => p.trim())
     .filter(Boolean)
 
-  const infoItems = [
-    { icon: Clock, label: "Duration", value: durationText },
-    { icon: MapPin, label: "Location", value: locationText },
-    { icon: CalendarDays, label: "Type", value: TYPE_LABELS[tour.tourType] },
+  // Hero facts — compact, scannable tour basics.
+  const heroFacts = [
+    { icon: CalendarDays, text: TYPE_LABELS[tour.tourType] },
+    { icon: Clock, text: durationText },
+    detail?.hasPickup
+      ? { icon: Bus, text: `Pickup in ${locationText}` }
+      : { icon: MapPin, text: locationText },
     tour.groupSizeLabel
-      ? { icon: Users, label: "Group size", value: tour.groupSizeLabel }
+      ? { icon: Users, text: tour.groupSizeLabel }
       : null,
+  ].filter((x): x is { icon: typeof Clock; text: string } => Boolean(x))
+
+  // Quick-facts strip.
+  const quickFacts = [
+    { icon: Clock, label: "Duration", value: durationText },
+    { icon: CalendarDays, label: "Type", value: TYPE_LABELS[tour.tourType] },
     tour.difficultyLabel
       ? { icon: Gauge, label: "Difficulty", value: tour.difficultyLabel }
+      : null,
+    detail?.hasPickup
+      ? { icon: Bus, label: "Pickup", value: "Hotel pickup included" }
+      : { icon: MapPin, label: "Meeting point", value: locationText },
+    tour.groupSizeLabel
+      ? { icon: Users, label: "Group size", value: tour.groupSizeLabel }
       : null,
     detail?.minAge
       ? { icon: Baby, label: "Minimum age", value: `${detail.minAge} years` }
       : null,
-  ].filter((x): x is { icon: typeof Clock; label: string; value: string } => Boolean(x))
+  ].filter(
+    (x): x is { icon: typeof Clock; label: string; value: string } => Boolean(x),
+  )
 
-  // Data-driven "Good to know" highlights from real Bokun fields.
-  const highlights: { icon: typeof Check; text: string }[] = []
-  if (detail?.cancellationHours) {
-    highlights.push({
-      icon: ShieldCheck,
-      text: `Free cancellation up to ${detail.cancellationHours}h before`,
-    })
-  }
-  highlights.push({ icon: Zap, text: "Instant confirmation" })
-  if (detail?.hasPickup) {
-    highlights.push({ icon: Bus, text: "Hotel pickup available" })
-  }
-  if (detail?.minAge) {
-    highlights.push({ icon: Baby, text: `Minimum age ${detail.minAge} years` })
-  }
+  // Highlights — the places/experiences from the itinerary, else included items.
+  const highlightLabels = (() => {
+    const fromItinerary = Array.from(
+      new Set(
+        tour.itinerary
+          .map((s) => s.title?.trim())
+          .filter((t): t is string => Boolean(t)),
+      ),
+    )
+    if (fromItinerary.length >= 3) return fromItinerary.slice(0, 6)
+    return tour.includedItems.slice(0, 6)
+  })()
 
   const gallery = detail?.gallery?.length
     ? detail.gallery
     : [tour.image].filter(Boolean)
+
   const heroImage = gallery[0] || tour.image || "/placeholder.svg"
-  const extraPhotos = gallery.slice(1, 5)
+
+  const hasKnowBefore =
+    tour.goodToKnowItems.length > 0 ||
+    Boolean(detail?.requirements) ||
+    Boolean(detail?.attention)
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
-      <main className="flex-1">
+      <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
         <section className="relative">
-          <div className="relative h-[44vh] min-h-80 w-full overflow-hidden md:h-[56vh]">
+          <div className="relative h-[52vh] min-h-[26rem] w-full overflow-hidden md:h-[60vh]">
             <Image
               src={heroImage || "/placeholder.svg"}
               alt={tour.title}
@@ -151,12 +172,13 @@ export default async function TourPage({
               className="object-cover"
               sizes="100vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/10" />
+            {/* Stronger overlay for readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+            <div className="absolute inset-0 bg-background/20" />
           </div>
 
           <div className="absolute inset-x-0 bottom-0">
-            <div className="mx-auto max-w-7xl px-4 pb-8 md:px-6 md:pb-10">
-              {/* Breadcrumb */}
+            <div className="mx-auto max-w-7xl px-4 pb-8 md:px-6 md:pb-12">
               <nav
                 aria-label="Breadcrumb"
                 className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"
@@ -165,52 +187,71 @@ export default async function TourPage({
                   Home
                 </a>
                 <ChevronRight className="size-4" aria-hidden="true" />
-                <a href="/tours" className="transition-colors hover:text-foreground">
+                <a
+                  href="/tours"
+                  className="transition-colors hover:text-foreground"
+                >
                   Tours
                 </a>
                 <ChevronRight className="size-4" aria-hidden="true" />
                 <span className="truncate text-foreground">{tour.title}</span>
               </nav>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {tour.categoryNames.length > 0 ? (
-                  tour.categoryNames.map((name) => (
-                    <span
-                      key={name}
-                      className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground"
-                    >
-                      {name}
+              <div className="grid items-end gap-6 lg:grid-cols-[1fr_auto]">
+                {/* Left: title + subtitle + facts */}
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(tour.categoryNames.length > 0
+                      ? tour.categoryNames
+                      : [tour.tag]
+                    ).map((name) => (
+                      <span
+                        key={name}
+                        className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+
+                  <h1 className="mt-3 max-w-3xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-5xl">
+                    {tour.title}
+                  </h1>
+
+                  {tour.excerpt?.trim() && (
+                    <p className="mt-3 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+                      {tour.excerpt.trim()}
+                    </p>
+                  )}
+
+                  <ul className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-foreground">
+                    {heroFacts.map((f) => (
+                      <li key={f.text} className="flex items-center gap-1.5">
+                        <f.icon className="size-4 text-primary" aria-hidden="true" />
+                        {f.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Right: starting price + CTA */}
+                <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur md:min-w-64">
+                  <span className="text-xs text-muted-foreground">From</span>
+                  <p className="font-heading text-3xl font-extrabold text-foreground">
+                    <Price isk={priceAmount} fallback="Contact us" />
+                  </p>
+                  {priceAmount > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      per person
                     </span>
-                  ))
-                ) : (
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground">
-                    {tour.tag}
-                  </span>
-                )}
-                <span className="rounded-full bg-background/90 px-3 py-1 text-xs font-bold text-foreground shadow-sm backdrop-blur">
-                  {TYPE_LABELS[tour.tourType]}
-                </span>
-              </div>
-
-              <h1 className="mt-3 max-w-3xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-5xl">
-                {tour.title}
-              </h1>
-
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                {tour.rating > 0 && (
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
-                    {tour.rating.toFixed(1)}
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-4" aria-hidden="true" />
-                  {durationText}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4" aria-hidden="true" />
-                  {locationText}
-                </span>
+                  )}
+                  <a
+                    href="#book"
+                    className="mt-4 flex w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    Book now
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -218,227 +259,270 @@ export default async function TourPage({
 
         {/* Body */}
         <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
-          <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
-            {/* Left: details */}
-            <div>
-              {/* Quick facts */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {infoItems.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-xl border border-border bg-card p-4"
-                  >
-                    <item.icon className="size-5 text-primary" aria-hidden="true" />
-                    <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
-                      {item.label}
-                    </p>
-                    <p className="font-heading text-sm font-bold text-foreground">
-                      {item.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
+          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-12">
+            {/* Left: content */}
+            <div className="flex flex-col gap-12">
+              {/* Gallery */}
+              {gallery.length > 0 && (
+                <TourGallery images={gallery} title={tour.title} />
+              )}
 
-              {/* Description */}
-              <div className="mt-10">
-                <h2 className="font-heading text-2xl font-extrabold text-foreground">
+              {/* Highlights */}
+              {highlightLabels.length > 0 && (
+                <section aria-labelledby="highlights-heading">
+                  <h2
+                    id="highlights-heading"
+                    className="font-heading text-2xl font-extrabold text-foreground"
+                  >
+                    Tour highlights
+                  </h2>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {highlightLabels.map((label) => (
+                      <div
+                        key={label}
+                        className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                          <Check className="size-4" aria-hidden="true" />
+                        </span>
+                        <span className="text-sm font-medium leading-snug text-foreground">
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Quick facts strip */}
+              {quickFacts.length > 0 && (
+                <section aria-label="Tour facts">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {quickFacts.map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-xl border border-border bg-card p-4"
+                      >
+                        <item.icon
+                          className="size-5 text-primary"
+                          aria-hidden="true"
+                        />
+                        <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
+                          {item.label}
+                        </p>
+                        <p className="font-heading text-sm font-bold text-foreground">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* About */}
+              <section aria-labelledby="about-heading">
+                <h2
+                  id="about-heading"
+                  className="font-heading text-2xl font-extrabold text-foreground md:text-3xl"
+                >
                   About this tour
                 </h2>
                 {paragraphs.length > 0 ? (
-                  <div className="mt-4 flex flex-col gap-4 text-pretty leading-relaxed text-muted-foreground">
+                  <div className="mt-4 flex max-w-prose flex-col gap-4 text-pretty text-base leading-relaxed text-muted-foreground">
                     {paragraphs.map((p, i) => (
                       <p key={i}>{p}</p>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 leading-relaxed text-muted-foreground">
+                  <p className="mt-4 max-w-prose text-base leading-relaxed text-muted-foreground">
                     {tour.excerpt?.trim() ||
                       "Contact us for full details about this experience."}
                   </p>
                 )}
-              </div>
+              </section>
 
-              {/* Photo gallery */}
-              {extraPhotos.length > 0 && (
-                <div className="mt-10">
-                  <h2 className="font-heading text-2xl font-extrabold text-foreground">
-                    Photos
-                  </h2>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {extraPhotos.map((src, i) => (
-                      <div
-                        key={src}
-                        className="relative aspect-square overflow-hidden rounded-xl border border-border"
-                      >
-                        <Image
-                          src={src || "/placeholder.svg"}
-                          alt={`${tour.title} photo ${i + 2}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 50vw, 25vw"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Included / excluded */}
+              {/* What's included */}
               {(tour.includedItems.length || tour.excludedItems.length) ? (
-                <div className="mt-10 grid gap-8 sm:grid-cols-2">
-                  {tour.includedItems.length > 0 && (
-                    <div>
-                      <h2 className="font-heading text-xl font-extrabold text-foreground">
-                        What&apos;s included
-                      </h2>
-                      <ul className="mt-4 flex flex-col gap-3">
-                        {tour.includedItems.map((item, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
-                          >
-                            <Check
-                              className="mt-0.5 size-4 shrink-0 text-primary"
-                              aria-hidden="true"
-                            />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {tour.excludedItems.length > 0 && (
-                    <div>
-                      <h2 className="font-heading text-xl font-extrabold text-foreground">
-                        Not included
-                      </h2>
-                      <ul className="mt-4 flex flex-col gap-3">
-                        {tour.excludedItems.map((item, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
-                          >
-                            <X
-                              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <section aria-labelledby="included-heading">
+                  <h2
+                    id="included-heading"
+                    className="font-heading text-2xl font-extrabold text-foreground"
+                  >
+                    What&apos;s included
+                  </h2>
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    {tour.includedItems.length > 0 && (
+                      <div className="rounded-2xl border border-border bg-card p-5">
+                        <p className="font-heading text-sm font-bold text-foreground">
+                          Included
+                        </p>
+                        <ul className="mt-3 flex flex-col gap-2.5">
+                          {tour.includedItems.map((item, i) => (
+                            <li
+                              key={i}
+                              className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                            >
+                              <Check
+                                className="mt-0.5 size-4 shrink-0 text-primary"
+                                aria-hidden="true"
+                              />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {tour.excludedItems.length > 0 && (
+                      <div className="rounded-2xl border border-border bg-card p-5">
+                        <p className="font-heading text-sm font-bold text-foreground">
+                          Not included
+                        </p>
+                        <ul className="mt-3 flex flex-col gap-2.5">
+                          {tour.excludedItems.map((item, i) => (
+                            <li
+                              key={i}
+                              className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                            >
+                              <X
+                                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                aria-hidden="true"
+                              />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
               ) : null}
 
-              {/* Itinerary */}
+              {/* Itinerary timeline */}
               {tour.itinerary.length > 0 && (
-                <div className="mt-10">
-                  <h2 className="font-heading text-2xl font-extrabold text-foreground">
+                <section aria-labelledby="itinerary-heading">
+                  <h2
+                    id="itinerary-heading"
+                    className="font-heading text-2xl font-extrabold text-foreground"
+                  >
                     Itinerary
                   </h2>
-                  <ol className="mt-4 flex flex-col gap-4">
+                  <ol className="relative mt-6 flex flex-col gap-7 border-l border-border pl-7">
                     {tour.itinerary.map((step, i) => (
-                      <li key={i} className="flex gap-4">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                          {i + 1}
-                        </span>
-                        <div>
-                          {step.title && (
-                            <p className="font-heading font-bold text-foreground">
-                              {step.title}
-                            </p>
-                          )}
-                          {step.body && (
-                            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                              {step.body}
-                            </p>
-                          )}
-                        </div>
+                      <li key={i} className="relative">
+                        <span
+                          className="absolute -left-[35px] top-1 flex size-4 items-center justify-center rounded-full bg-primary ring-4 ring-background"
+                          aria-hidden="true"
+                        />
+                        {step.title && (
+                          <p className="font-heading font-bold text-foreground">
+                            {step.title}
+                          </p>
+                        )}
+                        {step.body && (
+                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                            {step.body}
+                          </p>
+                        )}
                       </li>
                     ))}
                   </ol>
-                </div>
+                </section>
               )}
 
-              {/* Know before you go / requirements */}
-              {(tour.goodToKnowItems.length ||
-                detail?.requirements ||
-                detail?.attention) ? (
-                <div className="mt-10">
-                  <h2 className="font-heading text-2xl font-extrabold text-foreground">
+              {/* Know before you go */}
+              {hasKnowBefore && (
+                <section aria-labelledby="know-heading">
+                  <h2
+                    id="know-heading"
+                    className="font-heading text-2xl font-extrabold text-foreground"
+                  >
                     Know before you go
                   </h2>
-                  {tour.goodToKnowItems.length > 0 && (
-                    <ul className="mt-4 flex flex-col gap-3">
-                      {tour.goodToKnowItems.map((item, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
-                        >
-                          <Check
-                            className="mt-0.5 size-4 shrink-0 text-primary"
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    {detail?.requirements && (
+                      <div className="rounded-2xl border border-border bg-card p-5">
+                        <div className="flex items-center gap-2">
+                          <Backpack
+                            className="size-5 text-primary"
                             aria-hidden="true"
                           />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {detail?.requirements && (
-                    <p className="mt-4 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
-                      {detail.requirements}
-                    </p>
-                  )}
-                  {detail?.attention && (
-                    <p className="mt-4 rounded-xl border border-border bg-secondary/40 p-4 text-pretty text-sm leading-relaxed text-muted-foreground">
-                      {detail.attention}
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {/* Right: booking card */}
-            <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <span className="text-xs text-muted-foreground">From</span>
-                    <p className="font-heading text-3xl font-extrabold text-foreground">
-                      <Price isk={priceAmount} />
-                    </p>
-                    {priceAmount > 0 && (
-                      <span className="text-xs text-muted-foreground">per person</span>
+                          <p className="font-heading text-sm font-bold text-foreground">
+                            What to bring
+                          </p>
+                        </div>
+                        <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
+                          {detail.requirements}
+                        </p>
+                      </div>
+                    )}
+                    {tour.goodToKnowItems.length > 0 && (
+                      <div className="rounded-2xl border border-border bg-card p-5">
+                        <div className="flex items-center gap-2">
+                          <Info
+                            className="size-5 text-primary"
+                            aria-hidden="true"
+                          />
+                          <p className="font-heading text-sm font-bold text-foreground">
+                            Good to know
+                          </p>
+                        </div>
+                        <ul className="mt-3 flex flex-col gap-2.5">
+                          {tour.goodToKnowItems.map((item, i) => (
+                            <li
+                              key={i}
+                              className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                            >
+                              <Check
+                                className="mt-0.5 size-4 shrink-0 text-primary"
+                                aria-hidden="true"
+                              />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {detail?.attention && (
+                      <div className="rounded-2xl border border-border bg-secondary/40 p-5 sm:col-span-2">
+                        <div className="flex items-center gap-2">
+                          <HeartPulse
+                            className="size-5 text-primary"
+                            aria-hidden="true"
+                          />
+                          <p className="font-heading text-sm font-bold text-foreground">
+                            Important information
+                          </p>
+                        </div>
+                        <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
+                          {detail.attention}
+                        </p>
+                      </div>
                     )}
                   </div>
-                  {tour.rating > 0 && (
-                    <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                      <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
-                      {tour.rating.toFixed(1)}
-                    </span>
-                  )}
-                </div>
+                </section>
+              )}
 
-                <BookingForm
-                  bokunId={tour.bokunId}
-                  slots={slots}
-                  extras={extras}
-                  pickup={pickup}
-                  fallbackPhone="+354 419 1600"
+              {/* Route map */}
+              {detail?.lat != null && detail?.lng != null && (
+                <TourMapSection
+                  lat={detail.lat}
+                  lng={detail.lng}
+                  location={locationText}
                 />
+              )}
+            </div>
 
-                {highlights.length > 0 && (
-                  <ul className="mt-5 flex flex-col gap-2 border-t border-border pt-5 text-sm text-muted-foreground">
-                    {highlights.map((h, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <h.icon className="size-4 text-primary" aria-hidden="true" />
-                        {h.text}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+            {/* Right: booking panel */}
+            <aside id="book" className="lg:sticky lg:top-24 lg:self-start">
+              <BookingForm
+                bokunId={tour.bokunId}
+                slots={slots}
+                extras={extras}
+                pickup={pickup}
+                fallbackPhone="+354 419 1600"
+                startingPriceIsk={priceAmount}
+                cancellationHours={detail?.cancellationHours ?? null}
+              />
             </aside>
           </div>
         </section>
@@ -448,7 +532,7 @@ export default async function TourPage({
           <section className="border-t border-border bg-secondary/40 py-14">
             <div className="mx-auto max-w-7xl px-4 md:px-6">
               <h2 className="font-heading text-2xl font-extrabold text-foreground md:text-3xl">
-                You might also like
+                Explore similar adventures
               </h2>
               <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((t) => (
