@@ -24,6 +24,11 @@ import {
   Search,
   SlidersHorizontal,
   Calendar,
+  User,
+  ChevronUp,
+  ChevronDown,
+  Minus,
+  Plus,
   X,
 } from "lucide-react"
 
@@ -148,6 +153,80 @@ export function ToursBrowser({
       window.removeEventListener("resize", onResize)
     }
   }, [dateOpen])
+
+  // Current travelers context (only affects availability when dates are set).
+  const urlAdults = Math.max(1, Number(searchParams.get("adults")) || 1)
+  const urlChildren = Math.max(0, Number(searchParams.get("children")) || 0)
+  const urlPax = urlAdults + urlChildren
+  const travelersLabel = `${urlPax} ${urlPax === 1 ? "traveler" : "travelers"}`
+
+  // Travelers popover (mirrors the home search widget). Portaled like the
+  // calendar so it isn't clipped by the sidebar's scroll container. We keep a
+  // local draft while stepping and only commit to the URL when it closes, so
+  // the popover doesn't re-mount (and close) on every +/- tap.
+  const [paxOpen, setPaxOpen] = useState(false)
+  const paxBtnRef = useRef<HTMLButtonElement>(null)
+  const paxPopRef = useRef<HTMLDivElement>(null)
+  const [paxPos, setPaxPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  })
+  const [draftAdults, setDraftAdults] = useState(urlAdults)
+  const [draftChildren, setDraftChildren] = useState(urlChildren)
+
+  function openPaxPopover() {
+    const btn = paxBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      const width = Math.min(window.innerWidth - 24, 320)
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setPaxPos({ top: r.bottom + 8, left })
+    }
+    setDraftAdults(urlAdults)
+    setDraftChildren(urlChildren)
+    setPaxOpen((o) => !o)
+  }
+
+  // Commit the draft party size to the URL, only navigating when it changed.
+  function commitPax(adults: number, children: number) {
+    if (adults === urlAdults && children === urlChildren) return
+    const params = new URLSearchParams(searchParams.toString())
+    if (adults > 1) params.set("adults", String(adults))
+    else params.delete("adults")
+    if (children > 0) params.set("children", String(children))
+    else params.delete("children")
+    router.push(`/tours?${params.toString()}`)
+  }
+
+  function closePax() {
+    setPaxOpen(false)
+    commitPax(draftAdults, draftChildren)
+  }
+
+  useEffect(() => {
+    if (!paxOpen) return
+    function onPointer(e: PointerEvent) {
+      const t = e.target as Node
+      if (!paxBtnRef.current?.contains(t) && !paxPopRef.current?.contains(t)) {
+        closePax()
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closePax()
+    }
+    function onResize() {
+      closePax()
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onResize)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paxOpen, draftAdults, draftChildren])
 
   const [query, setQuery] = useState("")
   // Selected category ids (multi-select). Empty = no activity filter.
@@ -283,7 +362,17 @@ export function ToursBrowser({
     setActivitySearch("")
     setLocationSearch("")
     setPriceRange([priceBounds.min, priceBounds.max])
-    if (hasDateSearch) clearDates()
+    setDraftAdults(1)
+    setDraftChildren(0)
+    // Remove every URL-driven search param (dates + travelers) in one push.
+    if (hasDateSearch || urlPax > 1) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete("from")
+      params.delete("to")
+      params.delete("adults")
+      params.delete("children")
+      router.push(`/tours?${params.toString()}`)
+    }
   }
 
   const activeFilterCount =
@@ -292,7 +381,8 @@ export function ToursBrowser({
     activeDurations.size +
     activeDifficulties.size +
     (priceActive ? 1 : 0) +
-    (hasDateSearch ? 1 : 0)
+    (hasDateSearch ? 1 : 0) +
+    (urlPax > 1 ? 1 : 0)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -586,6 +676,64 @@ export function ToursBrowser({
               Clear dates
             </button>
           )}
+        </div>
+      </FilterSection>
+
+      {/* Travelers (affects availability when dates are set) */}
+      <FilterSection title="Travelers">
+        <div className="flex flex-col gap-2">
+          <button
+            ref={paxBtnRef}
+            type="button"
+            onClick={openPaxPopover}
+            aria-expanded={paxOpen}
+            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
+          >
+            <span className="flex items-center gap-2 text-sm text-foreground">
+              <User className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              {travelersLabel}
+            </span>
+            {paxOpen ? (
+              <ChevronUp
+                className="size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+            ) : (
+              <ChevronDown
+                className="size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+
+          {paxOpen &&
+            createPortal(
+              <div
+                ref={paxPopRef}
+                style={{
+                  position: "fixed",
+                  top: paxPos.top,
+                  left: paxPos.left,
+                  width: "min(90vw, 20rem)",
+                }}
+                className="z-50 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
+              >
+                <Stepper
+                  label="Adults"
+                  value={draftAdults}
+                  min={1}
+                  onChange={setDraftAdults}
+                />
+                <div className="my-3 h-px bg-border" />
+                <Stepper
+                  label="Children"
+                  value={draftChildren}
+                  min={0}
+                  onChange={setDraftChildren}
+                />
+              </div>,
+              document.body,
+            )}
         </div>
       </FilterSection>
 
@@ -991,5 +1139,45 @@ function Chip({
     >
       {children}
     </button>
+  )
+}
+
+function Stepper({
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-base font-medium text-foreground">{label}</span>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={value <= min}
+          aria-label={`Decrease ${label.toLowerCase()}`}
+          className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Minus className="size-4" aria-hidden="true" />
+        </button>
+        <span className="w-5 text-center text-base font-semibold tabular-nums text-foreground">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          aria-label={`Increase ${label.toLowerCase()}`}
+          className="flex size-9 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10"
+        >
+          <Plus className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
   )
 }
