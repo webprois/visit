@@ -105,9 +105,7 @@ export default async function TourPage({
   const heroFacts = [
     { icon: CalendarDays, text: TYPE_LABELS[tour.tourType] },
     { icon: Clock, text: durationText },
-    detail?.hasPickup
-      ? { icon: Bus, text: `Pickup in ${locationText}` }
-      : { icon: MapPin, text: locationText },
+    { icon: MapPin, text: locationText },
     tour.groupSizeLabel
       ? { icon: Users, text: tour.groupSizeLabel }
       : null,
@@ -132,19 +130,6 @@ export default async function TourPage({
   ].filter(
     (x): x is { icon: typeof Clock; label: string; value: string } => Boolean(x),
   )
-
-  // Highlights — the places/experiences from the itinerary, else included items.
-  const highlightLabels = (() => {
-    const fromItinerary = Array.from(
-      new Set(
-        tour.itinerary
-          .map((s) => s.title?.trim())
-          .filter((t): t is string => Boolean(t)),
-      ),
-    )
-    if (fromItinerary.length >= 3) return fromItinerary.slice(0, 6)
-    return tour.includedItems.slice(0, 6)
-  })()
 
   const gallery = detail?.gallery?.length
     ? detail.gallery
@@ -265,33 +250,6 @@ export default async function TourPage({
               {/* Gallery */}
               {gallery.length > 0 && (
                 <TourGallery images={gallery} title={tour.title} />
-              )}
-
-              {/* Highlights */}
-              {highlightLabels.length > 0 && (
-                <section aria-labelledby="highlights-heading">
-                  <h2
-                    id="highlights-heading"
-                    className="font-heading text-2xl font-extrabold text-foreground"
-                  >
-                    Tour highlights
-                  </h2>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {highlightLabels.map((label) => (
-                      <div
-                        key={label}
-                        className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-secondary/50"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                          <Check className="size-4" aria-hidden="true" />
-                        </span>
-                        <span className="text-sm font-medium leading-snug text-foreground">
-                          {label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
               )}
 
               {/* Quick facts strip */}
@@ -440,7 +398,14 @@ export default async function TourPage({
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {detail?.requirements && (
-                      <div className="rounded-2xl border border-border bg-card p-5">
+                      <div
+                        className={
+                          "rounded-2xl border border-border bg-card p-5" +
+                          (tour.goodToKnowItems.length === 0
+                            ? " sm:col-span-2"
+                            : "")
+                        }
+                      >
                         <div className="flex items-center gap-2">
                           <Backpack
                             className="size-5 text-primary"
@@ -456,7 +421,12 @@ export default async function TourPage({
                       </div>
                     )}
                     {tour.goodToKnowItems.length > 0 && (
-                      <div className="rounded-2xl border border-border bg-card p-5">
+                      <div
+                        className={
+                          "rounded-2xl border border-border bg-card p-5" +
+                          (!detail?.requirements ? " sm:col-span-2" : "")
+                        }
+                      >
                         <div className="flex items-center gap-2">
                           <Info
                             className="size-5 text-primary"
@@ -513,7 +483,10 @@ export default async function TourPage({
             </div>
 
             {/* Right: booking panel */}
-            <aside id="book" className="lg:sticky lg:top-24 lg:self-start">
+            <aside
+              id="book"
+              className="scroll-mt-24 pb-24 lg:self-start lg:pb-0"
+            >
               <BookingForm
                 bokunId={tour.bokunId}
                 slots={slots}

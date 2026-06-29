@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import {
   CalendarDays,
   Clock,
@@ -11,7 +11,6 @@ import {
   Phone,
   Plus,
   ShieldCheck,
-  X,
   Zap,
 } from "lucide-react"
 import { Price } from "@/components/price"
@@ -211,7 +210,6 @@ export function BookingForm({
   const [phoneCode, setPhoneCode] = useState("+354")
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const totalPax = lines.reduce((n, l) => n + (qtyByLine[l.id] ?? 0), 0)
@@ -245,21 +243,6 @@ export function BookingForm({
     !slot || slot.unlimited ? Number.POSITIVE_INFINITY : slot.seats - totalPax
   const atCapacity = seatsLeft <= 0
 
-  // Lock body scroll while the checkout overlay is open.
-  useEffect(() => {
-    if (!checkoutOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setCheckoutOpen(false)
-    }
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.body.style.overflow = prev
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [checkoutOpen])
-
   // Functional delta update so rapid clicks accumulate correctly.
   function bumpQty(lineId: number, delta: number) {
     setQtyByLine((prev) => ({
@@ -286,28 +269,6 @@ export function BookingForm({
     setFirstByGuest({})
     setLastByGuest({})
     setError(null)
-  }
-
-  /** Validate the date + participant selection, then open the checkout step. */
-  function openCheckout() {
-    setError(null)
-    if (!slot) {
-      setError("Please choose a date.")
-      return
-    }
-    if (totalPax <= 0) {
-      setError("Please add at least one participant.")
-      return
-    }
-    if (totalPax < slot.minPax) {
-      setError(`This tour requires at least ${slot.minPax} participants.`)
-      return
-    }
-    if (!slot.unlimited && totalPax > slot.seats) {
-      setError(`Only ${slot.seats} seats left for this date.`)
-      return
-    }
-    setCheckoutOpen(true)
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -559,59 +520,6 @@ export function BookingForm({
 
   return (
     <>
-      {/* ---------- Desktop sticky panel (step 1) ---------- */}
-      <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-sm lg:block">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            {showFrom && (
-              <span className="text-xs text-muted-foreground">From</span>
-            )}
-            <p className="font-heading text-3xl font-extrabold text-foreground">
-              <Price
-                isk={headlinePriceIsk}
-                fallback="Select participants"
-              />
-            </p>
-            <span className="text-xs text-muted-foreground">
-              {totalPax > 0 ? "total price" : "per person"}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-5">{renderSelection()}</div>
-
-        {totalPax <= 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Select participants to see final pricing.
-          </p>
-        )}
-
-        {error && !checkoutOpen && (
-          <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        )}
-
-        <Button
-          type="button"
-          size="lg"
-          onClick={openCheckout}
-          disabled={totalPax <= 0}
-          className="mt-4 w-full rounded-full"
-        >
-          {totalPax <= 0 ? "Select participants to continue" : "Book now"}
-        </Button>
-
-        <ul className="mt-5 grid grid-cols-1 gap-2.5 border-t border-border pt-5 text-sm text-muted-foreground">
-          {trust.map((t) => (
-            <li key={t.text} className="flex items-center gap-2">
-              <t.icon className="size-4 text-primary" aria-hidden="true" />
-              {t.text}
-            </li>
-          ))}
-        </ul>
-      </div>
-
       {/* ---------- Mobile fixed booking bar ---------- */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="min-w-0">
@@ -627,51 +535,45 @@ export function BookingForm({
         <Button
           type="button"
           size="lg"
-          onClick={() => setCheckoutOpen(true)}
+          onClick={() =>
+            document
+              .getElementById("book")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
           className="shrink-0 rounded-full"
         >
           Book now
         </Button>
       </div>
 
-      {/* ---------- Checkout overlay (step 2) ---------- */}
-      {checkoutOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Complete your booking"
-          className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-background/80 backdrop-blur-sm sm:items-start sm:p-6"
-          onClick={() => setCheckoutOpen(false)}
-        >
-          <form
-            onSubmit={onSubmit}
-            onClick={(e) => e.stopPropagation()}
-            className="relative flex w-full max-w-lg flex-col gap-5 rounded-t-2xl border border-border bg-card p-5 shadow-xl sm:my-auto sm:rounded-2xl sm:p-6"
-          >
-            <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex items-start justify-between gap-3 rounded-t-2xl border-b border-border bg-card px-5 pb-4 pt-5 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
-              <div>
-                <h2 className="font-heading text-xl font-extrabold text-foreground">
-                  Complete your booking
-                </h2>
-                {slot && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {formatDate(slot.date)}
-                    {slot.startTime ? ` · ${slot.startTime}` : ""}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setCheckoutOpen(false)}
-                aria-label="Close"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
+      {/* ---------- Booking form (inline, single step) ---------- */}
+      <form
+        onSubmit={onSubmit}
+        className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-sm"
+      >
+            <div>
+              <p className="font-heading text-xl font-extrabold text-foreground">
+                Complete your booking
+              </p>
+              {showFrom && (
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  From{" "}
+                  <span className="font-semibold text-foreground">
+                    <Price isk={headlinePriceIsk} />
+                  </span>{" "}
+                  per person
+                </span>
+              )}
             </div>
 
-            {/* Date + participants — only on mobile, where step 1 lives here. */}
-            <div className="lg:hidden">{renderSelection()}</div>
+            {/* Date + participants */}
+            {renderSelection()}
+
+            {totalPax <= 0 && (
+              <p className="-mt-1 text-xs text-muted-foreground">
+                Select participants to see final pricing.
+              </p>
+            )}
 
             {/* Add-ons */}
             {extras.length > 0 && (
@@ -1000,9 +902,16 @@ export function BookingForm({
               Secure payment via Teya. You won&apos;t be charged until you
               confirm.
             </p>
-          </form>
-        </div>
-      )}
+
+            <ul className="grid grid-cols-1 gap-2.5 border-t border-border pt-5 text-sm text-muted-foreground">
+              {trust.map((t) => (
+                <li key={t.text} className="flex items-center gap-2">
+                  <t.icon className="size-4 text-primary" aria-hidden="true" />
+                  {t.text}
+                </li>
+              ))}
+            </ul>
+      </form>
     </>
   )
 }
