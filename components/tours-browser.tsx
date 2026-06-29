@@ -1005,7 +1005,7 @@ export function ToursBrowser({
                     </span>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                  <div className="mt-5 flex items-center justify-between pt-4">
                     <div>
                       <span className="text-xs text-muted-foreground">From</span>
                       <p className="font-heading text-xl font-extrabold text-foreground">
@@ -1039,7 +1039,7 @@ function FilterSection({
   children: React.ReactNode
 }) {
   return (
-    <div className="border-t border-border pt-5 first:border-t-0 first:pt-0">
+    <div>
       <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-wide text-foreground">
         {title}
       </h3>
