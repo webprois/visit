@@ -7,7 +7,7 @@ export function SiteFooter() {
     <footer className="border-t border-border bg-background">
       {/* CTA */}
       <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground ring-1 ring-accent/30 md:flex-row md:items-center md:justify-between md:p-12">
+        <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground md:flex-row md:items-center md:justify-between md:p-12">
           <div>
             <h2 className="text-balance font-heading text-2xl font-extrabold md:text-3xl">
               Start your Icelandic adventure today
