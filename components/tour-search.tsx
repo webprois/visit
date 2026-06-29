@@ -142,7 +142,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
   return (
     <div
       ref={rootRef}
-      className="relative z-40 w-full rounded-2xl border border-border/60 bg-card/95 p-4 shadow-xl backdrop-blur md:p-5"
+          className="relative z-40 w-full rounded-2xl border border-border/60 bg-[#181F2D]/95 p-4 shadow-xl backdrop-blur md:p-5"
     >
       <div className="grid gap-3 md:grid-cols-[1.3fr_1.3fr_1fr_auto]">
         {/* Experience */}
