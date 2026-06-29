@@ -49,6 +49,12 @@ const PHONE_CODES: { code: string; label: string }[] = [
   { code: "+55", label: "+55 Brazil" },
 ]
 
+// Visit Travel Iceland's standard day-trip / activity cancellation policy
+// (https://visit.is/terms-and-conditions/). Partner tours may differ per the
+// operator's terms shown on the ticket.
+const TERMS_URL = "https://visit.is/terms-and-conditions/"
+const CANCELLATION_SUMMARY = "Free cancellation up to 72h before"
+
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
 type PriceLine = { id: number; title: string; minAge: number; tiers: Tier[] }
@@ -159,7 +165,6 @@ export function BookingForm({
   pickup = null,
   fallbackPhone,
   startingPriceIsk = 0,
-  cancellationHours = null,
 }: {
   bokunId: string
   slots: BookingSlot[]
@@ -168,11 +173,13 @@ export function BookingForm({
   fallbackPhone: string
   /** "From" price shown before any participants are selected. */
   startingPriceIsk?: number
-  /** Free-cancellation window, used for the trust badge copy. */
-  cancellationHours?: number | null
 }) {
   const pickupPlaces = pickup?.pickupPlaces ?? []
   const dropoffPlaces = pickup?.dropoffPlaces ?? []
+  // Bokun often returns no separate drop-off list even when pickup is offered;
+  // fall back to the pickup places so guests can still choose where to be
+  // dropped off (defaulting to "same as pickup").
+  const dropoffOptions = dropoffPlaces.length > 0 ? dropoffPlaces : pickupPlaces
   const pickupRequired = Boolean(pickup?.required) && pickupPlaces.length > 0
   // Unique sorted dates that have at least one slot.
   const dates = useMemo(() => {
@@ -475,17 +482,7 @@ export function BookingForm({
 
   const trust: { icon: typeof Zap; text: string }[] = [
     { icon: Zap, text: "Instant confirmation" },
-    {
-      icon: ShieldCheck,
-      text:
-        cancellationHours && cancellationHours <= 24 * 30
-          ? `Free cancellation up to ${
-              cancellationHours % 24 === 0
-                ? `${cancellationHours / 24} days`
-                : `${cancellationHours}h`
-            } before`
-          : "Free cancellation",
-    },
+    { icon: ShieldCheck, text: CANCELLATION_SUMMARY },
     { icon: Compass, text: "Local expert guide" },
     { icon: Lock, text: "Secure booking" },
   ]
@@ -818,7 +815,7 @@ export function BookingForm({
                   </div>
                 )}
 
-                {dropoffPlaces.length > 0 && (
+                {dropoffOptions.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="booking-dropoff">
                       Where should we drop you off?
@@ -829,8 +826,8 @@ export function BookingForm({
                       onChange={(e) => setDropoffId(e.target.value)}
                       className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      <option value="">I don&apos;t need drop-off</option>
-                      {dropoffPlaces.map((p) => (
+                      <option value="">Same as pickup location</option>
+                      {dropoffOptions.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.title}
                         </option>
@@ -926,18 +923,13 @@ export function BookingForm({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-phone">
-                  Phone
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
+                <Label htmlFor="booking-phone">Phone</Label>
                 <div className="flex gap-2">
                   <select
                     value={phoneCode}
                     onChange={(e) => setPhoneCode(e.target.value)}
                     aria-label="Phone area code"
-                    className="h-11 w-28 shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-11 w-36 shrink-0 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {PHONE_CODES.map((c) => (
                       <option key={c.code + c.label} value={c.code}>
@@ -1017,9 +1009,20 @@ export function BookingForm({
               )}
             </div>
 
-            {slot?.cancellation && (
-              <p className="text-xs text-muted-foreground">{slot.cancellation}</p>
-            )}
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+              <p>
+                Free cancellation up to 72 hours before departure. 20% fee
+                within 48–72 hours; no refund within 48 hours.
+              </p>
+              <a
+                href={TERMS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                See full cancellation terms
+              </a>
+            </div>
               </>
             )}
 
