@@ -1,7 +1,19 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
-import { CalendarDays, Clock, Loader2, Minus, Phone, Plus } from "lucide-react"
+import { useEffect, useMemo, useState, useTransition } from "react"
+import {
+  CalendarDays,
+  Clock,
+  Compass,
+  Loader2,
+  Lock,
+  Minus,
+  Phone,
+  Plus,
+  ShieldCheck,
+  X,
+  Zap,
+} from "lucide-react"
 import { Price } from "@/components/price"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -146,12 +158,18 @@ export function BookingForm({
   extras = [],
   pickup = null,
   fallbackPhone,
+  startingPriceIsk = 0,
+  cancellationHours = null,
 }: {
   bokunId: string
   slots: BookingSlot[]
   extras?: BookingExtra[]
   pickup?: BookingPickup | null
   fallbackPhone: string
+  /** "From" price shown before any participants are selected. */
+  startingPriceIsk?: number
+  /** Free-cancellation window, used for the trust badge copy. */
+  cancellationHours?: number | null
 }) {
   const pickupPlaces = pickup?.pickupPlaces ?? []
   const dropoffPlaces = pickup?.dropoffPlaces ?? []
@@ -193,6 +211,7 @@ export function BookingForm({
   const [phoneCode, setPhoneCode] = useState("+354")
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const totalPax = lines.reduce((n, l) => n + (qtyByLine[l.id] ?? 0), 0)
@@ -226,6 +245,21 @@ export function BookingForm({
     !slot || slot.unlimited ? Number.POSITIVE_INFINITY : slot.seats - totalPax
   const atCapacity = seatsLeft <= 0
 
+  // Lock body scroll while the checkout overlay is open.
+  useEffect(() => {
+    if (!checkoutOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setCheckoutOpen(false)
+    }
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = prev
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [checkoutOpen])
+
   // Functional delta update so rapid clicks accumulate correctly.
   function bumpQty(lineId: number, delta: number) {
     setQtyByLine((prev) => ({
@@ -252,6 +286,28 @@ export function BookingForm({
     setFirstByGuest({})
     setLastByGuest({})
     setError(null)
+  }
+
+  /** Validate the date + participant selection, then open the checkout step. */
+  function openCheckout() {
+    setError(null)
+    if (!slot) {
+      setError("Please choose a date.")
+      return
+    }
+    if (totalPax <= 0) {
+      setError("Please add at least one participant.")
+      return
+    }
+    if (totalPax < slot.minPax) {
+      setError(`This tour requires at least ${slot.minPax} participants.`)
+      return
+    }
+    if (!slot.unlimited && totalPax > slot.seats) {
+      setError(`Only ${slot.seats} seats left for this date.`)
+      return
+    }
+    setCheckoutOpen(true)
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -334,465 +390,619 @@ export function BookingForm({
     })
   }
 
-  // No availability at all → contact fallback.
+  // No availability at all → contact fallback (desktop card + mobile bar).
   if (slots.length === 0) {
     return (
-      <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4 text-sm leading-relaxed text-muted-foreground">
-        <p className="font-medium text-foreground">
-          Online booking isn&apos;t available for this tour.
-        </p>
-        <p className="mt-1">
-          Contact us and we&apos;ll arrange your booking directly.
-        </p>
-        <a
-          href={`tel:${fallbackPhone.replace(/\s/g, "")}`}
-          className="mt-3 inline-flex items-center gap-2 font-medium text-primary"
-        >
-          <Phone className="size-4" aria-hidden="true" />
-          {fallbackPhone}
-        </a>
+      <>
+        <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-sm lg:block">
+          <p className="font-heading text-lg font-bold text-foreground">
+            Online booking isn&apos;t available
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Contact us and we&apos;ll arrange your booking directly.
+          </p>
+          <a
+            href={`tel:${fallbackPhone.replace(/\s/g, "")}`}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <Phone className="size-4" aria-hidden="true" />
+            {fallbackPhone}
+          </a>
+        </div>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
+          <a
+            href={`tel:${fallbackPhone.replace(/\s/g, "")}`}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <Phone className="size-4" aria-hidden="true" />
+            Call to book — {fallbackPhone}
+          </a>
+        </div>
+      </>
+    )
+  }
+
+  const headlinePriceIsk = totalPax > 0 ? total : startingPriceIsk
+  const showFrom = totalPax <= 0 && startingPriceIsk > 0
+
+  const trust: { icon: typeof Zap; text: string }[] = [
+    { icon: Zap, text: "Instant confirmation" },
+    {
+      icon: ShieldCheck,
+      text: cancellationHours
+        ? `Free cancellation up to ${cancellationHours}h before`
+        : "Free cancellation",
+    },
+    { icon: Compass, text: "Local expert guide" },
+    { icon: Lock, text: "Secure booking" },
+  ]
+
+  /** Date + departure + participant steppers — reused in card and overlay. */
+  function renderSelection() {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="booking-date" className="flex items-center gap-1.5">
+            <CalendarDays className="size-4 text-primary" aria-hidden="true" />
+            Date
+          </Label>
+          <select
+            id="booking-date"
+            value={date}
+            onChange={(e) => onDateChange(e.target.value)}
+            className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {dates.map((d) => (
+              <option key={d} value={d}>
+                {formatDate(d)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {slotsForDate.length > 1 && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="booking-time" className="flex items-center gap-1.5">
+              <Clock className="size-4 text-primary" aria-hidden="true" />
+              Departure
+            </Label>
+            <select
+              id="booking-time"
+              value={slotId}
+              onChange={(e) => {
+                setSlotId(e.target.value)
+                setQtyByLine({})
+              }}
+              className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {slotsForDate.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.startTime || "Flexible"}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {slot && (
+          <div className="flex flex-col gap-3">
+            <Label className="flex items-center gap-1.5">
+              <Compass className="size-4 text-primary" aria-hidden="true" />
+              Participants
+            </Label>
+            {lines.map((line) => {
+              const qty = qtyByLine[line.id] ?? 0
+              const tier =
+                line.tiers.find(
+                  (t) => totalPax >= t.minPax && totalPax <= t.maxPax,
+                ) ?? line.tiers[0]
+              return (
+                <div
+                  key={line.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {line.title}
+                      {line.minAge > 0 && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          (age {line.minAge}+)
+                        </span>
+                      )}
+                    </p>
+                    {slot.pricedPerPerson && tier && (
+                      <p className="text-xs text-muted-foreground">
+                        <Price isk={tier.unitIsk} /> each
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => bumpQty(line.id, -1)}
+                      disabled={qty <= 0}
+                      aria-label={`Decrease ${line.title}`}
+                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                    >
+                      <Minus className="size-4" aria-hidden="true" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-semibold text-foreground">
+                      {qty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => bumpQty(line.id, 1)}
+                      disabled={atCapacity}
+                      aria-label={`Increase ${line.title}`}
+                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+            {!slot.unlimited && seatsLeft <= 5 && (
+              <p
+                className={`text-xs ${atCapacity ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {atCapacity
+                  ? "No more seats available for this departure."
+                  : `${seatsLeft} ${seatsLeft === 1 ? "seat" : "seats"} left for this departure.`}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-4">
-      {/* Date */}
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="booking-date" className="flex items-center gap-1.5">
-          <CalendarDays className="size-4 text-primary" aria-hidden="true" />
-          Date
-        </Label>
-        <select
-          id="booking-date"
-          value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {dates.map((d) => (
-            <option key={d} value={d}>
-              {formatDate(d)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Time (only when the date has more than one departure) */}
-      {slotsForDate.length > 1 && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-time" className="flex items-center gap-1.5">
-            <Clock className="size-4 text-primary" aria-hidden="true" />
-            Departure
-          </Label>
-          <select
-            id="booking-time"
-            value={slotId}
-            onChange={(e) => {
-              setSlotId(e.target.value)
-              setQtyByLine({})
-            }}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {slotsForDate.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.startTime || "Flexible"}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Participants / price lines */}
-      {slot && (
-        <div className="flex flex-col gap-3">
-          {lines.map((line) => {
-            const qty = qtyByLine[line.id] ?? 0
-            const tier =
-              line.tiers.find(
-                (t) => totalPax >= t.minPax && totalPax <= t.maxPax,
-              ) ?? line.tiers[0]
-            return (
-              <div
-                key={line.id}
-                className="flex items-center justify-between gap-3"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {line.title}
-                    {line.minAge > 0 && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        (age {line.minAge}+)
-                      </span>
-                    )}
-                  </p>
-                  {slot.pricedPerPerson && tier && (
-                    <p className="text-xs text-muted-foreground">
-                      <Price isk={tier.unitIsk} /> each
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => bumpQty(line.id, -1)}
-                    disabled={qty <= 0}
-                    aria-label={`Decrease ${line.title}`}
-                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
-                  >
-                    <Minus className="size-4" aria-hidden="true" />
-                  </button>
-                  <span className="w-6 text-center text-sm font-semibold text-foreground">
-                    {qty}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => bumpQty(line.id, 1)}
-                    disabled={atCapacity}
-                    aria-label={`Increase ${line.title}`}
-                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
-                  >
-                    <Plus className="size-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-          {!slot.unlimited && seatsLeft <= 5 && (
-            <p
-              className={`text-xs ${
-                atCapacity ? "text-destructive" : "text-muted-foreground"
-              }`}
-            >
-              {atCapacity
-                ? "No more seats available for this departure."
-                : `${seatsLeft} ${seatsLeft === 1 ? "seat" : "seats"} left for this departure.`}
+    <>
+      {/* ---------- Desktop sticky panel (step 1) ---------- */}
+      <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-sm lg:block">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            {showFrom && (
+              <span className="text-xs text-muted-foreground">From</span>
+            )}
+            <p className="font-heading text-3xl font-extrabold text-foreground">
+              <Price
+                isk={headlinePriceIsk}
+                fallback="Select participants"
+              />
             </p>
-          )}
-        </div>
-      )}
-
-      {/* Add-ons (hidden when none loaded) */}
-      {extras.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
-          <p className="text-sm font-semibold text-foreground">Add-ons</p>
-          {extras.map((extra) => {
-            const qty = qtyByAddon[extra.id] ?? 0
-            return (
-              <div
-                key={extra.id}
-                className="flex items-start justify-between gap-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {extra.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    <Price isk={extra.unitIsk} />
-                    {extra.pricedPerPerson ? " per person" : " each"}
-                  </p>
-                  {extra.information && (
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                      {extra.information}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAddonQty(extra, qty - 1)}
-                    disabled={qty <= 0}
-                    aria-label={`Decrease ${extra.title}`}
-                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
-                  >
-                    <Minus className="size-4" aria-hidden="true" />
-                  </button>
-                  <span className="w-6 text-center text-sm font-semibold text-foreground">
-                    {qty}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setAddonQty(extra, qty + 1)}
-                    aria-label={`Increase ${extra.title}`}
-                    className="flex size-8 items-center justify-center rounded-full border border-border text-foreground"
-                  >
-                    <Plus className="size-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Pickup / drop-off (hidden when no places are configured) */}
-      {pickupPlaces.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-foreground">Pick-up</p>
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              Included in price
+            <span className="text-xs text-muted-foreground">
+              {totalPax > 0 ? "total price" : "per person"}
             </span>
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="booking-pickup">
-              Where should we pick you up?
-              {pickupRequired && (
-                <span className="ml-0.5 text-destructive" aria-hidden="true">
-                  *
-                </span>
-              )}
-            </Label>
-            <select
-              id="booking-pickup"
-              value={pickupId}
-              onChange={(e) => {
-                setPickupId(e.target.value)
-                setRoomNumber("")
-              }}
-              required={pickupRequired}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">
-                {pickupRequired
-                  ? "Select a pickup location"
-                  : "I'll meet at the starting location"}
-              </option>
-              {pickupPlaces.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {needsRoomNumber && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="booking-room">Room number</Label>
-              <Input
-                id="booking-room"
-                value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}
-                placeholder="e.g. 204"
-              />
-            </div>
-          )}
-
-          {dropoffPlaces.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="booking-dropoff">
-                Where should we drop you off?
-              </Label>
-              <select
-                id="booking-dropoff"
-                value={dropoffId}
-                onChange={(e) => setDropoffId(e.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">I don&apos;t need drop-off</option>
-                {dropoffPlaces.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
-      )}
 
-      {/* Participant names (one per seat) */}
-      {guestSlots.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
-          <p className="text-sm font-semibold text-foreground">
-            {guestSlots.length === 1 ? "Participant name" : "Participant names"}
+        <div className="mt-5">{renderSelection()}</div>
+
+        {totalPax <= 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Select participants to see final pricing.
           </p>
-          {guestSlots.map((g) => (
-            <div key={g.key} className="flex flex-col gap-1.5">
-              <Label>{g.label}</Label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Input
-                  id={`guest-${g.key}-first`}
-                  value={firstByGuest[g.key] ?? ""}
-                  onChange={(e) =>
-                    setFirstByGuest((prev) => ({
-                      ...prev,
-                      [g.key]: e.target.value,
-                    }))
-                  }
-                  required
-                  autoComplete="off"
-                  placeholder="First name"
-                  aria-label={`${g.label} first name`}
-                />
-                <Input
-                  id={`guest-${g.key}-last`}
-                  value={lastByGuest[g.key] ?? ""}
-                  onChange={(e) =>
-                    setLastByGuest((prev) => ({
-                      ...prev,
-                      [g.key]: e.target.value,
-                    }))
-                  }
-                  required
-                  autoComplete="off"
-                  placeholder="Last name"
-                  aria-label={`${g.label} last name`}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        )}
 
-      {/* Customer details */}
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <p className="text-sm font-semibold text-foreground">Contact details</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="booking-first-name">First name</Label>
-            <Input
-              id="booking-first-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              autoComplete="given-name"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="booking-last-name">Last name</Label>
-            <Input
-              id="booking-last-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              autoComplete="family-name"
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-email">Email</Label>
-          <Input
-            id="booking-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-phone">Phone (optional)</Label>
-          <div className="flex gap-2">
-            <select
-              value={phoneCode}
-              onChange={(e) => setPhoneCode(e.target.value)}
-              aria-label="Phone area code"
-              className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              {PHONE_CODES.map((c) => (
-                <option key={c.code + c.label} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <Input
-              id="booking-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              autoComplete="tel-national"
-              placeholder="Phone number"
-              className="flex-1"
-            />
-          </div>
-        </div>
+        {error && !checkoutOpen && (
+          <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <Button
+          type="button"
+          size="lg"
+          onClick={openCheckout}
+          disabled={totalPax <= 0}
+          className="mt-4 w-full rounded-full"
+        >
+          {totalPax <= 0 ? "Select participants to continue" : "Book now"}
+        </Button>
+
+        <ul className="mt-5 grid grid-cols-1 gap-2.5 border-t border-border pt-5 text-sm text-muted-foreground">
+          {trust.map((t) => (
+            <li key={t.text} className="flex items-center gap-2">
+              <t.icon className="size-4 text-primary" aria-hidden="true" />
+              {t.text}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {/* Itemized order summary + total */}
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        {totalPax > 0 && (
-          <div className="flex flex-col gap-1.5">
-            {lines.map((line) => {
-              const qty = qtyByLine[line.id] ?? 0
-              if (qty <= 0) return null
-              const tier =
-                line.tiers.find(
-                  (t) => totalPax >= t.minPax && totalPax <= t.maxPax,
-                ) ?? line.tiers[0]
-              const lineTotal = slot?.pricedPerPerson
-                ? (tier?.unitIsk ?? 0) * qty
-                : (slot?.flatPriceIsk ?? 0)
-              return (
-                <div
-                  key={line.id}
-                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
-                >
-                  <span>
-                    {line.title}
-                    {slot?.pricedPerPerson && ` × ${qty}`}
-                  </span>
-                  <span className="text-foreground">
-                    <Price isk={lineTotal} />
-                  </span>
-                </div>
-              )
-            })}
-            {extras.map((extra) => {
-              const qty = qtyByAddon[extra.id] ?? 0
-              if (qty <= 0) return null
-              return (
-                <div
-                  key={extra.id}
-                  className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
-                >
-                  <span>
-                    {extra.title} × {qty}
-                  </span>
-                  <span className="text-foreground">
-                    <Price isk={extra.unitIsk * qty} />
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-sm text-muted-foreground">Total</span>
-          <span className="font-heading text-2xl font-extrabold text-foreground">
-            <Price isk={total} />
+      {/* ---------- Mobile fixed booking bar ---------- */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="min-w-0">
+          {showFrom && (
+            <span className="block text-[11px] leading-none text-muted-foreground">
+              From
+            </span>
+          )}
+          <span className="font-heading text-lg font-extrabold text-foreground">
+            <Price isk={headlinePriceIsk} fallback="Select dates" />
           </span>
         </div>
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => setCheckoutOpen(true)}
+          className="shrink-0 rounded-full"
+        >
+          Book now
+        </Button>
       </div>
 
-      {slot?.cancellation && (
-        <p className="text-xs text-muted-foreground">{slot.cancellation}</p>
-      )}
+      {/* ---------- Checkout overlay (step 2) ---------- */}
+      {checkoutOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Complete your booking"
+          className="fixed inset-0 z-[90] flex justify-center overflow-y-auto bg-background/80 backdrop-blur-sm sm:items-start sm:p-6"
+          onClick={() => setCheckoutOpen(false)}
+        >
+          <form
+            onSubmit={onSubmit}
+            onClick={(e) => e.stopPropagation()}
+            className="relative flex w-full max-w-lg flex-col gap-5 rounded-t-2xl border border-border bg-card p-5 shadow-xl sm:my-auto sm:rounded-2xl sm:p-6"
+          >
+            <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex items-start justify-between gap-3 rounded-t-2xl border-b border-border bg-card px-5 pb-4 pt-5 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
+              <div>
+                <h2 className="font-heading text-xl font-extrabold text-foreground">
+                  Complete your booking
+                </h2>
+                {slot && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatDate(slot.date)}
+                    {slot.startTime ? ` · ${slot.startTime}` : ""}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckoutOpen(false)}
+                aria-label="Close"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
 
-      {error && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
-      )}
+            {/* Date + participants — only on mobile, where step 1 lives here. */}
+            <div className="lg:hidden">{renderSelection()}</div>
 
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending || totalPax <= 0}
-        className="w-full rounded-full"
-      >
-        {pending ? (
-          <>
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            Redirecting to payment…
-          </>
-        ) : (
-          "Book now"
-        )}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">
-        Secure payment via Teya. You won&apos;t be charged until you confirm.
-      </p>
-    </form>
+            {/* Add-ons */}
+            {extras.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <p className="text-sm font-semibold text-foreground">Add-ons</p>
+                {extras.map((extra) => {
+                  const qty = qtyByAddon[extra.id] ?? 0
+                  return (
+                    <div
+                      key={extra.id}
+                      className="flex items-start justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {extra.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          <Price isk={extra.unitIsk} />
+                          {extra.pricedPerPerson ? " per person" : " each"}
+                        </p>
+                        {extra.information && (
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            {extra.information}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAddonQty(extra, qty - 1)}
+                          disabled={qty <= 0}
+                          aria-label={`Decrease ${extra.title}`}
+                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
+                        >
+                          <Minus className="size-4" aria-hidden="true" />
+                        </button>
+                        <span className="w-6 text-center text-sm font-semibold text-foreground">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAddonQty(extra, qty + 1)}
+                          aria-label={`Increase ${extra.title}`}
+                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground"
+                        >
+                          <Plus className="size-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Pickup / drop-off */}
+            {pickupPlaces.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Pick-up</p>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    Included in price
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="booking-pickup">
+                    Where should we pick you up?
+                    {pickupRequired && (
+                      <span className="ml-0.5 text-destructive" aria-hidden="true">
+                        *
+                      </span>
+                    )}
+                  </Label>
+                  <select
+                    id="booking-pickup"
+                    value={pickupId}
+                    onChange={(e) => {
+                      setPickupId(e.target.value)
+                      setRoomNumber("")
+                    }}
+                    required={pickupRequired}
+                    className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">
+                      {pickupRequired
+                        ? "Select a pickup location"
+                        : "I'll meet at the starting location"}
+                    </option>
+                    {pickupPlaces.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {needsRoomNumber && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="booking-room">Room number</Label>
+                    <Input
+                      id="booking-room"
+                      value={roomNumber}
+                      onChange={(e) => setRoomNumber(e.target.value)}
+                      placeholder="e.g. 204"
+                    />
+                  </div>
+                )}
+
+                {dropoffPlaces.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="booking-dropoff">
+                      Where should we drop you off?
+                    </Label>
+                    <select
+                      id="booking-dropoff"
+                      value={dropoffId}
+                      onChange={(e) => setDropoffId(e.target.value)}
+                      className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">I don&apos;t need drop-off</option>
+                      {dropoffPlaces.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Participant names */}
+            {guestSlots.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <p className="text-sm font-semibold text-foreground">
+                  {guestSlots.length === 1
+                    ? "Participant name"
+                    : "Participant names"}
+                </p>
+                {guestSlots.map((g) => (
+                  <div key={g.key} className="flex flex-col gap-1.5">
+                    <Label>{g.label}</Label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Input
+                        id={`guest-${g.key}-first`}
+                        value={firstByGuest[g.key] ?? ""}
+                        onChange={(e) =>
+                          setFirstByGuest((prev) => ({
+                            ...prev,
+                            [g.key]: e.target.value,
+                          }))
+                        }
+                        required
+                        autoComplete="off"
+                        placeholder="First name"
+                        aria-label={`${g.label} first name`}
+                      />
+                      <Input
+                        id={`guest-${g.key}-last`}
+                        value={lastByGuest[g.key] ?? ""}
+                        onChange={(e) =>
+                          setLastByGuest((prev) => ({
+                            ...prev,
+                            [g.key]: e.target.value,
+                          }))
+                        }
+                        required
+                        autoComplete="off"
+                        placeholder="Last name"
+                        aria-label={`${g.label} last name`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Contact details */}
+            <div className="flex flex-col gap-3 border-t border-border pt-4">
+              <p className="text-sm font-semibold text-foreground">
+                Contact details
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="booking-first-name">First name</Label>
+                  <Input
+                    id="booking-first-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="booking-last-name">Last name</Label>
+                  <Input
+                    id="booking-last-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="booking-email">Email</Label>
+                <Input
+                  id="booking-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="booking-phone">Phone (optional)</Label>
+                <div className="flex gap-2">
+                  <select
+                    value={phoneCode}
+                    onChange={(e) => setPhoneCode(e.target.value)}
+                    aria-label="Phone area code"
+                    className="h-11 shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {PHONE_CODES.map((c) => (
+                      <option key={c.code + c.label} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    id="booking-phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel-national"
+                    placeholder="Phone number"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Order summary */}
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              {totalPax > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {lines.map((line) => {
+                    const qty = qtyByLine[line.id] ?? 0
+                    if (qty <= 0) return null
+                    const tier =
+                      line.tiers.find(
+                        (t) => totalPax >= t.minPax && totalPax <= t.maxPax,
+                      ) ?? line.tiers[0]
+                    const lineTotal = slot?.pricedPerPerson
+                      ? (tier?.unitIsk ?? 0) * qty
+                      : (slot?.flatPriceIsk ?? 0)
+                    return (
+                      <div
+                        key={line.id}
+                        className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                      >
+                        <span>
+                          {line.title}
+                          {slot?.pricedPerPerson && ` × ${qty}`}
+                        </span>
+                        <span className="text-foreground">
+                          <Price isk={lineTotal} />
+                        </span>
+                      </div>
+                    )
+                  })}
+                  {extras.map((extra) => {
+                    const qty = qtyByAddon[extra.id] ?? 0
+                    if (qty <= 0) return null
+                    return (
+                      <div
+                        key={extra.id}
+                        className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                      >
+                        <span>
+                          {extra.title} × {qty}
+                        </span>
+                        <span className="text-foreground">
+                          <Price isk={extra.unitIsk * qty} />
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="font-heading text-2xl font-extrabold text-foreground">
+                  <Price isk={total} />
+                </span>
+              </div>
+            </div>
+
+            {slot?.cancellation && (
+              <p className="text-xs text-muted-foreground">{slot.cancellation}</p>
+            )}
+
+            {error && (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={pending || totalPax <= 0}
+              className="w-full rounded-full"
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  Redirecting to payment…
+                </>
+              ) : (
+                "Confirm & pay"
+              )}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Secure payment via Teya. You won&apos;t be charged until you
+              confirm.
+            </p>
+          </form>
+        </div>
+      )}
+    </>
   )
 }

@@ -434,7 +434,7 @@ async function fetchTourDetailUncached(bokunId: string): Promise<TourDetail | nu
 export function fetchTourDetail(bokunId: string): Promise<TourDetail | null> {
   return unstable_cache(
     () => fetchTourDetailUncached(bokunId),
-    ["bokun-detail-v2", bokunId],
+    ["bokun-detail-v3", bokunId],
     { revalidate: 3600, tags: ["bokun-tours"] },
   )()
 }
@@ -908,7 +908,9 @@ async function fetchTourPickupUncached(bokunId: string): Promise<TourPickup> {
     meetingType?: string
     displaySettings?: { showPickupPlaces?: boolean }
   }>("GET", `/activity.json/${bokunId}?lang=EN&currency=ISK`)
-  if (!activity) return empty
+  // Throw (rather than return empty) so a transient API failure is never
+  // cached as a valid "no pickup" result and stuck for the cache lifetime.
+  if (!activity) throw new Error(`Bokun activity ${bokunId} unavailable`)
 
   const meetingType = activity.meetingType ?? "MEET_ON_LOCATION"
   const offersPickup =
@@ -920,11 +922,14 @@ async function fetchTourPickupUncached(bokunId: string): Promise<TourPickup> {
     pickupPlaces?: BokunPickupPlace[]
     dropoffPlaces?: BokunPickupPlace[]
   }>("GET", `/activity.json/${bokunId}/pickup-places?lang=EN`)
+  // A tour that advertises pickup but whose places request failed must not be
+  // cached as empty — throw so the next render retries.
+  if (!places) throw new Error(`Bokun pickup-places ${bokunId} unavailable`)
 
-  const pickupPlaces = (places?.pickupPlaces ?? [])
+  const pickupPlaces = (places.pickupPlaces ?? [])
     .map(mapPlace)
     .filter((p) => p.title)
-  const dropoffPlaces = (places?.dropoffPlaces ?? [])
+  const dropoffPlaces = (places.dropoffPlaces ?? [])
     .map(mapPlace)
     .filter((p) => p.title)
 
@@ -945,7 +950,7 @@ async function fetchTourPickupUncached(bokunId: string): Promise<TourPickup> {
 export function fetchTourPickup(bokunId: string): Promise<TourPickup> {
   return unstable_cache(
     () => fetchTourPickupUncached(bokunId),
-    ["bokun-pickup-v1", bokunId],
+    ["bokun-pickup-v2", bokunId],
     { revalidate: 900, tags: ["bokun-tours"] },
   )()
 }
