@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Image from "next/image"
+import { useRouter, useSearchParams } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { MergedTour } from "@/lib/tours"
@@ -15,8 +16,16 @@ import {
   Star,
   Search,
   SlidersHorizontal,
+  CalendarDays,
   X,
 } from "lucide-react"
+
+/** Rank difficulty labels so chips render easiest → hardest. */
+function difficultyRank(d: string): number {
+  const order = ["easy", "moderate", "challenging", "difficult", "hard", "extreme"]
+  const i = order.indexOf(d.trim().toLowerCase())
+  return i === -1 ? order.length : i
+}
 
 
 /**
@@ -46,6 +55,13 @@ export function ToursBrowser({
   /** Multi-select seed; takes precedence over `initialCategoryId` when given. */
   initialCategoryIds?: number[]
 }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  // Current travel-date search context (server-side availability filter).
+  const dateFrom = searchParams.get("from") ?? ""
+  const dateTo = searchParams.get("to") ?? ""
+  const hasDateSearch = /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)
+
   const [query, setQuery] = useState("")
   // Selected category ids (multi-select). Empty = no activity filter.
   const [activeCategories, setActiveCategories] = useState<Set<number>>(
@@ -62,6 +78,10 @@ export function ToursBrowser({
   const [activeLocations, setActiveLocations] = useState<Set<number>>(new Set())
   // Selected duration buckets (multi-select). Empty = no duration filter.
   const [activeDurations, setActiveDurations] = useState<Set<number>>(new Set())
+  // Selected difficulty labels (multi-select). Empty = no difficulty filter.
+  const [activeDifficulties, setActiveDifficulties] = useState<Set<string>>(
+    new Set(),
+  )
   // Search-within-filter text for the two long lists.
   const [activitySearch, setActivitySearch] = useState("")
   const [locationSearch, setLocationSearch] = useState("")
@@ -116,6 +136,16 @@ export function ToursBrowser({
     return [...set].sort((a, b) => a - b)
   }, [tours])
 
+  // Distinct difficulty labels present across all tours, easiest → hardest.
+  const allDifficulties = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of tours) {
+      const d = t.difficulty?.trim()
+      if (d) set.add(d)
+    }
+    return [...set].sort((a, b) => difficultyRank(a) - difficultyRank(b))
+  }, [tours])
+
   function toggleSet(
     setter: React.Dispatch<React.SetStateAction<Set<number>>>,
     id: number,
@@ -128,21 +158,55 @@ export function ToursBrowser({
     })
   }
 
+  function toggleDifficulty(label: string) {
+    setActiveDifficulties((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
+  // Navigate to update the server-side travel-date availability filter,
+  // preserving the current experience/category context in the URL.
+  function applyDates(next: { from?: string; to?: string }) {
+    const params = new URLSearchParams(searchParams.toString())
+    const from = next.from ?? dateFrom
+    const to = next.to ?? dateTo
+    if (from) params.set("from", from)
+    else params.delete("from")
+    // Keep `to` only when it's on/after `from`; default a single day otherwise.
+    if (from && to && to >= from) params.set("to", to)
+    else params.delete("to")
+    router.push(`/tours?${params.toString()}`)
+  }
+
+  function clearDates() {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("from")
+    params.delete("to")
+    router.push(`/tours?${params.toString()}`)
+  }
+
   function clearAll() {
     setQuery("")
     setActiveCategories(new Set())
     setActiveLocations(new Set())
     setActiveDurations(new Set())
+    setActiveDifficulties(new Set())
     setActivitySearch("")
     setLocationSearch("")
     setPriceRange([priceBounds.min, priceBounds.max])
+    if (hasDateSearch) clearDates()
   }
 
   const activeFilterCount =
     activeCategories.size +
     activeLocations.size +
     activeDurations.size +
-    (priceActive ? 1 : 0)
+    activeDifficulties.size +
+    (priceActive ? 1 : 0) +
+    (hasDateSearch ? 1 : 0)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -156,6 +220,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -169,6 +236,7 @@ export function ToursBrowser({
         matchesCategory &&
         matchesLocation &&
         matchesDuration &&
+        matchesDifficulty &&
         matchesPrice &&
         matchesQuery
       )
@@ -179,6 +247,7 @@ export function ToursBrowser({
     activeCategories,
     activeLocations,
     activeDurations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -195,6 +264,9 @@ export function ToursBrowser({
       const matchesLocation =
         activeLocations.size === 0 ||
         t.locationIds.some((id) => activeLocations.has(id))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -207,6 +279,7 @@ export function ToursBrowser({
       if (
         matchesCategory &&
         matchesLocation &&
+        matchesDifficulty &&
         matchesPrice &&
         matchesQuery
       ) {
@@ -219,6 +292,7 @@ export function ToursBrowser({
     query,
     activeCategories,
     activeLocations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -235,6 +309,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -244,7 +321,13 @@ export function ToursBrowser({
         t.title.toLowerCase().includes(q) ||
         t.location.toLowerCase().includes(q) ||
         t.tag.toLowerCase().includes(q)
-      if (matchesLocation && matchesDuration && matchesPrice && matchesQuery) {
+      if (
+        matchesLocation &&
+        matchesDuration &&
+        matchesDifficulty &&
+        matchesPrice &&
+        matchesQuery
+      ) {
         for (const id of t.categoryIds) set.add(id)
       }
     }
@@ -254,6 +337,7 @@ export function ToursBrowser({
     query,
     activeLocations,
     activeDurations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -270,6 +354,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -279,7 +366,13 @@ export function ToursBrowser({
         t.title.toLowerCase().includes(q) ||
         t.location.toLowerCase().includes(q) ||
         t.tag.toLowerCase().includes(q)
-      if (matchesCategory && matchesDuration && matchesPrice && matchesQuery) {
+      if (
+        matchesCategory &&
+        matchesDuration &&
+        matchesDifficulty &&
+        matchesPrice &&
+        matchesQuery
+      ) {
         for (const id of t.locationIds) set.add(id)
       }
     }
@@ -288,6 +381,54 @@ export function ToursBrowser({
     tours,
     query,
     activeCategories,
+    activeDurations,
+    activeDifficulties,
+    priceActive,
+    priceRange,
+  ])
+
+  // Difficulty labels that still have results given every OTHER active filter
+  // (ignoring the difficulty selection itself).
+  const enabledDifficulties = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const set = new Set<string>()
+    for (const t of tours) {
+      const d = t.difficulty?.trim()
+      if (!d) continue
+      const matchesCategory =
+        activeCategories.size === 0 ||
+        t.categoryIds.some((id) => activeCategories.has(id))
+      const matchesLocation =
+        activeLocations.size === 0 ||
+        t.locationIds.some((id) => activeLocations.has(id))
+      const matchesDuration =
+        activeDurations.size === 0 ||
+        activeDurations.has(durationBucket(t.duration))
+      const matchesPrice =
+        !priceActive ||
+        t.price === 0 ||
+        (t.price >= priceRange[0] && t.price <= priceRange[1])
+      const matchesQuery =
+        q === "" ||
+        t.title.toLowerCase().includes(q) ||
+        t.location.toLowerCase().includes(q) ||
+        t.tag.toLowerCase().includes(q)
+      if (
+        matchesCategory &&
+        matchesLocation &&
+        matchesDuration &&
+        matchesPrice &&
+        matchesQuery
+      ) {
+        set.add(d)
+      }
+    }
+    return set
+  }, [
+    tours,
+    query,
+    activeCategories,
+    activeLocations,
     activeDurations,
     priceActive,
     priceRange,
@@ -305,6 +446,54 @@ export function ToursBrowser({
 
   const sidebar = (
     <div className="flex flex-col gap-6">
+      {/* Travel dates (server-side availability) */}
+      <FilterSection title="Travel dates">
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            From
+            <div className="relative">
+              <CalendarDays
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary"
+                aria-hidden="true"
+              />
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => applyDates({ from: e.target.value })}
+                className="h-9 pl-9 text-foreground"
+                aria-label="Travel date from"
+              />
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            To
+            <div className="relative">
+              <CalendarDays
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary"
+                aria-hidden="true"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => applyDates({ to: e.target.value })}
+                className="h-9 pl-9 text-foreground"
+                aria-label="Travel date to"
+              />
+            </div>
+          </label>
+          {hasDateSearch && (
+            <button
+              type="button"
+              onClick={clearDates}
+              className="self-start text-sm font-medium text-primary hover:underline"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
+      </FilterSection>
+
       {/* Duration */}
       {allDurationBuckets.length > 1 && (
         <FilterSection title="Duration">
@@ -320,6 +509,28 @@ export function ToursBrowser({
                   onClick={() => toggleSet(setActiveDurations, bucket)}
                 >
                   {durationLabel(bucket)}
+                </Chip>
+              )
+            })}
+          </div>
+        </FilterSection>
+      )}
+
+      {/* Difficulty */}
+      {allDifficulties.length > 0 && (
+        <FilterSection title="Difficulty">
+          <div className="flex flex-wrap gap-2">
+            {allDifficulties.map((d) => {
+              const enabled = enabledDifficulties.has(d)
+              const active = activeDifficulties.has(d)
+              return (
+                <Chip
+                  key={d}
+                  active={active}
+                  disabled={!enabled && !active}
+                  onClick={() => toggleDifficulty(d)}
+                >
+                  {d}
                 </Chip>
               )
             })}
