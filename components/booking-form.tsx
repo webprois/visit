@@ -24,7 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
-import { startBooking, type BookingInput } from "@/app/actions/booking"
+import { createPendingBooking, type BookingInput } from "@/app/actions/booking"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 // Full country dialing list. `iso` is the unique select value (some countries
@@ -307,27 +307,6 @@ function formatDate(iso: string): string {
   })
 }
 
-/**
- * Teya SecurePay requires a top-level POST (not a GET redirect). Build a hidden
- * form from the signed fields and submit it, sending the customer to the hosted
- * payment page.
- */
-function submitToSecurePay(form: { url: string; fields: Record<string, string> }) {
-  const el = document.createElement("form")
-  el.method = "POST"
-  el.action = form.url
-  el.style.display = "none"
-  for (const [name, value] of Object.entries(form.fields)) {
-    const input = document.createElement("input")
-    input.type = "hidden"
-    input.name = name
-    input.value = value
-    el.appendChild(input)
-  }
-  document.body.appendChild(el)
-  el.submit()
-}
-
 /** Client-side mirror of priceSlotIsk (server recomputes authoritatively). */
 function computeTotal(
   slot: BookingSlot,
@@ -569,11 +548,33 @@ export function BookingForm({
     }
 
     startTransition(async () => {
-      const res = await startBooking(payload)
-      if (res.ok) {
-        submitToSecurePay(res.form)
-      } else {
+      // 1. Create the booking record (status "pending_payment", re-priced
+      //    server-side against Bokun).
+      const res = await createPendingBooking(payload)
+      if (!res.ok) {
         setError(res.error)
+        return
+      }
+      // 2. Ask the backend to create a Teya Hosted Checkout session (API keys
+      //    stay server-side), then redirect to the hosted payment page.
+      try {
+        const r = await fetch("/api/payments/teya/create-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: res.bookingId }),
+        })
+        const data = (await r.json()) as {
+          ok?: boolean
+          url?: string
+          error?: string
+        }
+        if (r.ok && data.ok && data.url) {
+          window.location.href = data.url
+        } else {
+          setError(data.error ?? "Could not start payment. Please try again.")
+        }
+      } catch {
+        setError("Could not reach the payment service. Please try again.")
       }
     })
   }

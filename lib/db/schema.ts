@@ -198,7 +198,8 @@ export const booking = pgTable("booking", {
   customerEmail: text("customer_email").notNull(),
   customerPhone: text("customer_phone"),
   notes: text("notes"),
-  // "pending" | "paid" | "failed" | "cancelled"
+  // Legacy SecurePay flow: "pending" | "paid" | "failed" | "cancelled".
+  // Teya Hosted Checkout flow: "pending_payment" | "confirmed" | "cancelled".
   status: text("status").notNull().default("pending"),
   teyaSessionId: text("teya_session_id"),
   teyaReference: text("teya_reference"),
