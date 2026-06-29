@@ -846,10 +846,16 @@ export function BookingForm({
                   const active = n === step
                   const done = n < step
                   return (
-                    <li key={stepKey} className="flex items-center gap-1.5">
+                    <li
+                      key={stepKey}
+                      className={
+                        "flex min-w-0 items-center gap-1.5 " +
+                        (active ? "shrink-0" : "")
+                      }
+                    >
                       <span
                         className={
-                          "flex size-6 items-center justify-center rounded-full text-[11px] font-bold transition-colors " +
+                          "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors " +
                           (active
                             ? "bg-primary text-primary-foreground"
                             : done
@@ -865,7 +871,9 @@ export function BookingForm({
                       </span>
                       <span
                         className={
-                          "whitespace-nowrap " +
+                          "truncate " +
+                          (active ? "inline" : "hidden sm:inline") +
+                          " " +
                           (active
                             ? "font-semibold text-foreground"
                             : "text-muted-foreground")
@@ -875,7 +883,7 @@ export function BookingForm({
                       </span>
                       {n < stepKeys.length && (
                         <span
-                          className="ml-0.5 h-px w-3 bg-border"
+                          className="ml-0.5 hidden h-px w-3 shrink-0 bg-border sm:inline-block"
                           aria-hidden="true"
                         />
                       )}
