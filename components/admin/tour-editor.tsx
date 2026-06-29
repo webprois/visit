@@ -32,7 +32,6 @@ import {
   Trash2,
   Plus,
   Search,
-  AlertCircle,
   ImageIcon,
   Globe,
   RefreshCw,
@@ -71,7 +70,6 @@ type EditorTab =
   | "overview"
   | "content"
   | "categories"
-  | "translations"
   | "images"
   | "seo"
   | "bokun"
@@ -80,7 +78,6 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
-  { id: "translations", label: "Translations" },
   { id: "images", label: "Images", soon: true },
   { id: "seo", label: "SEO", soon: true },
   { id: "bokun", label: "Bokun", soon: true },
@@ -348,7 +345,6 @@ export function TourEditor({
   }
 
   const current = content[lang]
-  const filledCount = LOCALES.filter((l) => isLangFilled(content[l])).length
 
   // Hero image (shared across languages).
   const heroNode = (
@@ -562,104 +558,52 @@ export function TourEditor({
     </div>
   )
 
-  // Translations tab: per-language status + original Bokun reference texts.
-  const translationsNode = (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-foreground">
-            Translation status
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {filledCount} / {LOCALES.length} languages
-          </span>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {LOCALES.map((l) => {
-            const filled = isLangFilled(content[l])
-            return (
-              <button
-                key={l}
-                type="button"
-                onClick={() => {
-                  setLang(l)
-                  setTab("content")
-                }}
-                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
-              >
-                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Languages
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  {LOCALE_LABELS[l]}
-                </span>
-                {filled ? (
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-semibold"
-                    style={{ color: "var(--chart-3)" }}
-                  >
-                    <Check className="size-3.5" /> Complete
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                    <AlertCircle className="size-3.5" /> Missing
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Select a language to edit its content, or use &ldquo;Translate from
-          English&rdquo; on the Content tab.
-        </p>
-      </div>
-
-      <BokunTexts
-        bokunId={tour.bokunId}
-        activeLangLabel={LOCALE_LABELS[lang]}
-        onApply={(field, value, mode) => {
-          setContent((prev) => {
-            const existing = prev[lang][field]
-            const next =
-              mode === "append" && existing.trim()
-                ? `${existing.trimEnd()}\n${value}`
-                : value
-            return {
-              ...prev,
-              [lang]: { ...prev[lang], [field]: next },
-            }
-          })
-          markDirty()
-          toast.success("Applied")
-        }}
-        onImportAll={(t) => {
-          const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .join("\n")
-          setContent((prev) => ({
+  // Import original texts from Bokun into the active language (English by
+  // default). Shown at the bottom of the Content tab.
+  const bokunImportNode = (
+    <BokunTexts
+      bokunId={tour.bokunId}
+      activeLangLabel={LOCALE_LABELS[lang]}
+      onApply={(field, value, mode) => {
+        setContent((prev) => {
+          const existing = prev[lang][field]
+          const next =
+            mode === "append" && existing.trim()
+              ? `${existing.trimEnd()}\n${value}`
+              : value
+          return {
             ...prev,
-            [lang]: {
-              title: t.title,
-              excerpt: t.excerpt,
-              description: t.description,
-              included: t.included,
-              excluded: t.excluded,
-              goodToKnow,
-              itinerary: t.itinerary ?? [],
-            },
-          }))
-          markDirty()
-          toast.success(`Imported all ${t.lang} texts from Bokun`)
-        }}
-        onApplyItinerary={(steps) => {
-          setItinerary(steps)
-          toast.success("Itinerary applied")
-        }}
-      />
-    </div>
+            [lang]: { ...prev[lang], [field]: next },
+          }
+        })
+        markDirty()
+        toast.success("Applied")
+      }}
+      onImportAll={(t) => {
+        const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join("\n")
+        setContent((prev) => ({
+          ...prev,
+          [lang]: {
+            title: t.title,
+            excerpt: t.excerpt,
+            description: t.description,
+            included: t.included,
+            excluded: t.excluded,
+            goodToKnow,
+            itinerary: t.itinerary ?? [],
+          },
+        }))
+        markDirty()
+        toast.success(`Imported all ${t.lang} texts from Bokun`)
+      }}
+      onApplyItinerary={(steps) => {
+        setItinerary(steps)
+        toast.success("Itinerary applied")
+      }}
+    />
   )
 
   // Sticky settings panel (right rail on desktop, inline on mobile).
@@ -844,14 +788,12 @@ export function TourEditor({
             onChange={(v) => setField("goodToKnow", v)}
           />
           <ItineraryField steps={current.itinerary} onChange={setItinerary} />
+          {bokunImportNode}
         </>
       )
       break
     case "categories":
       tabContent = categoriesNode
-      break
-    case "translations":
-      tabContent = translationsNode
       break
     case "images":
       tabContent = (
