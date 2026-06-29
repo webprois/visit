@@ -25,6 +25,12 @@ import {
   Utensils,
   Building2,
   Bike,
+  Bird,
+  Bus,
+  Zap,
+  Compass,
+  TreePine,
+  Palette,
   MapPin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -64,20 +70,30 @@ function experienceIcon(label: string) {
   const l = label.toLowerCase()
   if (l.includes("northern light")) return Snowflake
   if (l.includes("ice") || l.includes("glacier")) return Mountain
+  if (l.includes("bus") || l.includes("minivan") || l.includes("minibus"))
+    return Bus
   if (l.includes("self drive") || l.includes("car") || l.includes("super jeep"))
     return Car
-  if (l.includes("hik") || l.includes("walk")) return Footprints
+  if (l.includes("hik") || l.includes("walk") || l.includes("trek"))
+    return Footprints
   if (l.includes("sightsee")) return Binoculars
-  if (l.includes("whale") || l.includes("bird")) return Fish
+  if (l.includes("bird")) return Bird
+  if (l.includes("whale")) return Fish
   if (l.includes("snorkel") || l.includes("div") || l.includes("raft") || l.includes("kayak"))
     return Waves
   if (l.includes("boat") || l.includes("ferry") || l.includes("sail")) return Ship
   if (l.includes("snowmobile") || l.includes("hot spring") || l.includes("spa") || l.includes("wellness"))
     return Sparkles
   if (l.includes("photo")) return Camera
-  if (l.includes("food") || l.includes("drink")) return Utensils
-  if (l.includes("city") || l.includes("culture")) return Building2
+  if (l.includes("food") || l.includes("drink") || l.includes("culinary"))
+    return Utensils
+  if (l.includes("art") || l.includes("culture") || l.includes("museum"))
+    return Palette
+  if (l.includes("city")) return Building2
+  if (l.includes("adrenaline") || l.includes("extreme")) return Zap
+  if (l.includes("nature") || l.includes("wildlife")) return TreePine
   if (l.includes("horse") || l.includes("bike") || l.includes("cycl")) return Bike
+  if (l.includes("adventure") || l.includes("explor")) return Compass
   return MapPin
 }
 
