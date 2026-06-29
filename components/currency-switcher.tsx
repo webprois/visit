@@ -32,7 +32,7 @@ export function CurrencySwitcher() {
         <Coins className="size-4" aria-hidden="true" />
         <span className="text-sm font-medium">{CURRENCY_SHORT[currency]}</span>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-auto min-w-56">
         {CURRENCIES.map((c) => (
           <SelectItem key={c} value={c}>
             {CURRENCY_LABELS[c]} ({CURRENCY_SHORT[c]})
