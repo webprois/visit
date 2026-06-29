@@ -182,7 +182,7 @@ export default async function TourPage({
                 <span className="truncate text-foreground">{tour.title}</span>
               </nav>
 
-              <div className="grid items-end gap-6 lg:grid-cols-[1fr_auto]">
+              <div className="grid items-start gap-6 lg:grid-cols-[1fr_auto]">
                 {/* Left: title + subtitle + facts */}
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
