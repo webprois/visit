@@ -788,7 +788,7 @@ export function TourEditor({
             onChange={(v) => setField("goodToKnow", v)}
           />
           <ItineraryField steps={current.itinerary} onChange={setItinerary} />
-          {bokunImportNode}
+          {lang === "en" && bokunImportNode}
         </>
       )
       break
