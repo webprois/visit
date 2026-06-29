@@ -237,6 +237,14 @@ const PHONE_CODES: { iso: string; dial: string; name: string }[] = [
 const TERMS_URL = "https://visit.is/terms-and-conditions/"
 const CANCELLATION_SUMMARY = "Free cancellation up to 72h before"
 
+type StepKey = "tour" | "details" | "addons" | "confirm"
+const STEP_LABELS: Record<StepKey, string> = {
+  tour: "Tour",
+  details: "Details",
+  addons: "Add-ons",
+  confirm: "Confirm",
+}
+
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
 type PriceLine = { id: number; title: string; minAge: number; tiers: Tier[] }
@@ -402,7 +410,15 @@ export function BookingForm({
     PHONE_CODES.find((c) => c.iso === phoneCountry)?.dial ?? "+354"
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState(1)
+  // Wizard steps. The add-ons step only appears when the tour has extras, so a
+  // tour without add-ons collapses to a 3-step flow.
+  const stepKeys: StepKey[] =
+    extras.length > 0
+      ? ["tour", "details", "addons", "confirm"]
+      : ["tour", "details", "confirm"]
+  const totalSteps = stepKeys.length
+  const currentKey = stepKeys[Math.min(step, totalSteps) - 1]
   const [pending, startTransition] = useTransition()
 
   const totalPax = lines.reduce((n, l) => n + (qtyByLine[l.id] ?? 0), 0)
@@ -469,7 +485,7 @@ export function BookingForm({
     setError(null)
     // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
     // here, so just advance through the wizard instead of attempting to pay.
-    if (step !== 3) {
+    if (currentKey !== "confirm") {
       goNext()
       return
     }
@@ -603,30 +619,18 @@ export function BookingForm({
       setError("Please enter a first and last name for each participant.")
       return false
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setError("Please enter your name.")
-      return false
-    }
-    if (!email.trim()) {
-      setError("Please enter your email.")
-      return false
-    }
-    if (!phone.trim()) {
-      setError("Please enter your phone number.")
-      return false
-    }
     return true
   }
 
   function goNext() {
-    if (step === 1 && !validateStep1()) return
-    if (step === 2 && !validateStep2()) return
-    setStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s))
+    if (currentKey === "tour" && !validateStep1()) return
+    if (currentKey === "details" && !validateStep2()) return
+    setStep((s) => Math.min(totalSteps, s + 1))
   }
 
   function goBack() {
     setError(null)
-    setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
+    setStep((s) => Math.max(1, s - 1))
   }
 
   // No availability at all → contact fallback (desktop card + mobile bar).
@@ -670,8 +674,6 @@ export function BookingForm({
     { icon: Compass, text: "Local expert guide" },
     { icon: Lock, text: "Secure booking" },
   ]
-
-  const STEPS = ["Tour", "Details", "Review"]
 
   /** Date + departure + participant steppers — reused in card and overlay. */
   function renderSelection() {
@@ -833,12 +835,13 @@ export function BookingForm({
 
               {/* Step indicator */}
               <ol className="mt-3 flex items-center gap-1.5 text-xs">
-                {STEPS.map((label, i) => {
+                {stepKeys.map((stepKey, i) => {
                   const n = i + 1
+                  const label = STEP_LABELS[stepKey]
                   const active = n === step
                   const done = n < step
                   return (
-                    <li key={label} className="flex items-center gap-1.5">
+                    <li key={stepKey} className="flex items-center gap-1.5">
                       <span
                         className={
                           "flex size-6 items-center justify-center rounded-full text-[11px] font-bold transition-colors " +
@@ -864,7 +867,7 @@ export function BookingForm({
                       >
                         {label}
                       </span>
-                      {n < STEPS.length && (
+                      {n < stepKeys.length && (
                         <span
                           className="ml-0.5 h-px w-3 bg-border"
                           aria-hidden="true"
@@ -876,8 +879,8 @@ export function BookingForm({
               </ol>
             </div>
 
-            {/* Step 1 — date, participants & add-ons */}
-            {step === 1 && (
+            {/* Step: tour — date & participants */}
+            {currentKey === "tour" && (
               <>
                 {renderSelection()}
 
@@ -886,7 +889,12 @@ export function BookingForm({
                     Select participants to see final pricing.
                   </p>
                 )}
+              </>
+            )}
 
+            {/* Step: add-ons */}
+            {currentKey === "addons" && (
+              <>
                 {/* Add-ons */}
             {extras.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
@@ -942,8 +950,8 @@ export function BookingForm({
               </>
             )}
 
-            {/* Step 2 — pickup, participant names & contact */}
-            {step === 2 && (
+            {/* Step: details — pickup & participant names */}
+            {currentKey === "details" && (
               <>
             {/* Pickup / drop-off */}
             {pickupPlaces.length > 0 && (
@@ -1067,7 +1075,12 @@ export function BookingForm({
                 ))}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step: confirm — contact, summary & pay */}
+            {currentKey === "confirm" && (
+              <>
             {/* Contact details */}
             <div className="flex flex-col gap-3 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
@@ -1140,12 +1153,7 @@ export function BookingForm({
                 </div>
               </div>
             </div>
-              </>
-            )}
 
-            {/* Step 3 — review & pay */}
-            {step === 3 && (
-              <>
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
@@ -1258,7 +1266,7 @@ export function BookingForm({
                     Back
                   </Button>
                 )}
-                {step < 3 ? (
+                {step < totalSteps ? (
                   <Button
                     type="button"
                     size="lg"
@@ -1287,7 +1295,7 @@ export function BookingForm({
                 )}
               </div>
 
-              {step === 3 && (
+              {step === totalSteps && (
                 <p className="text-center text-xs text-muted-foreground">
                   Secure payment via Teya. You won&apos;t be charged until you
                   confirm.
