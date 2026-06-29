@@ -577,7 +577,7 @@ export function TourEditor({
                   value={difficulty || undefined}
                   onValueChange={(v) => setDifficulty(v ?? "")}
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 w-full">
                     <SelectValue placeholder="Select difficulty" />
                   </SelectTrigger>
                   <SelectContent>
@@ -599,21 +599,23 @@ export function TourEditor({
             </div>
 
             {/* Tour type */}
-            <Field label="Tour type">
-              <Select value={tourType} onValueChange={(v) => setTourType(v ?? "day")}>
-                <SelectTrigger className="h-11">
-                  <SelectValue>
-                    {(value: string) =>
-                      value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="day">Day Tour</SelectItem>
-                  <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Tour type">
+                <Select value={tourType} onValueChange={(v) => setTourType(v ?? "day")}>
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue>
+                      {(value: string) =>
+                        value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day Tour</SelectItem>
+                    <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
             {/* Categories */}
             <Field label="Categories">
