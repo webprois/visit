@@ -434,7 +434,7 @@ export function ToursBrowser({
           <button
             type="button"
             onClick={() => setShowFilters((v) => !v)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground lg:hidden"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary lg:hidden"
             aria-expanded={showFilters}
           >
             <SlidersHorizontal className="size-4" aria-hidden="true" />
@@ -454,7 +454,7 @@ export function ToursBrowser({
           "lg:sticky lg:top-24 " + (showFilters ? "block" : "hidden lg:block")
         }
       >
-        <div className="relative rounded-2xl border border-border bg-card p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        <div className="relative rounded-2xl border border-border bg-card p-5 shadow-sm lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {activeFilterCount > 0 && (
             <button
               type="button"
@@ -499,7 +499,7 @@ export function ToursBrowser({
               <a
                 key={tour.bokunId}
                 href={`/tours/${tour.bokunId}`}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg"
+                className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
               >
                 <div className="relative aspect-[16/10] overflow-hidden">
                   <Image
@@ -509,6 +509,7 @@ export function ToursBrowser({
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 </div>
 
                 <div className="flex flex-1 flex-col p-5">
@@ -627,7 +628,7 @@ function CheckRow({
     <li>
       <label
         className={
-          "flex items-center gap-2.5 rounded-md px-1 py-1.5 text-sm " +
+          "flex items-center gap-2.5 rounded-md px-1 py-1.5 text-sm transition-colors " +
           (disabled
             ? "cursor-not-allowed opacity-40"
             : "cursor-pointer hover:bg-secondary")
@@ -664,11 +665,11 @@ function Chip({
       onClick={onClick}
       disabled={disabled}
       className={
-        "flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors " +
+        "flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all active:scale-95 " +
         (active
-          ? "border-primary bg-primary text-primary-foreground"
+          ? "border-primary bg-primary text-primary-foreground glow-primary"
           : disabled
-            ? "cursor-not-allowed border-border/50 bg-card text-muted-foreground/40"
+            ? "cursor-not-allowed border-border/50 bg-card text-muted-foreground/40 active:scale-100"
             : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
       }
     >

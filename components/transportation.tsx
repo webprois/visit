@@ -25,9 +25,9 @@ export function Transportation() {
           {transfers.map((t) => (
             <div
               key={t.title}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm"
+              className="card-lift group flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
-              <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
                 <Bus className="size-5" aria-hidden="true" />
               </span>
               <div className="flex-1">
