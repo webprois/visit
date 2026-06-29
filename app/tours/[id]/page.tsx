@@ -164,9 +164,9 @@ export default async function TourPage({
                 <span className="truncate text-foreground">{tour.title}</span>
               </nav>
 
-              <div className="grid items-start gap-6 lg:grid-cols-[1fr_auto]">
+              <div className="lg:relative">
                 {/* Left: title + subtitle + facts */}
-                <div>
+                <div className="lg:max-w-[calc(100%-18rem)]">
                   <div className="flex flex-wrap items-center gap-2">
                     {(tour.categoryNames.length > 0
                       ? tour.categoryNames
@@ -201,8 +201,10 @@ export default async function TourPage({
                   </ul>
                 </div>
 
-                {/* Right: starting price + CTA */}
-                <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur md:min-w-64">
+                {/* Right: starting price + CTA. On desktop it's bottom-aligned
+                    with the facts (absolute) so the spacing below the hero stays
+                    constant regardless of how tall the title is. */}
+                <div className="mt-6 rounded-2xl border border-border bg-card/80 p-5 backdrop-blur lg:absolute lg:bottom-0 lg:right-0 lg:mt-0 lg:w-64">
                   <span className="text-xs text-muted-foreground">From</span>
                   <p className="font-heading text-3xl font-extrabold text-foreground">
                     <Price isk={priceAmount} fallback="Contact us" />
@@ -243,13 +245,13 @@ export default async function TourPage({
                   About this tour
                 </h2>
                 {paragraphs.length > 0 ? (
-                  <div className="mt-4 flex max-w-prose flex-col gap-4 text-pretty text-base leading-relaxed text-muted-foreground">
+                  <div className="mt-4 flex flex-col gap-4 text-pretty text-base leading-relaxed text-muted-foreground">
                     {paragraphs.map((p, i) => (
                       <p key={i}>{p}</p>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 max-w-prose text-base leading-relaxed text-muted-foreground">
+                  <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                     {tour.excerpt?.trim() ||
                       "Contact us for full details about this experience."}
                   </p>
