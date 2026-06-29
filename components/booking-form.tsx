@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import {
   CalendarDays,
+  Check,
   Clock,
   Compass,
   Loader2,
@@ -21,31 +22,31 @@ import { startBooking, type BookingInput } from "@/app/actions/booking"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 const PHONE_CODES: { code: string; label: string }[] = [
-  { code: "+354", label: "Iceland (+354)" },
-  { code: "+1", label: "USA / Canada (+1)" },
-  { code: "+44", label: "United Kingdom (+44)" },
-  { code: "+49", label: "Germany (+49)" },
-  { code: "+33", label: "France (+33)" },
-  { code: "+34", label: "Spain (+34)" },
-  { code: "+39", label: "Italy (+39)" },
-  { code: "+31", label: "Netherlands (+31)" },
-  { code: "+45", label: "Denmark (+45)" },
-  { code: "+46", label: "Sweden (+46)" },
-  { code: "+47", label: "Norway (+47)" },
-  { code: "+358", label: "Finland (+358)" },
-  { code: "+41", label: "Switzerland (+41)" },
-  { code: "+43", label: "Austria (+43)" },
-  { code: "+32", label: "Belgium (+32)" },
-  { code: "+353", label: "Ireland (+353)" },
-  { code: "+351", label: "Portugal (+351)" },
-  { code: "+48", label: "Poland (+48)" },
-  { code: "+61", label: "Australia (+61)" },
-  { code: "+64", label: "New Zealand (+64)" },
-  { code: "+81", label: "Japan (+81)" },
-  { code: "+82", label: "South Korea (+82)" },
-  { code: "+86", label: "China (+86)" },
-  { code: "+91", label: "India (+91)" },
-  { code: "+55", label: "Brazil (+55)" },
+  { code: "+354", label: "+354 Iceland" },
+  { code: "+1", label: "+1 USA / Canada" },
+  { code: "+44", label: "+44 United Kingdom" },
+  { code: "+49", label: "+49 Germany" },
+  { code: "+33", label: "+33 France" },
+  { code: "+34", label: "+34 Spain" },
+  { code: "+39", label: "+39 Italy" },
+  { code: "+31", label: "+31 Netherlands" },
+  { code: "+45", label: "+45 Denmark" },
+  { code: "+46", label: "+46 Sweden" },
+  { code: "+47", label: "+47 Norway" },
+  { code: "+358", label: "+358 Finland" },
+  { code: "+41", label: "+41 Switzerland" },
+  { code: "+43", label: "+43 Austria" },
+  { code: "+32", label: "+32 Belgium" },
+  { code: "+353", label: "+353 Ireland" },
+  { code: "+351", label: "+351 Portugal" },
+  { code: "+48", label: "+48 Poland" },
+  { code: "+61", label: "+61 Australia" },
+  { code: "+64", label: "+64 New Zealand" },
+  { code: "+81", label: "+81 Japan" },
+  { code: "+82", label: "+82 South Korea" },
+  { code: "+86", label: "+86 China" },
+  { code: "+91", label: "+91 India" },
+  { code: "+55", label: "+55 Brazil" },
 ]
 
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
@@ -210,6 +211,7 @@ export function BookingForm({
   const [phoneCode, setPhoneCode] = useState("+354")
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
   const [pending, startTransition] = useTransition()
 
   const totalPax = lines.reduce((n, l) => n + (qtyByLine[l.id] ?? 0), 0)
@@ -274,6 +276,12 @@ export function BookingForm({
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
+    // here, so just advance through the wizard instead of attempting to pay.
+    if (step !== 3) {
+      goNext()
+      return
+    }
     if (!slot) {
       setError("Please choose a date.")
       return
@@ -308,6 +316,18 @@ export function BookingForm({
       setError("Please enter a first and last name for each participant.")
       return
     }
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your name.")
+      return
+    }
+    if (!email.trim()) {
+      setError("Please enter your email.")
+      return
+    }
+    if (!phone.trim()) {
+      setError("Please enter your phone number.")
+      return
+    }
 
     const selections = slot.pricedPerPerson
       ? slot.lines
@@ -338,7 +358,7 @@ export function BookingForm({
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
       customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
-      customerPhone: phone.trim() ? `${phoneCode} ${phone.trim()}` : undefined,
+      customerPhone: `${phoneCode} ${phone.trim()}`,
     }
 
     startTransition(async () => {
@@ -349,6 +369,73 @@ export function BookingForm({
         setError(res.error)
       }
     })
+  }
+
+  function validateStep1(): boolean {
+    setError(null)
+    if (!slot) {
+      setError("Please choose a date.")
+      return false
+    }
+    if (totalPax <= 0) {
+      setError("Please add at least one participant.")
+      return false
+    }
+    if (totalPax < slot.minPax) {
+      setError(`This tour requires at least ${slot.minPax} participants.`)
+      return false
+    }
+    if (!slot.unlimited && totalPax > slot.seats) {
+      setError(`Only ${slot.seats} seats left for this date.`)
+      return false
+    }
+    return true
+  }
+
+  function validateStep2(): boolean {
+    setError(null)
+    if (pickupRequired && !selectedPickup) {
+      setError("Please choose a pickup location.")
+      return false
+    }
+    if (needsRoomNumber && !roomNumber.trim()) {
+      setError("Please enter your room number for the pickup.")
+      return false
+    }
+    if (
+      guestSlots.some(
+        (g) =>
+          !(firstByGuest[g.key] ?? "").trim() ||
+          !(lastByGuest[g.key] ?? "").trim(),
+      )
+    ) {
+      setError("Please enter a first and last name for each participant.")
+      return false
+    }
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your name.")
+      return false
+    }
+    if (!email.trim()) {
+      setError("Please enter your email.")
+      return false
+    }
+    if (!phone.trim()) {
+      setError("Please enter your phone number.")
+      return false
+    }
+    return true
+  }
+
+  function goNext() {
+    if (step === 1 && !validateStep1()) return
+    if (step === 2 && !validateStep2()) return
+    setStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s))
+  }
+
+  function goBack() {
+    setError(null)
+    setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
   }
 
   // No availability at all → contact fallback (desktop card + mobile bar).
@@ -390,13 +477,20 @@ export function BookingForm({
     { icon: Zap, text: "Instant confirmation" },
     {
       icon: ShieldCheck,
-      text: cancellationHours
-        ? `Free cancellation up to ${cancellationHours}h before`
-        : "Free cancellation",
+      text:
+        cancellationHours && cancellationHours <= 24 * 30
+          ? `Free cancellation up to ${
+              cancellationHours % 24 === 0
+                ? `${cancellationHours / 24} days`
+                : `${cancellationHours}h`
+            } before`
+          : "Free cancellation",
     },
     { icon: Compass, text: "Local expert guide" },
     { icon: Lock, text: "Secure booking" },
   ]
+
+  const STEPS = ["Tour", "Details", "Review"]
 
   /** Date + departure + participant steppers — reused in card and overlay. */
   function renderSelection() {
@@ -546,7 +640,7 @@ export function BookingForm({
         </Button>
       </div>
 
-      {/* ---------- Booking form (inline, single step) ---------- */}
+      {/* ---------- Booking form (inline, 3-step wizard) ---------- */}
       <form
         onSubmit={onSubmit}
         className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-sm"
@@ -555,27 +649,64 @@ export function BookingForm({
               <p className="font-heading text-xl font-extrabold text-foreground">
                 Complete your booking
               </p>
-              {showFrom && (
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  From{" "}
-                  <span className="font-semibold text-foreground">
-                    <Price isk={headlinePriceIsk} />
-                  </span>{" "}
-                  per person
-                </span>
-              )}
+
+              {/* Step indicator */}
+              <ol className="mt-3 flex items-center gap-1.5 text-xs">
+                {STEPS.map((label, i) => {
+                  const n = i + 1
+                  const active = n === step
+                  const done = n < step
+                  return (
+                    <li key={label} className="flex items-center gap-1.5">
+                      <span
+                        className={
+                          "flex size-6 items-center justify-center rounded-full text-[11px] font-bold transition-colors " +
+                          (active
+                            ? "bg-primary text-primary-foreground"
+                            : done
+                              ? "bg-primary/20 text-primary"
+                              : "bg-secondary text-muted-foreground")
+                        }
+                      >
+                        {done ? (
+                          <Check className="size-3.5" aria-hidden="true" />
+                        ) : (
+                          n
+                        )}
+                      </span>
+                      <span
+                        className={
+                          active
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {label}
+                      </span>
+                      {n < STEPS.length && (
+                        <span
+                          className="ml-0.5 h-px w-3 bg-border"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </li>
+                  )
+                })}
+              </ol>
             </div>
 
-            {/* Date + participants */}
-            {renderSelection()}
+            {/* Step 1 — date, participants & add-ons */}
+            {step === 1 && (
+              <>
+                {renderSelection()}
 
-            {totalPax <= 0 && (
-              <p className="-mt-1 text-xs text-muted-foreground">
-                Select participants to see final pricing.
-              </p>
-            )}
+                {totalPax <= 0 && (
+                  <p className="-mt-1 text-xs text-muted-foreground">
+                    Select participants to see final pricing.
+                  </p>
+                )}
 
-            {/* Add-ons */}
+                {/* Add-ons */}
             {extras.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">Add-ons</p>
@@ -627,7 +758,12 @@ export function BookingForm({
                 })}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step 2 — pickup, participant names & contact */}
+            {step === 2 && (
+              <>
             {/* Pickup / drop-off */}
             {pickupPlaces.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
@@ -790,13 +926,18 @@ export function BookingForm({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-phone">Phone (optional)</Label>
+                <Label htmlFor="booking-phone">
+                  Phone
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
                 <div className="flex gap-2">
                   <select
                     value={phoneCode}
                     onChange={(e) => setPhoneCode(e.target.value)}
                     aria-label="Phone area code"
-                    className="h-11 shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-11 w-28 shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {PHONE_CODES.map((c) => (
                       <option key={c.code + c.label} value={c.code}>
@@ -809,6 +950,7 @@ export function BookingForm({
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    required
                     autoComplete="tel-national"
                     placeholder="Phone number"
                     className="flex-1"
@@ -816,9 +958,17 @@ export function BookingForm({
                 </div>
               </div>
             </div>
+              </>
+            )}
 
+            {/* Step 3 — review & pay */}
+            {step === 3 && (
+              <>
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-sm font-semibold text-foreground">
+                Order summary
+              </p>
               {totalPax > 0 && (
                 <div className="flex flex-col gap-1.5">
                   {lines.map((line) => {
@@ -865,16 +1015,12 @@ export function BookingForm({
                   })}
                 </div>
               )}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-sm text-muted-foreground">Total</span>
-                <span className="font-heading text-2xl font-extrabold text-foreground">
-                  <Price isk={total} />
-                </span>
-              </div>
             </div>
 
             {slot?.cancellation && (
               <p className="text-xs text-muted-foreground">{slot.cancellation}</p>
+            )}
+              </>
             )}
 
             {error && (
@@ -883,26 +1029,80 @@ export function BookingForm({
               </p>
             )}
 
-            <Button
-              type="submit"
-              size="lg"
-              disabled={pending || totalPax <= 0}
-              className="w-full rounded-full"
-            >
-              {pending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  Redirecting to payment…
-                </>
-              ) : (
-                "Confirm & pay"
-              )}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Secure payment via Teya. You won&apos;t be charged until you
-              confirm.
-            </p>
+            {/* Footer: running total + step navigation */}
+            <div className="flex flex-col gap-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  {totalPax > 0 ? "Total" : "From"}
+                </span>
+                <span className="font-heading text-2xl font-extrabold text-foreground">
+                  {totalPax > 0 ? (
+                    <Price isk={total} />
+                  ) : startingPriceIsk > 0 ? (
+                    <>
+                      <Price isk={startingPriceIsk} />
+                      <span className="ml-1 text-sm font-normal text-muted-foreground">
+                        / person
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-base font-semibold text-muted-foreground">
+                      Select participants
+                    </span>
+                  )}
+                </span>
+              </div>
 
+              <div className="flex gap-2">
+                {step > 1 && (
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    onClick={goBack}
+                    className="rounded-full"
+                  >
+                    Back
+                  </Button>
+                )}
+                {step < 3 ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={goNext}
+                    disabled={step === 1 && totalPax <= 0}
+                    className="flex-1 rounded-full"
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={pending || totalPax <= 0}
+                    className="flex-1 rounded-full"
+                  >
+                    {pending ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        Redirecting…
+                      </>
+                    ) : (
+                      "Confirm & pay"
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {step === 3 && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Secure payment via Teya. You won&apos;t be charged until you
+                  confirm.
+                </p>
+              )}
+            </div>
+
+            {/* Trust badges */}
             <ul className="grid grid-cols-1 gap-2.5 border-t border-border pt-5 text-sm text-muted-foreground">
               {trust.map((t) => (
                 <li key={t.text} className="flex items-center gap-2">

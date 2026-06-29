@@ -595,6 +595,9 @@ function cancellationText(policy?: BokunCancellationPolicy): string {
       ? Math.min(...freeRules.map((r) => r.cutoffHours ?? Infinity))
       : null)
   if (!cutoff || !isFinite(cutoff)) return ""
+  // Implausibly large cutoffs (e.g. Bokun's ~999-day placeholder) really just
+  // mean "free cancellation anytime" — don't surface a misleading day count.
+  if (cutoff > 24 * 30) return "Free cancellation"
   const label = cutoff % 24 === 0 ? `${cutoff / 24} days` : `${cutoff}h`
   return `Free cancellation up to ${label} before`
 }
