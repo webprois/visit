@@ -494,7 +494,6 @@ export default async function TourPage({
                 pickup={pickup}
                 fallbackPhone="+354 419 1600"
                 startingPriceIsk={priceAmount}
-                cancellationHours={detail?.cancellationHours ?? null}
               />
             </aside>
           </div>
