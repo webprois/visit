@@ -434,7 +434,7 @@ async function fetchTourDetailUncached(bokunId: string): Promise<TourDetail | nu
 export function fetchTourDetail(bokunId: string): Promise<TourDetail | null> {
   return unstable_cache(
     () => fetchTourDetailUncached(bokunId),
-    ["bokun-detail-v2", bokunId],
+    ["bokun-detail-v3", bokunId],
     { revalidate: 3600, tags: ["bokun-tours"] },
   )()
 }

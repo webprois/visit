@@ -648,7 +648,7 @@ export function BookingForm({
             onClick={(e) => e.stopPropagation()}
             className="relative flex w-full max-w-lg flex-col gap-5 rounded-t-2xl border border-border bg-card p-5 shadow-xl sm:my-auto sm:rounded-2xl sm:p-6"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
+            <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex items-start justify-between gap-3 rounded-t-2xl border-b border-border bg-card px-5 pb-4 pt-5 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
               <div>
                 <h2 className="font-heading text-xl font-extrabold text-foreground">
                   Complete your booking

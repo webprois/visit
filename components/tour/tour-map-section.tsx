@@ -31,7 +31,7 @@ export function TourMapSection({
         <MapPin className="size-4 text-primary" aria-hidden="true" />
         {location}
       </p>
-      <div className="relative mt-4 h-72 overflow-hidden rounded-2xl border border-border md:h-96">
+      <div className="relative isolate z-0 mt-4 h-72 overflow-hidden rounded-2xl border border-border md:h-96">
         <TourMap lat={lat} lng={lng} label={location} />
       </div>
     </section>
