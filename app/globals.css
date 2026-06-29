@@ -66,8 +66,8 @@
   --accent: #ec4647;
   --accent-foreground: #fff5f5;
   --destructive: #ec4647;
-  --border: #26303f;
-  --input: #26303f;
+  --border: transparent;
+  --input: transparent;
   --ring: #ec4647;
   --chart-1: #ec4647;
   --chart-2: #4a90c2;
