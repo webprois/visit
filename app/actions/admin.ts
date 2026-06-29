@@ -11,7 +11,7 @@ import {
   tourTranslation,
   type TourTranslation as TourTranslationRow,
 } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { fetchTourTranslations, type TourTranslation } from "@/lib/bokun"
 import { autoCategorizeTours } from "@/lib/tours"
@@ -56,6 +56,85 @@ export async function setTourVisibility(bokunId: string, visible: boolean) {
 export async function setTourFeatured(bokunId: string, featured: boolean) {
   await requireAuth()
   await upsertOverride(bokunId, { featured })
+  revalidateAll()
+}
+
+/* ---------------- Bulk tour actions ---------------- */
+
+/** Publish or unpublish many tours at once. */
+export async function bulkSetVisibility(bokunIds: string[], visible: boolean) {
+  await requireAuth()
+  for (const id of bokunIds) {
+    await upsertOverride(id, { visible })
+  }
+  revalidateAll()
+}
+
+/** Feature or unfeature many tours at once. */
+export async function bulkSetFeatured(bokunIds: string[], featured: boolean) {
+  await requireAuth()
+  for (const id of bokunIds) {
+    await upsertOverride(id, { featured })
+  }
+  revalidateAll()
+}
+
+/**
+ * Add a category to many tours without touching their other content. Keeps the
+ * legacy single-category column populated when a tour had none.
+ */
+export async function bulkAddCategory(bokunIds: string[], categoryId: number) {
+  await requireAuth()
+  if (!Number.isFinite(categoryId)) return
+  for (const bokunId of bokunIds) {
+    await db
+      .insert(tourCategoryLink)
+      .values({ bokunId, categoryId })
+      .onConflictDoNothing()
+    const [row] = await db
+      .select()
+      .from(tourOverride)
+      .where(eq(tourOverride.bokunId, bokunId))
+    if (!row?.categoryId) {
+      await upsertOverride(bokunId, { categoryId })
+    }
+  }
+  revalidateAll()
+}
+
+/**
+ * Remove a category from many tours. Repoints the legacy single-category column
+ * to a remaining category (or null) when it pointed at the removed one.
+ */
+export async function bulkRemoveCategory(
+  bokunIds: string[],
+  categoryId: number,
+) {
+  await requireAuth()
+  if (!Number.isFinite(categoryId)) return
+  for (const bokunId of bokunIds) {
+    await db
+      .delete(tourCategoryLink)
+      .where(
+        and(
+          eq(tourCategoryLink.bokunId, bokunId),
+          eq(tourCategoryLink.categoryId, categoryId),
+        ),
+      )
+    const [row] = await db
+      .select()
+      .from(tourOverride)
+      .where(eq(tourOverride.bokunId, bokunId))
+    if (row?.categoryId === categoryId) {
+      const remaining = await db
+        .select()
+        .from(tourCategoryLink)
+        .where(eq(tourCategoryLink.bokunId, bokunId))
+      await upsertOverride(bokunId, {
+        categoryId: remaining[0]?.categoryId ?? null,
+      })
+    }
+  }
   revalidateAll()
 }
 
