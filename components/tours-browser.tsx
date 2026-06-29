@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
@@ -11,12 +12,18 @@ import type { TourCategory } from "@/lib/db/schema"
 import { Price } from "@/components/price"
 import { PriceRangeSlider } from "@/components/price-range-slider"
 import {
+  RangeCalendar,
+  toYmd,
+  fromYmd,
+  shortLabel,
+} from "@/components/range-calendar"
+import {
   Clock,
   MapPin,
   Star,
   Search,
   SlidersHorizontal,
-  CalendarDays,
+  Calendar,
   X,
 } from "lucide-react"
 
@@ -61,6 +68,66 @@ export function ToursBrowser({
   const dateFrom = searchParams.get("from") ?? ""
   const dateTo = searchParams.get("to") ?? ""
   const hasDateSearch = /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)
+  const fromDate = fromYmd(dateFrom)
+  const toDate = fromYmd(dateTo)
+  const datesLabel =
+    fromDate && toDate
+      ? `${shortLabel(fromDate)} – ${shortLabel(toDate)}`
+      : fromDate
+        ? shortLabel(fromDate)
+        : null
+
+  // Single-field calendar popover (mirrors the home search widget). The
+  // calendar is portaled to the body with fixed positioning so it escapes the
+  // sidebar's scroll/clip container instead of being cut off at its edge.
+  const [dateOpen, setDateOpen] = useState(false)
+  const dateBtnRef = useRef<HTMLButtonElement>(null)
+  const datePopRef = useRef<HTMLDivElement>(null)
+  const [datePos, setDatePos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  })
+
+  function openDatePopover() {
+    const btn = dateBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      const width = Math.min(window.innerWidth - 24, 640)
+      // Prefer left-aligned to the trigger, but keep fully on screen.
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setDatePos({ top: r.bottom + 8, left })
+    }
+    setDateOpen((o) => !o)
+  }
+
+  useEffect(() => {
+    if (!dateOpen) return
+    function onPointer(e: PointerEvent) {
+      const t = e.target as Node
+      if (
+        !dateBtnRef.current?.contains(t) &&
+        !datePopRef.current?.contains(t)
+      ) {
+        setDateOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDateOpen(false)
+    }
+    function onReflow() {
+      setDateOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onReflow)
+    window.addEventListener("scroll", onReflow, true)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onReflow)
+      window.removeEventListener("scroll", onReflow, true)
+    }
+  }, [dateOpen])
 
   const [query, setQuery] = useState("")
   // Selected category ids (multi-select). Empty = no activity filter.
@@ -168,17 +235,16 @@ export function ToursBrowser({
   }
 
   // Navigate to update the server-side travel-date availability filter,
-  // preserving the current experience/category context in the URL.
-  function applyDates(next: { from?: string; to?: string }) {
+  // preserving the current experience/category context in the URL. Called by
+  // the calendar with Date objects; a full range closes the popover.
+  function applyDates(from: Date | null, to: Date | null) {
     const params = new URLSearchParams(searchParams.toString())
-    const from = next.from ?? dateFrom
-    const to = next.to ?? dateTo
-    if (from) params.set("from", from)
+    if (from) params.set("from", toYmd(from))
     else params.delete("from")
-    // Keep `to` only when it's on/after `from`; default a single day otherwise.
-    if (from && to && to >= from) params.set("to", to)
+    if (from && to) params.set("to", toYmd(to))
     else params.delete("to")
     router.push(`/tours?${params.toString()}`)
+    if (from && to) setDateOpen(false)
   }
 
   function clearDates() {
@@ -449,39 +515,48 @@ export function ToursBrowser({
       {/* Travel dates (server-side availability) */}
       <FilterSection title="Travel dates">
         <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            From
-            <div className="relative">
-              <CalendarDays
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary"
-                aria-hidden="true"
-              />
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => applyDates({ from: e.target.value })}
-                className="h-9 pl-9 text-foreground"
-                aria-label="Travel date from"
-              />
-            </div>
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            To
-            <div className="relative">
-              <CalendarDays
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary"
-                aria-hidden="true"
-              />
-              <Input
-                type="date"
-                value={dateTo}
-                min={dateFrom || undefined}
-                onChange={(e) => applyDates({ to: e.target.value })}
-                className="h-9 pl-9 text-foreground"
-                aria-label="Travel date to"
-              />
-            </div>
-          </label>
+          <button
+            ref={dateBtnRef}
+            type="button"
+            onClick={openDatePopover}
+            aria-expanded={dateOpen}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
+          >
+            <Calendar
+              className="size-4 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <span
+              className={
+                "truncate text-sm " +
+                (datesLabel ? "text-foreground" : "text-muted-foreground")
+              }
+            >
+              {datesLabel ?? "Starting date — Final date"}
+            </span>
+          </button>
+
+          {dateOpen &&
+            createPortal(
+              <div
+                ref={datePopRef}
+                style={{
+                  position: "fixed",
+                  top: datePos.top,
+                  left: datePos.left,
+                  width: "min(92vw, 40rem)",
+                }}
+                className="z-50 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:p-4"
+              >
+                <RangeCalendar
+                  from={fromDate}
+                  to={toDate}
+                  onChange={applyDates}
+                />
+              </div>,
+              document.body,
+            )}
+
           {hasDateSearch && (
             <button
               type="button"
