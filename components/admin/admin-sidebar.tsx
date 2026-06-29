@@ -10,6 +10,7 @@ import {
   LogOut,
   RefreshCw,
   Loader2,
+  ImageIcon,
   type LucideIcon,
 } from "lucide-react"
 
@@ -28,6 +29,7 @@ const NAV: NavItem[] = [
 ]
 
 const COMING_SOON: { label: string; icon: LucideIcon }[] = [
+  { label: "Media Library", icon: ImageIcon },
   { label: "Requests", icon: Inbox },
   { label: "Settings", icon: Settings },
 ]
