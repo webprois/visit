@@ -572,14 +572,20 @@ export function TourEditor({
 
             {/* Difficulty / Group size */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Difficulty" htmlFor="difficulty">
-                <Input
-                  id="difficulty"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value)}
-                  placeholder="e.g. Easy, Moderate, Challenging"
-                  className="h-11"
-                />
+              <Field label="Difficulty">
+                <Select
+                  value={difficulty || undefined}
+                  onValueChange={(v) => setDifficulty(v ?? "")}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Easy">Easy</SelectItem>
+                    <SelectItem value="Moderate">Moderate</SelectItem>
+                    <SelectItem value="Challenging">Challenging</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Group size" htmlFor="groupSize">
                 <Input
