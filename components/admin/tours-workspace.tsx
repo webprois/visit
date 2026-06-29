@@ -38,7 +38,13 @@ function isMissingContent(t: MergedTour): boolean {
   return !t.excerpt || t.excerpt.trim().length === 0
 }
 
-type StatusFilter = "all" | "published" | "draft" | "featured"
+type StatusFilter =
+  | "all"
+  | "published"
+  | "draft"
+  | "featured"
+  | "uncategorized"
+  | "missing"
 type TypeFilter = "all" | "day" | "multi-day"
 
 const STATUS_LABELS: Record<StatusFilter, string> = {
@@ -46,6 +52,8 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
   published: "Published",
   draft: "Draft",
   featured: "Featured",
+  uncategorized: "Uncategorized",
+  missing: "Missing content",
 }
 
 const TYPE_LABELS: Record<TypeFilter, string> = {
@@ -131,6 +139,9 @@ export function ToursWorkspace({
       if (statusFilter === "published" && !t.visible) return false
       if (statusFilter === "draft" && t.visible) return false
       if (statusFilter === "featured" && !t.featured) return false
+      if (statusFilter === "uncategorized" && t.categoryIds.length > 0)
+        return false
+      if (statusFilter === "missing" && !isMissingContent(t)) return false
       if (typeFilter !== "all" && t.tourType !== typeFilter) return false
       if (categoryFilter !== "all") {
         if (categoryFilter === "none" && t.categoryIds.length > 0) return false
@@ -250,6 +261,8 @@ export function ToursWorkspace({
                   <SelectItem value="published">Published</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="featured">Featured</SelectItem>
+                  <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                  <SelectItem value="missing">Missing content</SelectItem>
                 </SelectContent>
               </Select>
 
