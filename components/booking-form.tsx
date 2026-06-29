@@ -6,8 +6,36 @@ import { Price } from "@/components/price"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { startBooking, type BookingInput } from "@/app/actions/booking"
+
+/** Phone area codes (Iceland first, then common visitor origins). */
+const PHONE_CODES: { code: string; label: string }[] = [
+  { code: "+354", label: "Iceland (+354)" },
+  { code: "+1", label: "USA / Canada (+1)" },
+  { code: "+44", label: "United Kingdom (+44)" },
+  { code: "+49", label: "Germany (+49)" },
+  { code: "+33", label: "France (+33)" },
+  { code: "+34", label: "Spain (+34)" },
+  { code: "+39", label: "Italy (+39)" },
+  { code: "+31", label: "Netherlands (+31)" },
+  { code: "+45", label: "Denmark (+45)" },
+  { code: "+46", label: "Sweden (+46)" },
+  { code: "+47", label: "Norway (+47)" },
+  { code: "+358", label: "Finland (+358)" },
+  { code: "+41", label: "Switzerland (+41)" },
+  { code: "+43", label: "Austria (+43)" },
+  { code: "+32", label: "Belgium (+32)" },
+  { code: "+353", label: "Ireland (+353)" },
+  { code: "+351", label: "Portugal (+351)" },
+  { code: "+48", label: "Poland (+48)" },
+  { code: "+61", label: "Australia (+61)" },
+  { code: "+64", label: "New Zealand (+64)" },
+  { code: "+81", label: "Japan (+81)" },
+  { code: "+82", label: "South Korea (+82)" },
+  { code: "+86", label: "China (+86)" },
+  { code: "+91", label: "India (+91)" },
+  { code: "+55", label: "Brazil (+55)" },
+]
 
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
@@ -154,13 +182,16 @@ export function BookingForm({
 
   const [qtyByLine, setQtyByLine] = useState<Record<number, number>>({})
   const [qtyByAddon, setQtyByAddon] = useState<Record<number, number>>({})
+  const [firstByGuest, setFirstByGuest] = useState<Record<string, string>>({})
+  const [lastByGuest, setLastByGuest] = useState<Record<string, string>>({})
   const [pickupId, setPickupId] = useState<string>("")
   const [dropoffId, setDropoffId] = useState<string>("")
   const [roomNumber, setRoomNumber] = useState("")
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
+  const [phoneCode, setPhoneCode] = useState("+354")
   const [phone, setPhone] = useState("")
-  const [notes, setNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -172,6 +203,21 @@ export function BookingForm({
   )
   const total = baseTotal + addonsTotal
 
+  // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
+  const guestSlots = useMemo(() => {
+    const slotsOut: { key: string; label: string }[] = []
+    for (const line of lines) {
+      const qty = qtyByLine[line.id] ?? 0
+      for (let i = 0; i < qty; i++) {
+        slotsOut.push({
+          key: `${line.id}-${i}`,
+          label: qty > 1 ? `${line.title} ${i + 1}` : line.title,
+        })
+      }
+    }
+    return slotsOut
+  }, [lines, qtyByLine])
+
   const selectedPickup = pickupPlaces.find((p) => String(p.id) === pickupId)
   const needsRoomNumber = Boolean(selectedPickup?.askForRoomNumber)
 
@@ -180,8 +226,12 @@ export function BookingForm({
     !slot || slot.unlimited ? Number.POSITIVE_INFINITY : slot.seats - totalPax
   const atCapacity = seatsLeft <= 0
 
-  function setQty(lineId: number, next: number) {
-    setQtyByLine((prev) => ({ ...prev, [lineId]: Math.max(0, next) }))
+  // Functional delta update so rapid clicks accumulate correctly.
+  function bumpQty(lineId: number, delta: number) {
+    setQtyByLine((prev) => ({
+      ...prev,
+      [lineId]: Math.max(0, (prev[lineId] ?? 0) + delta),
+    }))
   }
 
   function setAddonQty(extra: BookingExtra, next: number) {
@@ -199,6 +249,8 @@ export function BookingForm({
     setSlotId(first?.id ?? "")
     setQtyByLine({})
     setQtyByAddon({})
+    setFirstByGuest({})
+    setLastByGuest({})
     setError(null)
   }
 
@@ -229,6 +281,16 @@ export function BookingForm({
       setError("Please enter your room number for the pickup.")
       return
     }
+    if (
+      guestSlots.some(
+        (g) =>
+          !(firstByGuest[g.key] ?? "").trim() ||
+          !(lastByGuest[g.key] ?? "").trim(),
+      )
+    ) {
+      setError("Please enter a first and last name for each participant.")
+      return
+    }
 
     const selections = slot.pricedPerPerson
       ? slot.lines
@@ -240,6 +302,11 @@ export function BookingForm({
       .map((e) => ({ extraId: e.id, qty: qtyByAddon[e.id] ?? 0 }))
       .filter((a) => a.qty > 0)
 
+    const participants = guestSlots.map((g) => ({
+      category: g.label,
+      name: `${(firstByGuest[g.key] ?? "").trim()} ${(lastByGuest[g.key] ?? "").trim()}`.trim(),
+    }))
+
     const payload: BookingInput = {
       bokunId,
       slotId: slot.id,
@@ -248,13 +315,13 @@ export function BookingForm({
       startTimeId: slot.startTimeId,
       selections,
       addons,
+      participants,
       pickupId: selectedPickup ? selectedPickup.id : undefined,
       dropoffId: dropoffId ? Number(dropoffId) : undefined,
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
-      customerName: name,
+      customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
-      customerPhone: phone,
-      notes,
+      customerPhone: phone.trim() ? `${phoneCode} ${phone.trim()}` : undefined,
     }
 
     startTransition(async () => {
@@ -367,7 +434,7 @@ export function BookingForm({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setQty(line.id, qty - 1)}
+                    onClick={() => bumpQty(line.id, -1)}
                     disabled={qty <= 0}
                     aria-label={`Decrease ${line.title}`}
                     className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
@@ -379,7 +446,7 @@ export function BookingForm({
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQty(line.id, qty + 1)}
+                    onClick={() => bumpQty(line.id, 1)}
                     disabled={atCapacity}
                     aria-label={`Increase ${line.title}`}
                     className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
@@ -534,17 +601,74 @@ export function BookingForm({
         </div>
       )}
 
+      {/* Participant names (one per seat) */}
+      {guestSlots.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <p className="text-sm font-semibold text-foreground">
+            {guestSlots.length === 1 ? "Participant name" : "Participant names"}
+          </p>
+          {guestSlots.map((g) => (
+            <div key={g.key} className="flex flex-col gap-1.5">
+              <Label>{g.label}</Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Input
+                  id={`guest-${g.key}-first`}
+                  value={firstByGuest[g.key] ?? ""}
+                  onChange={(e) =>
+                    setFirstByGuest((prev) => ({
+                      ...prev,
+                      [g.key]: e.target.value,
+                    }))
+                  }
+                  required
+                  autoComplete="off"
+                  placeholder="First name"
+                  aria-label={`${g.label} first name`}
+                />
+                <Input
+                  id={`guest-${g.key}-last`}
+                  value={lastByGuest[g.key] ?? ""}
+                  onChange={(e) =>
+                    setLastByGuest((prev) => ({
+                      ...prev,
+                      [g.key]: e.target.value,
+                    }))
+                  }
+                  required
+                  autoComplete="off"
+                  placeholder="Last name"
+                  aria-label={`${g.label} last name`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Customer details */}
       <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-name">Full name</Label>
-          <Input
-            id="booking-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoComplete="name"
-          />
+        <p className="text-sm font-semibold text-foreground">Contact details</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="booking-first-name">First name</Label>
+            <Input
+              id="booking-first-name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              autoComplete="given-name"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="booking-last-name">Last name</Label>
+            <Input
+              id="booking-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              autoComplete="family-name"
+            />
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-email">Email</Label>
@@ -559,23 +683,29 @@ export function BookingForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-phone">Phone (optional)</Label>
-          <Input
-            id="booking-phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            autoComplete="tel"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="booking-notes">Notes (optional)</Label>
-          <Textarea
-            id="booking-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            placeholder="Dietary needs, accessibility, special requests, etc."
-          />
+          <div className="flex gap-2">
+            <select
+              value={phoneCode}
+              onChange={(e) => setPhoneCode(e.target.value)}
+              aria-label="Phone area code"
+              className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {PHONE_CODES.map((c) => (
+                <option key={c.code + c.label} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <Input
+              id="booking-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel-national"
+              placeholder="Phone number"
+              className="flex-1"
+            />
+          </div>
         </div>
       </div>
 

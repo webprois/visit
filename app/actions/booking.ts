@@ -27,6 +27,8 @@ export type BookingInput = {
   selections: SlotSelection[]
   /** Quantity per add-on id. */
   addons?: AddonSelection[]
+  /** Name of each participant, labeled by pricing category. */
+  participants?: { category: string; name: string }[]
   /** Selected pickup/drop-off place ids (and room number for hotels). */
   pickupId?: number
   dropoffId?: number
@@ -177,6 +179,15 @@ export async function startBooking(
     }
   }
 
+  // --- Sanitize participant names (cap to the paid head count) ---
+  const storedParticipants = (input.participants ?? [])
+    .slice(0, totalPax)
+    .map((p) => ({
+      category: String(p.category ?? "").slice(0, 60),
+      name: String(p.name ?? "").trim().slice(0, 120),
+    }))
+    .filter((p) => p.name.length > 0)
+
   const tour = await getTourById(input.bokunId)
   const tourTitle = tour?.title ?? slot.id
 
@@ -191,6 +202,7 @@ export async function startBooking(
     startTimeId: input.startTimeId || null,
     pax: input.selections,
     addons: storedAddons,
+    participants: storedParticipants,
     pickup: storedPickup,
     totalPax,
     currency: "ISK",

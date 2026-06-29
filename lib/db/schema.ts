@@ -186,6 +186,8 @@ export const booking = pgTable("booking", {
   pax: jsonb("pax").notNull(),
   // Selected add-ons: [{ extraId, title, qty, unitIsk }]
   addons: jsonb("addons").notNull().default([]),
+  // Per-participant names: [{ category, name }]
+  participants: jsonb("participants").notNull().default([]),
   // Pickup/drop-off selection: { pickupId, pickupTitle, roomNumber, dropoffId, dropoffTitle }
   pickup: jsonb("pickup"),
   totalPax: integer("total_pax").notNull(),
