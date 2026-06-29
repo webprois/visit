@@ -77,6 +77,12 @@ export function PriceRangeSlider({
           border: 2px solid var(--color-primary, #ec4647);
           cursor: pointer;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .range-thumb::-webkit-slider-thumb:hover,
+        .range-thumb::-webkit-slider-thumb:active {
+          transform: scale(1.15);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         }
         .range-thumb::-moz-range-thumb {
           pointer-events: auto;
@@ -87,6 +93,12 @@ export function PriceRangeSlider({
           border: 2px solid var(--color-primary, #ec4647);
           cursor: pointer;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .range-thumb::-moz-range-thumb:hover,
+        .range-thumb::-moz-range-thumb:active {
+          transform: scale(1.15);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         }
         .range-thumb::-webkit-slider-runnable-track {
           background: transparent;

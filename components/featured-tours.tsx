@@ -43,7 +43,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
             <a
               key={tour.id ?? tour.title}
               href={tour.id ? `/tours/${tour.id}` : "/tours"}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg"
+              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image
@@ -53,6 +53,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </div>
 
               <div className="flex flex-1 flex-col p-5">

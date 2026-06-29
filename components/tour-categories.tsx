@@ -26,7 +26,7 @@ export function TourCategories({ categories }: { categories: HomeCategory[] }) {
           <a
             key={cat.id}
             href={`/tours?category=${encodeURIComponent(cat.slug)}`}
-            className="group relative aspect-[4/5] overflow-hidden rounded-2xl"
+            className="card-lift group relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-border ring-inset"
           >
             <Image
               src={cat.image || "/placeholder.svg"}
@@ -36,7 +36,7 @@ export function TourCategories({ categories }: { categories: HomeCategory[] }) {
               sizes="(max-width: 768px) 50vw, 25vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
+            <div className="absolute inset-x-0 bottom-0 p-4 transition-transform duration-300 group-hover:-translate-y-1">
               <h3 className="font-heading text-lg font-bold leading-tight text-foreground">
                 {cat.name}
               </h3>

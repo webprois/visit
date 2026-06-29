@@ -163,8 +163,38 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Subtle ambient glow so large dark surfaces read with depth instead of flat black. */
+    background-image:
+      radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%),
+      radial-gradient(50rem 50rem at 100% 0%, color-mix(in oklch, var(--chart-2) 8%, transparent), transparent 70%);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  ::selection {
+    background-color: color-mix(in oklch, var(--primary) 40%, transparent);
+    color: var(--foreground);
+  }
+}
+
+/* Soft branded glow for primary CTAs and accent surfaces. */
+@utility glow-primary {
+  box-shadow:
+    0 1px 2px color-mix(in oklch, black 40%, transparent),
+    0 8px 24px -8px color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+/* Reusable lift-on-hover for cards. */
+@utility card-lift {
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px -16px color-mix(in oklch, black 70%, transparent);
+    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
   }
 }

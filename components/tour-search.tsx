@@ -154,7 +154,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             type="button"
             onClick={() => toggle("exp")}
             aria-expanded={openPanel === "exp"}
-            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
           >
             <span
               className={
@@ -218,7 +218,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             type="button"
             onClick={() => toggle("dates")}
             aria-expanded={openPanel === "dates"}
-            className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+            className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
           >
             <Calendar className="size-4 shrink-0 text-primary" aria-hidden="true" />
             <span
@@ -255,7 +255,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             type="button"
             onClick={() => toggle("pax")}
             aria-expanded={openPanel === "pax"}
-            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
           >
             <span className="flex items-center gap-2 text-base text-foreground">
               <User className="size-4 shrink-0 text-primary" aria-hidden="true" />

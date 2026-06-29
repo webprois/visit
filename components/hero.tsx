@@ -16,6 +16,8 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
         sizes="100vw"
       />
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/45 to-background/95" />
+      {/* Vignette + corner glow to focus the eye on the copy and blend into the page. */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
 
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground ring-1 ring-foreground/25 backdrop-blur">
@@ -23,7 +25,7 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
           Trusted by 500+ travellers
         </span>
 
-        <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-md md:text-6xl">
+        <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
           Ready for adventure in the land of fire and ice?
         </h1>
         <p className="max-w-xl text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
@@ -35,7 +37,11 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/tours"
-            className={buttonVariants({ size: "lg", className: "rounded-full" })}
+            className={buttonVariants({
+              size: "lg",
+              className:
+                "glow-primary rounded-full transition-transform hover:-translate-y-0.5",
+            })}
           >
             Explore Tours
           </Link>

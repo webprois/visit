@@ -41,9 +41,9 @@ export function WhyBook() {
           {reasons.map((r) => (
             <div
               key={r.title}
-              className="rounded-2xl bg-secondary p-6 ring-1 ring-border"
+              className="card-lift rounded-2xl border border-border bg-secondary p-6"
             >
-              <span className="flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <span className="glow-primary flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-primary text-accent-foreground">
                 <r.icon className="size-6" aria-hidden="true" />
               </span>
               <h3 className="mt-4 font-heading text-lg font-bold">{r.title}</h3>
