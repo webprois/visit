@@ -220,24 +220,20 @@ export function TourEditor({
   }, [tour.bokunId])
 
   // Lazily load the original Bokun photos the first time the Images tab opens.
+  // We key the request to the tour id via a ref so it runs once per tour and
+  // — crucially — does NOT depend on the loading/result state, which would
+  // otherwise make the effect cancel the very request it just started.
+  const loadedBokunFor = useRef<string | null>(null)
   useEffect(() => {
-    if (tab !== "images" || bokunGallery !== null || loadingBokun) return
-    let cancelled = false
+    if (tab !== "images") return
+    if (loadedBokunFor.current === tour.bokunId) return
+    loadedBokunFor.current = tour.bokunId
     setLoadingBokun(true)
     getBokunGallery(tour.bokunId)
-      .then((urls) => {
-        if (!cancelled) setBokunGallery(urls)
-      })
-      .catch(() => {
-        if (!cancelled) setBokunGallery([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingBokun(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [tab, bokunGallery, loadingBokun, tour.bokunId])
+      .then((urls) => setBokunGallery(urls))
+      .catch(() => setBokunGallery([]))
+      .finally(() => setLoadingBokun(false))
+  }, [tab, tour.bokunId])
 
   function setField(
     field: "title" | "excerpt" | "description" | "included" | "excluded" | "goodToKnow",
