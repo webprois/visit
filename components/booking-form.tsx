@@ -860,9 +860,10 @@ export function BookingForm({
                       </span>
                       <span
                         className={
-                          active
+                          "whitespace-nowrap " +
+                          (active
                             ? "font-semibold text-foreground"
-                            : "text-muted-foreground"
+                            : "text-muted-foreground")
                         }
                       >
                         {label}
