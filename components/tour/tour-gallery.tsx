@@ -67,7 +67,7 @@ export function TourGallery({
         <button
           type="button"
           onClick={() => openAt(0)}
-          className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-border sm:aspect-[16/11]"
+          className="group relative aspect-[4/3] overflow-hidden rounded-2xl sm:aspect-[16/11]"
           aria-label={`Open ${title} photo 1 in full screen`}
         >
           <Image
@@ -95,7 +95,7 @@ export function TourGallery({
                   key={src}
                   type="button"
                   onClick={() => openAt(photoIndex)}
-                  className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border sm:aspect-auto sm:h-full"
+                  className="group relative aspect-[4/3] overflow-hidden rounded-xl sm:aspect-auto sm:h-full"
                   aria-label={`Open ${title} photo ${photoIndex + 1} in full screen`}
                 >
                   <Image
