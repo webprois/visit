@@ -87,6 +87,11 @@ export function ToursBrowser({
     top: 0,
     left: 0,
   })
+  // Draft range while picking. We only commit to the URL once a FULL range is
+  // chosen, so the first click doesn't trigger a navigation that would close
+  // the popover before the end date can be picked.
+  const [draftFrom, setDraftFrom] = useState<Date | null>(fromDate)
+  const [draftTo, setDraftTo] = useState<Date | null>(toDate)
 
   function openDatePopover() {
     const btn = dateBtnRef.current
@@ -97,7 +102,24 @@ export function ToursBrowser({
       const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
       setDatePos({ top: r.bottom + 8, left })
     }
+    // Sync the draft to whatever is currently committed in the URL.
+    setDraftFrom(fromDate)
+    setDraftTo(toDate)
     setDateOpen((o) => !o)
+  }
+
+  // Called by the calendar on every pick. Update the draft; once a complete
+  // range exists, commit it to the URL and close.
+  function handleCalendarChange(from: Date | null, to: Date | null) {
+    setDraftFrom(from)
+    setDraftTo(to)
+    if (from && to) {
+      applyDates(from, to)
+      setDateOpen(false)
+    } else if (!from && !to) {
+      // "Clear" inside the calendar removes any committed date search.
+      if (hasDateSearch) clearDates()
+    }
   }
 
   useEffect(() => {
@@ -114,18 +136,16 @@ export function ToursBrowser({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setDateOpen(false)
     }
-    function onReflow() {
+    function onResize() {
       setDateOpen(false)
     }
     document.addEventListener("pointerdown", onPointer)
     document.addEventListener("keydown", onKey)
-    window.addEventListener("resize", onReflow)
-    window.addEventListener("scroll", onReflow, true)
+    window.addEventListener("resize", onResize)
     return () => {
       document.removeEventListener("pointerdown", onPointer)
       document.removeEventListener("keydown", onKey)
-      window.removeEventListener("resize", onReflow)
-      window.removeEventListener("scroll", onReflow, true)
+      window.removeEventListener("resize", onResize)
     }
   }, [dateOpen])
 
@@ -549,9 +569,9 @@ export function ToursBrowser({
                 className="z-50 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:p-4"
               >
                 <RangeCalendar
-                  from={fromDate}
-                  to={toDate}
-                  onChange={applyDates}
+                  from={draftFrom}
+                  to={draftTo}
+                  onChange={handleCalendarChange}
                 />
               </div>,
               document.body,
