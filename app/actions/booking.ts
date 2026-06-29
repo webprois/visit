@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto"
 import { headers } from "next/headers"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { booking } from "@/lib/db/schema"
 import {
@@ -61,14 +61,27 @@ function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
+type PreparedBooking = {
+  id: string
+  amountIsk: number
+  tourTitle: string
+  date: string
+  customerEmail: string
+}
+type PersistResult =
+  | { ok: true; booking: PreparedBooking }
+  | { ok: false; error: string }
+
 /**
- * Validate the request, re-price it authoritatively against live Bokun data,
- * persist a pending booking, and build a signed Teya SecurePay form. Returns
- * the form fields for the client to auto-submit (POST) to the hosted page.
+ * Validate the request, re-price it authoritatively against live Bokun data
+ * (never trust client-supplied prices), and persist a booking with the given
+ * status. Shared by the legacy SecurePay flow and the new Teya Hosted Checkout
+ * flow.
  */
-export async function startBooking(
+async function persistBooking(
   input: BookingInput,
-): Promise<StartBookingResult> {
+  status: string,
+): Promise<PersistResult> {
   // --- Basic validation ---
   if (!input.bokunId || !input.slotId || !input.date) {
     return { ok: false, error: "Missing booking details." }
@@ -211,10 +224,32 @@ export async function startBooking(
     customerEmail: input.customerEmail.trim(),
     customerPhone: input.customerPhone?.trim() || null,
     notes: input.notes?.trim() || null,
-    status: "pending",
+    status,
   })
 
-  // --- Build the signed Teya SecurePay form ---
+  return {
+    ok: true,
+    booking: {
+      id,
+      amountIsk,
+      tourTitle,
+      date: input.date,
+      customerEmail: input.customerEmail.trim(),
+    },
+  }
+}
+
+/**
+ * Legacy SecurePay flow: persist a pending booking and build a signed Teya
+ * SecurePay form for the client to auto-submit (POST) to the hosted page.
+ */
+export async function startBooking(
+  input: BookingInput,
+): Promise<StartBookingResult> {
+  const prep = await persistBooking(input, "pending")
+  if (!prep.ok) return { ok: false, error: prep.error }
+  const { id, amountIsk, tourTitle, date, customerEmail } = prep.booking
+
   const origin = await getOrigin()
   const returnBase = `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`
   try {
@@ -222,14 +257,13 @@ export async function startBooking(
       orderId: id,
       amountIsk,
       currency: "ISK",
-      buyerEmail: input.customerEmail.trim(),
-      itemDescription: `${tourTitle} — ${input.date}`,
+      buyerEmail: customerEmail,
+      itemDescription: `${tourTitle} — ${date}`,
       returnUrlSuccess: returnBase,
       returnUrlSuccessServer: `${origin}/api/teya/webhook`,
       returnUrlCancel: `${returnBase}&status=cancelled`,
       returnUrlError: `${returnBase}&status=failed`,
     })
-    // Record the order id we'll reconcile against on return.
     await db
       .update(booking)
       .set({ teyaSessionId: id, updatedAt: new Date() })
@@ -247,6 +281,65 @@ export async function startBooking(
         "We couldn't start the payment. Please try again or contact us to book.",
     }
   }
+}
+
+export type CreatePendingResult =
+  | { ok: true; bookingId: string; amountIsk: number; currency: "ISK" }
+  | { ok: false; error: string }
+
+/**
+ * New Teya Hosted Checkout flow: validate + re-price + persist a booking with
+ * status "pending_payment". Returns the booking id; the client then calls
+ * POST /api/payments/teya/create-checkout to get the hosted payment URL.
+ */
+export async function createPendingBooking(
+  input: BookingInput,
+): Promise<CreatePendingResult> {
+  const prep = await persistBooking(input, "pending_payment")
+  if (!prep.ok) return { ok: false, error: prep.error }
+  return {
+    ok: true,
+    bookingId: prep.booking.id,
+    amountIsk: prep.booking.amountIsk,
+    currency: "ISK",
+  }
+}
+
+/**
+ * Mark a booking confirmed — ONLY from a verified Teya webhook / backend status,
+ * never from the browser redirect. No-op unless still "pending_payment", so it's
+ * safe to call more than once.
+ */
+export async function markBookingConfirmed(
+  bookingId: string,
+  paymentId: string | null,
+): Promise<boolean> {
+  const res = await db
+    .update(booking)
+    .set({
+      status: "confirmed",
+      teyaReference: paymentId,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(booking.id, bookingId), eq(booking.status, "pending_payment")),
+    )
+    .returning({ id: booking.id })
+  const confirmed = res.length > 0
+  if (confirmed) {
+    console.log(`[v0] Booking ${bookingId} CONFIRMED (Teya ${paymentId ?? "?"})`)
+  }
+  return confirmed
+}
+
+/** Mark a still-unpaid booking cancelled (e.g. the customer abandoned checkout). */
+export async function markBookingCancelled(bookingId: string): Promise<void> {
+  await db
+    .update(booking)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(
+      and(eq(booking.id, bookingId), eq(booking.status, "pending_payment")),
+    )
 }
 
 export type BookingSummary = {
