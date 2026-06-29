@@ -101,35 +101,17 @@ export default async function TourPage({
     .map((p) => p.trim())
     .filter(Boolean)
 
-  // Hero facts — compact, scannable tour basics.
+  // Hero facts — compact, scannable tour basics, all consolidated into the
+  // header (the separate quick-facts strip was dropped to avoid duplication).
   const heroFacts = [
     { icon: CalendarDays, text: TYPE_LABELS[tour.tourType] },
     { icon: Clock, text: durationText },
     { icon: MapPin, text: locationText },
-    tour.groupSizeLabel
-      ? { icon: Users, text: tour.groupSizeLabel }
-      : null,
+    tour.groupSizeLabel ? { icon: Users, text: tour.groupSizeLabel } : null,
+    tour.difficultyLabel ? { icon: Gauge, text: tour.difficultyLabel } : null,
+    detail?.hasPickup ? { icon: Bus, text: "Hotel pickup included" } : null,
+    detail?.minAge ? { icon: Baby, text: `Min age ${detail.minAge}` } : null,
   ].filter((x): x is { icon: typeof Clock; text: string } => Boolean(x))
-
-  // Quick-facts strip.
-  const quickFacts = [
-    { icon: Clock, label: "Duration", value: durationText },
-    { icon: CalendarDays, label: "Type", value: TYPE_LABELS[tour.tourType] },
-    tour.difficultyLabel
-      ? { icon: Gauge, label: "Difficulty", value: tour.difficultyLabel }
-      : null,
-    detail?.hasPickup
-      ? { icon: Bus, label: "Pickup", value: "Hotel pickup included" }
-      : { icon: MapPin, label: "Meeting point", value: locationText },
-    tour.groupSizeLabel
-      ? { icon: Users, label: "Group size", value: tour.groupSizeLabel }
-      : null,
-    detail?.minAge
-      ? { icon: Baby, label: "Minimum age", value: `${detail.minAge} years` }
-      : null,
-  ].filter(
-    (x): x is { icon: typeof Clock; label: string; value: string } => Boolean(x),
-  )
 
   const gallery = detail?.gallery?.length
     ? detail.gallery
@@ -182,7 +164,7 @@ export default async function TourPage({
                 <span className="truncate text-foreground">{tour.title}</span>
               </nav>
 
-              <div className="grid items-end gap-6 lg:grid-cols-[1fr_auto]">
+              <div className="grid items-start gap-6 lg:grid-cols-[1fr_auto]">
                 {/* Left: title + subtitle + facts */}
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -250,31 +232,6 @@ export default async function TourPage({
               {/* Gallery */}
               {gallery.length > 0 && (
                 <TourGallery images={gallery} title={tour.title} />
-              )}
-
-              {/* Quick facts strip */}
-              {quickFacts.length > 0 && (
-                <section aria-label="Tour facts">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {quickFacts.map((item) => (
-                      <div
-                        key={item.label}
-                        className="rounded-xl border border-border bg-card p-4"
-                      >
-                        <item.icon
-                          className="size-5 text-primary"
-                          aria-hidden="true"
-                        />
-                        <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
-                          {item.label}
-                        </p>
-                        <p className="font-heading text-sm font-bold text-foreground">
-                          {item.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
               )}
 
               {/* About */}

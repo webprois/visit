@@ -18,35 +18,217 @@ import { Price } from "@/components/price"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { startBooking, type BookingInput } from "@/app/actions/booking"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
-const PHONE_CODES: { code: string; label: string }[] = [
-  { code: "+354", label: "+354 Iceland" },
-  { code: "+1", label: "+1 USA / Canada" },
-  { code: "+44", label: "+44 United Kingdom" },
-  { code: "+49", label: "+49 Germany" },
-  { code: "+33", label: "+33 France" },
-  { code: "+34", label: "+34 Spain" },
-  { code: "+39", label: "+39 Italy" },
-  { code: "+31", label: "+31 Netherlands" },
-  { code: "+45", label: "+45 Denmark" },
-  { code: "+46", label: "+46 Sweden" },
-  { code: "+47", label: "+47 Norway" },
-  { code: "+358", label: "+358 Finland" },
-  { code: "+41", label: "+41 Switzerland" },
-  { code: "+43", label: "+43 Austria" },
-  { code: "+32", label: "+32 Belgium" },
-  { code: "+353", label: "+353 Ireland" },
-  { code: "+351", label: "+351 Portugal" },
-  { code: "+48", label: "+48 Poland" },
-  { code: "+61", label: "+61 Australia" },
-  { code: "+64", label: "+64 New Zealand" },
-  { code: "+81", label: "+81 Japan" },
-  { code: "+82", label: "+82 South Korea" },
-  { code: "+86", label: "+86 China" },
-  { code: "+91", label: "+91 India" },
-  { code: "+55", label: "+55 Brazil" },
+// Full country dialing list. `iso` is the unique select value (some countries
+// share a dial code, e.g. +1), `dial` is shown in the trigger, `name` in the
+// dropdown. Iceland first, then alphabetical.
+const PHONE_CODES: { iso: string; dial: string; name: string }[] = [
+  { iso: "IS", dial: "+354", name: "Iceland" },
+  { iso: "AF", dial: "+93", name: "Afghanistan" },
+  { iso: "AL", dial: "+355", name: "Albania" },
+  { iso: "DZ", dial: "+213", name: "Algeria" },
+  { iso: "AD", dial: "+376", name: "Andorra" },
+  { iso: "AO", dial: "+244", name: "Angola" },
+  { iso: "AG", dial: "+1268", name: "Antigua and Barbuda" },
+  { iso: "AR", dial: "+54", name: "Argentina" },
+  { iso: "AM", dial: "+374", name: "Armenia" },
+  { iso: "AU", dial: "+61", name: "Australia" },
+  { iso: "AT", dial: "+43", name: "Austria" },
+  { iso: "AZ", dial: "+994", name: "Azerbaijan" },
+  { iso: "BS", dial: "+1242", name: "Bahamas" },
+  { iso: "BH", dial: "+973", name: "Bahrain" },
+  { iso: "BD", dial: "+880", name: "Bangladesh" },
+  { iso: "BB", dial: "+1246", name: "Barbados" },
+  { iso: "BY", dial: "+375", name: "Belarus" },
+  { iso: "BE", dial: "+32", name: "Belgium" },
+  { iso: "BZ", dial: "+501", name: "Belize" },
+  { iso: "BJ", dial: "+229", name: "Benin" },
+  { iso: "BT", dial: "+975", name: "Bhutan" },
+  { iso: "BO", dial: "+591", name: "Bolivia" },
+  { iso: "BA", dial: "+387", name: "Bosnia and Herzegovina" },
+  { iso: "BW", dial: "+267", name: "Botswana" },
+  { iso: "BR", dial: "+55", name: "Brazil" },
+  { iso: "BN", dial: "+673", name: "Brunei" },
+  { iso: "BG", dial: "+359", name: "Bulgaria" },
+  { iso: "BF", dial: "+226", name: "Burkina Faso" },
+  { iso: "BI", dial: "+257", name: "Burundi" },
+  { iso: "KH", dial: "+855", name: "Cambodia" },
+  { iso: "CM", dial: "+237", name: "Cameroon" },
+  { iso: "CA", dial: "+1", name: "Canada" },
+  { iso: "CV", dial: "+238", name: "Cape Verde" },
+  { iso: "CF", dial: "+236", name: "Central African Republic" },
+  { iso: "TD", dial: "+235", name: "Chad" },
+  { iso: "CL", dial: "+56", name: "Chile" },
+  { iso: "CN", dial: "+86", name: "China" },
+  { iso: "CO", dial: "+57", name: "Colombia" },
+  { iso: "KM", dial: "+269", name: "Comoros" },
+  { iso: "CG", dial: "+242", name: "Congo" },
+  { iso: "CD", dial: "+243", name: "Congo (DRC)" },
+  { iso: "CR", dial: "+506", name: "Costa Rica" },
+  { iso: "CI", dial: "+225", name: "Côte d'Ivoire" },
+  { iso: "HR", dial: "+385", name: "Croatia" },
+  { iso: "CU", dial: "+53", name: "Cuba" },
+  { iso: "CY", dial: "+357", name: "Cyprus" },
+  { iso: "CZ", dial: "+420", name: "Czechia" },
+  { iso: "DK", dial: "+45", name: "Denmark" },
+  { iso: "DJ", dial: "+253", name: "Djibouti" },
+  { iso: "DM", dial: "+1767", name: "Dominica" },
+  { iso: "DO", dial: "+1809", name: "Dominican Republic" },
+  { iso: "EC", dial: "+593", name: "Ecuador" },
+  { iso: "EG", dial: "+20", name: "Egypt" },
+  { iso: "SV", dial: "+503", name: "El Salvador" },
+  { iso: "GQ", dial: "+240", name: "Equatorial Guinea" },
+  { iso: "ER", dial: "+291", name: "Eritrea" },
+  { iso: "EE", dial: "+372", name: "Estonia" },
+  { iso: "SZ", dial: "+268", name: "Eswatini" },
+  { iso: "ET", dial: "+251", name: "Ethiopia" },
+  { iso: "FJ", dial: "+679", name: "Fiji" },
+  { iso: "FI", dial: "+358", name: "Finland" },
+  { iso: "FR", dial: "+33", name: "France" },
+  { iso: "GA", dial: "+241", name: "Gabon" },
+  { iso: "GM", dial: "+220", name: "Gambia" },
+  { iso: "GE", dial: "+995", name: "Georgia" },
+  { iso: "DE", dial: "+49", name: "Germany" },
+  { iso: "GH", dial: "+233", name: "Ghana" },
+  { iso: "GR", dial: "+30", name: "Greece" },
+  { iso: "GD", dial: "+1473", name: "Grenada" },
+  { iso: "GT", dial: "+502", name: "Guatemala" },
+  { iso: "GN", dial: "+224", name: "Guinea" },
+  { iso: "GW", dial: "+245", name: "Guinea-Bissau" },
+  { iso: "GY", dial: "+592", name: "Guyana" },
+  { iso: "HT", dial: "+509", name: "Haiti" },
+  { iso: "HN", dial: "+504", name: "Honduras" },
+  { iso: "HK", dial: "+852", name: "Hong Kong" },
+  { iso: "HU", dial: "+36", name: "Hungary" },
+  { iso: "IN", dial: "+91", name: "India" },
+  { iso: "ID", dial: "+62", name: "Indonesia" },
+  { iso: "IR", dial: "+98", name: "Iran" },
+  { iso: "IQ", dial: "+964", name: "Iraq" },
+  { iso: "IE", dial: "+353", name: "Ireland" },
+  { iso: "IL", dial: "+972", name: "Israel" },
+  { iso: "IT", dial: "+39", name: "Italy" },
+  { iso: "JM", dial: "+1876", name: "Jamaica" },
+  { iso: "JP", dial: "+81", name: "Japan" },
+  { iso: "JO", dial: "+962", name: "Jordan" },
+  { iso: "KZ", dial: "+7", name: "Kazakhstan" },
+  { iso: "KE", dial: "+254", name: "Kenya" },
+  { iso: "KI", dial: "+686", name: "Kiribati" },
+  { iso: "KW", dial: "+965", name: "Kuwait" },
+  { iso: "KG", dial: "+996", name: "Kyrgyzstan" },
+  { iso: "LA", dial: "+856", name: "Laos" },
+  { iso: "LV", dial: "+371", name: "Latvia" },
+  { iso: "LB", dial: "+961", name: "Lebanon" },
+  { iso: "LS", dial: "+266", name: "Lesotho" },
+  { iso: "LR", dial: "+231", name: "Liberia" },
+  { iso: "LY", dial: "+218", name: "Libya" },
+  { iso: "LI", dial: "+423", name: "Liechtenstein" },
+  { iso: "LT", dial: "+370", name: "Lithuania" },
+  { iso: "LU", dial: "+352", name: "Luxembourg" },
+  { iso: "MO", dial: "+853", name: "Macau" },
+  { iso: "MG", dial: "+261", name: "Madagascar" },
+  { iso: "MW", dial: "+265", name: "Malawi" },
+  { iso: "MY", dial: "+60", name: "Malaysia" },
+  { iso: "MV", dial: "+960", name: "Maldives" },
+  { iso: "ML", dial: "+223", name: "Mali" },
+  { iso: "MT", dial: "+356", name: "Malta" },
+  { iso: "MH", dial: "+692", name: "Marshall Islands" },
+  { iso: "MR", dial: "+222", name: "Mauritania" },
+  { iso: "MU", dial: "+230", name: "Mauritius" },
+  { iso: "MX", dial: "+52", name: "Mexico" },
+  { iso: "FM", dial: "+691", name: "Micronesia" },
+  { iso: "MD", dial: "+373", name: "Moldova" },
+  { iso: "MC", dial: "+377", name: "Monaco" },
+  { iso: "MN", dial: "+976", name: "Mongolia" },
+  { iso: "ME", dial: "+382", name: "Montenegro" },
+  { iso: "MA", dial: "+212", name: "Morocco" },
+  { iso: "MZ", dial: "+258", name: "Mozambique" },
+  { iso: "MM", dial: "+95", name: "Myanmar" },
+  { iso: "NA", dial: "+264", name: "Namibia" },
+  { iso: "NR", dial: "+674", name: "Nauru" },
+  { iso: "NP", dial: "+977", name: "Nepal" },
+  { iso: "NL", dial: "+31", name: "Netherlands" },
+  { iso: "NZ", dial: "+64", name: "New Zealand" },
+  { iso: "NI", dial: "+505", name: "Nicaragua" },
+  { iso: "NE", dial: "+227", name: "Niger" },
+  { iso: "NG", dial: "+234", name: "Nigeria" },
+  { iso: "KP", dial: "+850", name: "North Korea" },
+  { iso: "MK", dial: "+389", name: "North Macedonia" },
+  { iso: "NO", dial: "+47", name: "Norway" },
+  { iso: "OM", dial: "+968", name: "Oman" },
+  { iso: "PK", dial: "+92", name: "Pakistan" },
+  { iso: "PW", dial: "+680", name: "Palau" },
+  { iso: "PS", dial: "+970", name: "Palestine" },
+  { iso: "PA", dial: "+507", name: "Panama" },
+  { iso: "PG", dial: "+675", name: "Papua New Guinea" },
+  { iso: "PY", dial: "+595", name: "Paraguay" },
+  { iso: "PE", dial: "+51", name: "Peru" },
+  { iso: "PH", dial: "+63", name: "Philippines" },
+  { iso: "PL", dial: "+48", name: "Poland" },
+  { iso: "PT", dial: "+351", name: "Portugal" },
+  { iso: "QA", dial: "+974", name: "Qatar" },
+  { iso: "RO", dial: "+40", name: "Romania" },
+  { iso: "RU", dial: "+7", name: "Russia" },
+  { iso: "RW", dial: "+250", name: "Rwanda" },
+  { iso: "KN", dial: "+1869", name: "Saint Kitts and Nevis" },
+  { iso: "LC", dial: "+1758", name: "Saint Lucia" },
+  { iso: "VC", dial: "+1784", name: "Saint Vincent and the Grenadines" },
+  { iso: "WS", dial: "+685", name: "Samoa" },
+  { iso: "SM", dial: "+378", name: "San Marino" },
+  { iso: "ST", dial: "+239", name: "Sao Tome and Principe" },
+  { iso: "SA", dial: "+966", name: "Saudi Arabia" },
+  { iso: "SN", dial: "+221", name: "Senegal" },
+  { iso: "RS", dial: "+381", name: "Serbia" },
+  { iso: "SC", dial: "+248", name: "Seychelles" },
+  { iso: "SL", dial: "+232", name: "Sierra Leone" },
+  { iso: "SG", dial: "+65", name: "Singapore" },
+  { iso: "SK", dial: "+421", name: "Slovakia" },
+  { iso: "SI", dial: "+386", name: "Slovenia" },
+  { iso: "SB", dial: "+677", name: "Solomon Islands" },
+  { iso: "SO", dial: "+252", name: "Somalia" },
+  { iso: "ZA", dial: "+27", name: "South Africa" },
+  { iso: "KR", dial: "+82", name: "South Korea" },
+  { iso: "SS", dial: "+211", name: "South Sudan" },
+  { iso: "ES", dial: "+34", name: "Spain" },
+  { iso: "LK", dial: "+94", name: "Sri Lanka" },
+  { iso: "SD", dial: "+249", name: "Sudan" },
+  { iso: "SR", dial: "+597", name: "Suriname" },
+  { iso: "SE", dial: "+46", name: "Sweden" },
+  { iso: "CH", dial: "+41", name: "Switzerland" },
+  { iso: "SY", dial: "+963", name: "Syria" },
+  { iso: "TW", dial: "+886", name: "Taiwan" },
+  { iso: "TJ", dial: "+992", name: "Tajikistan" },
+  { iso: "TZ", dial: "+255", name: "Tanzania" },
+  { iso: "TH", dial: "+66", name: "Thailand" },
+  { iso: "TL", dial: "+670", name: "Timor-Leste" },
+  { iso: "TG", dial: "+228", name: "Togo" },
+  { iso: "TO", dial: "+676", name: "Tonga" },
+  { iso: "TT", dial: "+1868", name: "Trinidad and Tobago" },
+  { iso: "TN", dial: "+216", name: "Tunisia" },
+  { iso: "TR", dial: "+90", name: "Turkey" },
+  { iso: "TM", dial: "+993", name: "Turkmenistan" },
+  { iso: "TV", dial: "+688", name: "Tuvalu" },
+  { iso: "UG", dial: "+256", name: "Uganda" },
+  { iso: "UA", dial: "+380", name: "Ukraine" },
+  { iso: "AE", dial: "+971", name: "United Arab Emirates" },
+  { iso: "GB", dial: "+44", name: "United Kingdom" },
+  { iso: "US", dial: "+1", name: "United States" },
+  { iso: "UY", dial: "+598", name: "Uruguay" },
+  { iso: "UZ", dial: "+998", name: "Uzbekistan" },
+  { iso: "VU", dial: "+678", name: "Vanuatu" },
+  { iso: "VA", dial: "+379", name: "Vatican City" },
+  { iso: "VE", dial: "+58", name: "Venezuela" },
+  { iso: "VN", dial: "+84", name: "Vietnam" },
+  { iso: "YE", dial: "+967", name: "Yemen" },
+  { iso: "ZM", dial: "+260", name: "Zambia" },
+  { iso: "ZW", dial: "+263", name: "Zimbabwe" },
 ]
 
 // Visit Travel Iceland's standard day-trip / activity cancellation policy
@@ -54,6 +236,14 @@ const PHONE_CODES: { code: string; label: string }[] = [
 // operator's terms shown on the ticket.
 const TERMS_URL = "https://visit.is/terms-and-conditions/"
 const CANCELLATION_SUMMARY = "Free cancellation up to 72h before"
+
+type StepKey = "tour" | "details" | "addons" | "confirm"
+const STEP_LABELS: Record<StepKey, string> = {
+  tour: "Tour",
+  details: "Details",
+  addons: "Add-ons",
+  confirm: "Confirm",
+}
 
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
@@ -215,10 +405,20 @@ export function BookingForm({
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
-  const [phoneCode, setPhoneCode] = useState("+354")
+  const [phoneCountry, setPhoneCountry] = useState("IS")
+  const phoneDial =
+    PHONE_CODES.find((c) => c.iso === phoneCountry)?.dial ?? "+354"
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState(1)
+  // Wizard steps. The add-ons step only appears when the tour has extras, so a
+  // tour without add-ons collapses to a 3-step flow.
+  const stepKeys: StepKey[] =
+    extras.length > 0
+      ? ["tour", "details", "addons", "confirm"]
+      : ["tour", "details", "confirm"]
+  const totalSteps = stepKeys.length
+  const currentKey = stepKeys[Math.min(step, totalSteps) - 1]
   const [pending, startTransition] = useTransition()
 
   const totalPax = lines.reduce((n, l) => n + (qtyByLine[l.id] ?? 0), 0)
@@ -285,7 +485,7 @@ export function BookingForm({
     setError(null)
     // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
     // here, so just advance through the wizard instead of attempting to pay.
-    if (step !== 3) {
+    if (currentKey !== "confirm") {
       goNext()
       return
     }
@@ -365,7 +565,7 @@ export function BookingForm({
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
       customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
-      customerPhone: `${phoneCode} ${phone.trim()}`,
+      customerPhone: `${phoneDial} ${phone.trim()}`,
     }
 
     startTransition(async () => {
@@ -419,30 +619,18 @@ export function BookingForm({
       setError("Please enter a first and last name for each participant.")
       return false
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setError("Please enter your name.")
-      return false
-    }
-    if (!email.trim()) {
-      setError("Please enter your email.")
-      return false
-    }
-    if (!phone.trim()) {
-      setError("Please enter your phone number.")
-      return false
-    }
     return true
   }
 
   function goNext() {
-    if (step === 1 && !validateStep1()) return
-    if (step === 2 && !validateStep2()) return
-    setStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s))
+    if (currentKey === "tour" && !validateStep1()) return
+    if (currentKey === "details" && !validateStep2()) return
+    setStep((s) => Math.min(totalSteps, s + 1))
   }
 
   function goBack() {
     setError(null)
-    setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
+    setStep((s) => Math.max(1, s - 1))
   }
 
   // No availability at all → contact fallback (desktop card + mobile bar).
@@ -486,8 +674,6 @@ export function BookingForm({
     { icon: Compass, text: "Local expert guide" },
     { icon: Lock, text: "Secure booking" },
   ]
-
-  const STEPS = ["Tour", "Details", "Review"]
 
   /** Date + departure + participant steppers — reused in card and overlay. */
   function renderSelection() {
@@ -649,12 +835,13 @@ export function BookingForm({
 
               {/* Step indicator */}
               <ol className="mt-3 flex items-center gap-1.5 text-xs">
-                {STEPS.map((label, i) => {
+                {stepKeys.map((stepKey, i) => {
                   const n = i + 1
+                  const label = STEP_LABELS[stepKey]
                   const active = n === step
                   const done = n < step
                   return (
-                    <li key={label} className="flex items-center gap-1.5">
+                    <li key={stepKey} className="flex items-center gap-1.5">
                       <span
                         className={
                           "flex size-6 items-center justify-center rounded-full text-[11px] font-bold transition-colors " +
@@ -680,7 +867,7 @@ export function BookingForm({
                       >
                         {label}
                       </span>
-                      {n < STEPS.length && (
+                      {n < stepKeys.length && (
                         <span
                           className="ml-0.5 h-px w-3 bg-border"
                           aria-hidden="true"
@@ -692,8 +879,8 @@ export function BookingForm({
               </ol>
             </div>
 
-            {/* Step 1 — date, participants & add-ons */}
-            {step === 1 && (
+            {/* Step: tour — date & participants */}
+            {currentKey === "tour" && (
               <>
                 {renderSelection()}
 
@@ -702,7 +889,12 @@ export function BookingForm({
                     Select participants to see final pricing.
                   </p>
                 )}
+              </>
+            )}
 
+            {/* Step: add-ons */}
+            {currentKey === "addons" && (
+              <>
                 {/* Add-ons */}
             {extras.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
@@ -758,8 +950,8 @@ export function BookingForm({
               </>
             )}
 
-            {/* Step 2 — pickup, participant names & contact */}
-            {step === 2 && (
+            {/* Step: details — pickup & participant names */}
+            {currentKey === "details" && (
               <>
             {/* Pickup / drop-off */}
             {pickupPlaces.length > 0 && (
@@ -883,7 +1075,12 @@ export function BookingForm({
                 ))}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step: confirm — contact, summary & pay */}
+            {currentKey === "confirm" && (
+              <>
             {/* Contact details */}
             <div className="flex flex-col gap-3 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
@@ -925,18 +1122,24 @@ export function BookingForm({
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="booking-phone">Phone</Label>
                 <div className="flex gap-2">
-                  <select
-                    value={phoneCode}
-                    onChange={(e) => setPhoneCode(e.target.value)}
-                    aria-label="Phone area code"
-                    className="h-11 w-36 shrink-0 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  <Select
+                    value={phoneCountry}
+                    onValueChange={(v) => v && setPhoneCountry(v)}
                   >
-                    {PHONE_CODES.map((c) => (
-                      <option key={c.code + c.label} value={c.code}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      aria-label="Phone country code"
+                      className="h-11 w-20 shrink-0 rounded-lg border-input bg-background"
+                    >
+                      <span className="text-sm font-medium">{phoneDial}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHONE_CODES.map((c) => (
+                        <SelectItem key={c.iso} value={c.iso}>
+                          {c.dial} {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     id="booking-phone"
                     type="tel"
@@ -950,12 +1153,7 @@ export function BookingForm({
                 </div>
               </div>
             </div>
-              </>
-            )}
 
-            {/* Step 3 — review & pay */}
-            {step === 3 && (
-              <>
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
@@ -1068,7 +1266,7 @@ export function BookingForm({
                     Back
                   </Button>
                 )}
-                {step < 3 ? (
+                {step < totalSteps ? (
                   <Button
                     type="button"
                     size="lg"
@@ -1097,7 +1295,7 @@ export function BookingForm({
                 )}
               </div>
 
-              {step === 3 && (
+              {step === totalSteps && (
                 <p className="text-center text-xs text-muted-foreground">
                   Secure payment via Teya. You won&apos;t be charged until you
                   confirm.
