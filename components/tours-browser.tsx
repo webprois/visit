@@ -38,15 +38,25 @@ export function ToursBrowser({
   tours,
   categories,
   initialCategoryId = null,
+  initialCategoryIds,
 }: {
   tours: MergedTour[]
   categories: TourCategory[]
   initialCategoryId?: number | null
+  /** Multi-select seed; takes precedence over `initialCategoryId` when given. */
+  initialCategoryIds?: number[]
 }) {
   const [query, setQuery] = useState("")
   // Selected category ids (multi-select). Empty = no activity filter.
   const [activeCategories, setActiveCategories] = useState<Set<number>>(
-    new Set(initialCategoryId != null ? [initialCategoryId] : []),
+    () =>
+      new Set(
+        initialCategoryIds && initialCategoryIds.length > 0
+          ? initialCategoryIds
+          : initialCategoryId != null
+            ? [initialCategoryId]
+            : [],
+      ),
   )
   // Selected starting location ids (multi-select). Empty = no location filter.
   const [activeLocations, setActiveLocations] = useState<Set<number>>(new Set())

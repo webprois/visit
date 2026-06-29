@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  Check,
   Minus,
   Plus,
   Snowflake,
@@ -101,7 +102,8 @@ function experienceIcon(label: string) {
 
 export function TourSearch({ experiences }: { experiences: Experience[] }) {
   const router = useRouter()
-  const [experience, setExperience] = useState<Experience | null>(null)
+  // Multi-select: the set of chosen experiences. Empty = "Any experience".
+  const [selected, setSelected] = useState<Experience[]>([])
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
   const [adults, setAdults] = useState(1)
@@ -133,9 +135,19 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
     setOpenPanel((p) => (p === panel ? null : panel))
   }
 
+  // Add or remove an experience from the current selection.
+  function toggleExperience(exp: Experience) {
+    setSelected((prev) =>
+      prev.some((e) => e.slug === exp.slug)
+        ? prev.filter((e) => e.slug !== exp.slug)
+        : [...prev, exp],
+    )
+  }
+
   function onSearch() {
     const params = new URLSearchParams()
-    if (experience) params.set("experience", experience.slug)
+    if (selected.length > 0)
+      params.set("experience", selected.map((e) => e.slug).join(","))
     if (from) params.set("from", toYmd(from))
     if (to ?? from) params.set("to", toYmd(to ?? (from as Date)))
     params.set("adults", String(adults))
@@ -147,6 +159,13 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
     const total = adults + children
     return `${total} ${total === 1 ? "traveler" : "travelers"}`
   })()
+
+  const experienceLabel =
+    selected.length === 0
+      ? "Choose an experience"
+      : selected.length === 1
+        ? selected[0].label
+        : `${selected.length} experiences`
 
   const datesLabel =
     from && to
@@ -175,10 +194,10 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             <span
               className={
                 "truncate text-base " +
-                (experience ? "text-foreground" : "text-muted-foreground")
+                (selected.length > 0 ? "text-foreground" : "text-muted-foreground")
               }
             >
-              {experience?.label ?? "Choose an experience"}
+              {experienceLabel}
             </span>
             {openPanel === "exp" ? (
               <ChevronUp className="size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -191,11 +210,11 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             <div className="absolute left-0 top-full z-30 mt-1 max-h-80 w-[min(92vw,26rem)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl">
               <button
                 type="button"
-                onClick={() => {
-                  setExperience(null)
-                  setOpenPanel(null)
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60"
+                onClick={() => setSelected([])}
+                className={
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60 " +
+                  (selected.length === 0 ? "bg-secondary/60 font-semibold" : "")
+                }
               >
                 <Search className="size-5 shrink-0 text-primary" aria-hidden="true" />
                 Any experience
@@ -204,22 +223,26 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
                 .sort((a, b) => a.label.localeCompare(b.label, "is"))
                 .map((exp) => {
                 const Icon = experienceIcon(exp.label)
-                const active = experience?.slug === exp.slug
+                const active = selected.some((e) => e.slug === exp.slug)
                 return (
                   <button
                     key={exp.slug}
                     type="button"
-                    onClick={() => {
-                      setExperience(exp)
-                      setOpenPanel(null)
-                    }}
+                    onClick={() => toggleExperience(exp)}
+                    aria-pressed={active}
                     className={
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60 " +
                       (active ? "bg-secondary/60 font-semibold" : "")
                     }
                   >
                     <Icon className="size-5 shrink-0 text-primary" aria-hidden="true" />
-                    {exp.label}
+                    <span className="flex-1 truncate">{exp.label}</span>
+                    {active && (
+                      <Check
+                        className="size-5 shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
+                    )}
                   </button>
                 )
               })}
