@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import { TourSearch, type Experience } from "@/components/tour-search"
+import { cn } from "@/lib/utils"
 
 export function Hero({ experiences }: { experiences: Experience[] }) {
   return (
@@ -37,11 +38,13 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/tours"
-            className={buttonVariants({
-              size: "lg",
-              className:
-                "glow-primary rounded-full transition-transform hover:-translate-y-0.5",
-            })}
+            className={cn(
+              buttonVariants({
+                size: "lg",
+                className:
+                  "glow-primary rounded-full transition-transform hover:-translate-y-0.5",
+              }),
+            )}
           >
             Explore Tours
           </Link>
