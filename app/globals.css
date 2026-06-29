@@ -194,12 +194,9 @@
     border-color 0.3s ease;
   &:hover {
     transform: translateY(-4px);
-    /* Brand-red highlight: a crisp red border + ring, over a deeper drop shadow
-       with a red-tinted glow for more presence. */
-    border-color: var(--primary);
+    /* Neutral lift: a deeper drop shadow on hover, no colored border or ring. */
     box-shadow:
-      0 0 0 1px color-mix(in oklch, var(--primary) 70%, transparent),
-      0 26px 55px -18px color-mix(in oklch, black 78%, transparent),
-      0 14px 40px -14px color-mix(in oklch, var(--primary) 50%, transparent);
+      0 26px 55px -18px color-mix(in oklch, black 80%, transparent),
+      0 14px 40px -14px color-mix(in oklch, black 55%, transparent);
   }
 }
