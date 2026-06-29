@@ -891,7 +891,7 @@ export function ToursBrowser({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by tour, location or category…"
-              className="pl-9"
+              className="border-0 pl-9 focus-visible:ring-0 focus-visible:ring-offset-0"
               aria-label="Search tours"
             />
           </div>
