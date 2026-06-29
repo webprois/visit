@@ -24,7 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
-import { createPendingBooking, type BookingInput } from "@/app/actions/booking"
+import { startBooking, type BookingInput } from "@/app/actions/booking"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 // Full country dialing list. `iso` is the unique select value (some countries
@@ -459,6 +459,28 @@ export function BookingForm({
     setError(null)
   }
 
+  // Build a hidden form and POST it to Teya's hosted SecurePay page. We use a
+  // real form submit (not fetch) because SecurePay renders its own page and the
+  // browser must navigate there carrying the signed fields.
+  function submitSecurePayForm(form: {
+    url: string
+    fields: Record<string, string>
+  }) {
+    const el = document.createElement("form")
+    el.method = "POST"
+    el.action = form.url
+    el.style.display = "none"
+    for (const [name, value] of Object.entries(form.fields)) {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = name
+      input.value = value
+      el.appendChild(input)
+    }
+    document.body.appendChild(el)
+    el.submit()
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -548,34 +570,16 @@ export function BookingForm({
     }
 
     startTransition(async () => {
-      // 1. Create the booking record (status "pending_payment", re-priced
-      //    server-side against Bokun).
-      const res = await createPendingBooking(payload)
+      // 1. Create a pending booking and get a signed Teya SecurePay form
+      //    (re-priced server-side against Bokun; the secret never leaves the
+      //    server — only the resulting checkhash does).
+      const res = await startBooking(payload)
       if (!res.ok) {
         setError(res.error)
         return
       }
-      // 2. Ask the backend to create a Teya Hosted Checkout session (API keys
-      //    stay server-side), then redirect to the hosted payment page.
-      try {
-        const r = await fetch("/api/payments/teya/create-checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId: res.bookingId }),
-        })
-        const data = (await r.json()) as {
-          ok?: boolean
-          url?: string
-          error?: string
-        }
-        if (r.ok && data.ok && data.url) {
-          window.location.href = data.url
-        } else {
-          setError(data.error ?? "Could not start payment. Please try again.")
-        }
-      } catch {
-        setError("Could not reach the payment service. Please try again.")
-      }
+      // 2. Auto-submit the signed form to Teya's hosted SecurePay page.
+      submitSecurePayForm(res.form)
     })
   }
 
