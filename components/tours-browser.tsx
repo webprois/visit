@@ -918,7 +918,7 @@ export function ToursBrowser({
           "lg:sticky lg:top-24 " + (showFilters ? "block" : "hidden lg:block")
         }
       >
-        <div className="relative rounded-2xl border border-border bg-card p-5 shadow-sm lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        <div className="relative rounded-2xl bg-card p-5 shadow-sm lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {activeFilterCount > 0 && (
             <button
               type="button"
