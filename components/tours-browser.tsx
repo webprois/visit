@@ -1129,12 +1129,12 @@ function Chip({
       onClick={onClick}
       disabled={disabled}
       className={
-        "flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all active:scale-95 " +
+        "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-95 " +
         (active
-          ? "border-primary bg-primary text-primary-foreground glow-primary"
+          ? "bg-primary text-primary-foreground glow-primary"
           : disabled
-            ? "cursor-not-allowed border-border/50 bg-card text-muted-foreground/40 active:scale-100"
-            : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
+            ? "cursor-not-allowed bg-secondary/50 text-muted-foreground/40 active:scale-100"
+            : "bg-secondary text-muted-foreground hover:bg-card hover:text-foreground")
       }
     >
       {children}
@@ -1162,7 +1162,7 @@ function Stepper({
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`Decrease ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex size-9 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Minus className="size-4" aria-hidden="true" />
         </button>
@@ -1173,7 +1173,7 @@ function Stepper({
           type="button"
           onClick={() => onChange(value + 1)}
           aria-label={`Increase ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10"
+          className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-primary transition-colors hover:bg-primary/25"
         >
           <Plus className="size-4" aria-hidden="true" />
         </button>

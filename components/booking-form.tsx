@@ -693,7 +693,7 @@ export function BookingForm({
             id="booking-date"
             value={date}
             onChange={(e) => onDateChange(e.target.value)}
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {dates.map((d) => (
               <option key={d} value={d}>
@@ -716,7 +716,7 @@ export function BookingForm({
                 setSlotId(e.target.value)
                 setQtyByLine({})
               }}
-              className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {slotsForDate.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -994,7 +994,7 @@ export function BookingForm({
                       setRoomNumber("")
                     }}
                     required={pickupRequired}
-                    className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">
                       {pickupRequired
@@ -1030,7 +1030,7 @@ export function BookingForm({
                       id="booking-dropoff"
                       value={dropoffId}
                       onChange={(e) => setDropoffId(e.target.value)}
-                      className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="">Same as pickup location</option>
                       {dropoffOptions.map((p) => (

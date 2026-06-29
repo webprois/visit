@@ -338,7 +338,7 @@ function Stepper({
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`Decrease ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex size-9 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Minus className="size-4" aria-hidden="true" />
         </button>
@@ -349,7 +349,7 @@ function Stepper({
           type="button"
           onClick={() => onChange(value + 1)}
           aria-label={`Increase ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10"
+            className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-primary transition-colors hover:bg-primary/25"
         >
           <Plus className="size-4" aria-hidden="true" />
         </button>
