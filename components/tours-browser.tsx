@@ -1,7 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
+import { useRouter, useSearchParams } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { MergedTour } from "@/lib/tours"
@@ -10,13 +12,32 @@ import type { TourCategory } from "@/lib/db/schema"
 import { Price } from "@/components/price"
 import { PriceRangeSlider } from "@/components/price-range-slider"
 import {
+  RangeCalendar,
+  toYmd,
+  fromYmd,
+  shortLabel,
+} from "@/components/range-calendar"
+import {
   Clock,
   MapPin,
   Star,
   Search,
   SlidersHorizontal,
+  Calendar,
+  User,
+  ChevronUp,
+  ChevronDown,
+  Minus,
+  Plus,
   X,
 } from "lucide-react"
+
+/** Rank difficulty labels so chips render easiest → hardest. */
+function difficultyRank(d: string): number {
+  const order = ["easy", "moderate", "challenging", "difficult", "hard", "extreme"]
+  const i = order.indexOf(d.trim().toLowerCase())
+  return i === -1 ? order.length : i
+}
 
 
 /**
@@ -38,20 +59,195 @@ export function ToursBrowser({
   tours,
   categories,
   initialCategoryId = null,
+  initialCategoryIds,
 }: {
   tours: MergedTour[]
   categories: TourCategory[]
   initialCategoryId?: number | null
+  /** Multi-select seed; takes precedence over `initialCategoryId` when given. */
+  initialCategoryIds?: number[]
 }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  // Current travel-date search context (server-side availability filter).
+  const dateFrom = searchParams.get("from") ?? ""
+  const dateTo = searchParams.get("to") ?? ""
+  const hasDateSearch = /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)
+  const fromDate = fromYmd(dateFrom)
+  const toDate = fromYmd(dateTo)
+  const datesLabel =
+    fromDate && toDate
+      ? `${shortLabel(fromDate)} – ${shortLabel(toDate)}`
+      : fromDate
+        ? shortLabel(fromDate)
+        : null
+
+  // Single-field calendar popover (mirrors the home search widget). The
+  // calendar is portaled to the body with fixed positioning so it escapes the
+  // sidebar's scroll/clip container instead of being cut off at its edge.
+  const [dateOpen, setDateOpen] = useState(false)
+  const dateBtnRef = useRef<HTMLButtonElement>(null)
+  const datePopRef = useRef<HTMLDivElement>(null)
+  const [datePos, setDatePos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  })
+  // Draft range while picking. We only commit to the URL once a FULL range is
+  // chosen, so the first click doesn't trigger a navigation that would close
+  // the popover before the end date can be picked.
+  const [draftFrom, setDraftFrom] = useState<Date | null>(fromDate)
+  const [draftTo, setDraftTo] = useState<Date | null>(toDate)
+
+  function openDatePopover() {
+    const btn = dateBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      const width = Math.min(window.innerWidth - 24, 640)
+      // Prefer left-aligned to the trigger, but keep fully on screen.
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setDatePos({ top: r.bottom + 8, left })
+    }
+    // Sync the draft to whatever is currently committed in the URL.
+    setDraftFrom(fromDate)
+    setDraftTo(toDate)
+    setDateOpen((o) => !o)
+  }
+
+  // Called by the calendar on every pick. Update the draft; once a complete
+  // range exists, commit it to the URL and close.
+  function handleCalendarChange(from: Date | null, to: Date | null) {
+    setDraftFrom(from)
+    setDraftTo(to)
+    if (from && to) {
+      applyDates(from, to)
+      setDateOpen(false)
+    } else if (!from && !to) {
+      // "Clear" inside the calendar removes any committed date search.
+      if (hasDateSearch) clearDates()
+    }
+  }
+
+  useEffect(() => {
+    if (!dateOpen) return
+    function onPointer(e: PointerEvent) {
+      const t = e.target as Node
+      if (
+        !dateBtnRef.current?.contains(t) &&
+        !datePopRef.current?.contains(t)
+      ) {
+        setDateOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDateOpen(false)
+    }
+    function onResize() {
+      setDateOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onResize)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onResize)
+    }
+  }, [dateOpen])
+
+  // Current travelers context (only affects availability when dates are set).
+  const urlAdults = Math.max(1, Number(searchParams.get("adults")) || 1)
+  const urlChildren = Math.max(0, Number(searchParams.get("children")) || 0)
+  const urlPax = urlAdults + urlChildren
+  const travelersLabel = `${urlPax} ${urlPax === 1 ? "traveler" : "travelers"}`
+
+  // Travelers popover (mirrors the home search widget). Portaled like the
+  // calendar so it isn't clipped by the sidebar's scroll container. We keep a
+  // local draft while stepping and only commit to the URL when it closes, so
+  // the popover doesn't re-mount (and close) on every +/- tap.
+  const [paxOpen, setPaxOpen] = useState(false)
+  const paxBtnRef = useRef<HTMLButtonElement>(null)
+  const paxPopRef = useRef<HTMLDivElement>(null)
+  const [paxPos, setPaxPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  })
+  const [draftAdults, setDraftAdults] = useState(urlAdults)
+  const [draftChildren, setDraftChildren] = useState(urlChildren)
+
+  function openPaxPopover() {
+    const btn = paxBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      const width = Math.min(window.innerWidth - 24, 320)
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setPaxPos({ top: r.bottom + 8, left })
+    }
+    setDraftAdults(urlAdults)
+    setDraftChildren(urlChildren)
+    setPaxOpen((o) => !o)
+  }
+
+  // Commit the draft party size to the URL, only navigating when it changed.
+  function commitPax(adults: number, children: number) {
+    if (adults === urlAdults && children === urlChildren) return
+    const params = new URLSearchParams(searchParams.toString())
+    if (adults > 1) params.set("adults", String(adults))
+    else params.delete("adults")
+    if (children > 0) params.set("children", String(children))
+    else params.delete("children")
+    router.push(`/tours?${params.toString()}`)
+  }
+
+  function closePax() {
+    setPaxOpen(false)
+    commitPax(draftAdults, draftChildren)
+  }
+
+  useEffect(() => {
+    if (!paxOpen) return
+    function onPointer(e: PointerEvent) {
+      const t = e.target as Node
+      if (!paxBtnRef.current?.contains(t) && !paxPopRef.current?.contains(t)) {
+        closePax()
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closePax()
+    }
+    function onResize() {
+      closePax()
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onResize)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paxOpen, draftAdults, draftChildren])
+
   const [query, setQuery] = useState("")
   // Selected category ids (multi-select). Empty = no activity filter.
   const [activeCategories, setActiveCategories] = useState<Set<number>>(
-    new Set(initialCategoryId != null ? [initialCategoryId] : []),
+    () =>
+      new Set(
+        initialCategoryIds && initialCategoryIds.length > 0
+          ? initialCategoryIds
+          : initialCategoryId != null
+            ? [initialCategoryId]
+            : [],
+      ),
   )
   // Selected starting location ids (multi-select). Empty = no location filter.
   const [activeLocations, setActiveLocations] = useState<Set<number>>(new Set())
   // Selected duration buckets (multi-select). Empty = no duration filter.
   const [activeDurations, setActiveDurations] = useState<Set<number>>(new Set())
+  // Selected difficulty labels (multi-select). Empty = no difficulty filter.
+  const [activeDifficulties, setActiveDifficulties] = useState<Set<string>>(
+    new Set(),
+  )
   // Search-within-filter text for the two long lists.
   const [activitySearch, setActivitySearch] = useState("")
   const [locationSearch, setLocationSearch] = useState("")
@@ -106,6 +302,16 @@ export function ToursBrowser({
     return [...set].sort((a, b) => a - b)
   }, [tours])
 
+  // Distinct difficulty labels present across all tours, easiest → hardest.
+  const allDifficulties = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of tours) {
+      const d = t.difficulty?.trim()
+      if (d) set.add(d)
+    }
+    return [...set].sort((a, b) => difficultyRank(a) - difficultyRank(b))
+  }, [tours])
+
   function toggleSet(
     setter: React.Dispatch<React.SetStateAction<Set<number>>>,
     id: number,
@@ -118,21 +324,65 @@ export function ToursBrowser({
     })
   }
 
+  function toggleDifficulty(label: string) {
+    setActiveDifficulties((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
+  // Navigate to update the server-side travel-date availability filter,
+  // preserving the current experience/category context in the URL. Called by
+  // the calendar with Date objects; a full range closes the popover.
+  function applyDates(from: Date | null, to: Date | null) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (from) params.set("from", toYmd(from))
+    else params.delete("from")
+    if (from && to) params.set("to", toYmd(to))
+    else params.delete("to")
+    router.push(`/tours?${params.toString()}`)
+    if (from && to) setDateOpen(false)
+  }
+
+  function clearDates() {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("from")
+    params.delete("to")
+    router.push(`/tours?${params.toString()}`)
+  }
+
   function clearAll() {
     setQuery("")
     setActiveCategories(new Set())
     setActiveLocations(new Set())
     setActiveDurations(new Set())
+    setActiveDifficulties(new Set())
     setActivitySearch("")
     setLocationSearch("")
     setPriceRange([priceBounds.min, priceBounds.max])
+    setDraftAdults(1)
+    setDraftChildren(0)
+    // Remove every URL-driven search param (dates + travelers) in one push.
+    if (hasDateSearch || urlPax > 1) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete("from")
+      params.delete("to")
+      params.delete("adults")
+      params.delete("children")
+      router.push(`/tours?${params.toString()}`)
+    }
   }
 
   const activeFilterCount =
     activeCategories.size +
     activeLocations.size +
     activeDurations.size +
-    (priceActive ? 1 : 0)
+    activeDifficulties.size +
+    (priceActive ? 1 : 0) +
+    (hasDateSearch ? 1 : 0) +
+    (urlPax > 1 ? 1 : 0)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -146,6 +396,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -159,6 +412,7 @@ export function ToursBrowser({
         matchesCategory &&
         matchesLocation &&
         matchesDuration &&
+        matchesDifficulty &&
         matchesPrice &&
         matchesQuery
       )
@@ -169,6 +423,7 @@ export function ToursBrowser({
     activeCategories,
     activeLocations,
     activeDurations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -185,6 +440,9 @@ export function ToursBrowser({
       const matchesLocation =
         activeLocations.size === 0 ||
         t.locationIds.some((id) => activeLocations.has(id))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -197,6 +455,7 @@ export function ToursBrowser({
       if (
         matchesCategory &&
         matchesLocation &&
+        matchesDifficulty &&
         matchesPrice &&
         matchesQuery
       ) {
@@ -209,6 +468,7 @@ export function ToursBrowser({
     query,
     activeCategories,
     activeLocations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -225,6 +485,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -234,7 +497,13 @@ export function ToursBrowser({
         t.title.toLowerCase().includes(q) ||
         t.location.toLowerCase().includes(q) ||
         t.tag.toLowerCase().includes(q)
-      if (matchesLocation && matchesDuration && matchesPrice && matchesQuery) {
+      if (
+        matchesLocation &&
+        matchesDuration &&
+        matchesDifficulty &&
+        matchesPrice &&
+        matchesQuery
+      ) {
         for (const id of t.categoryIds) set.add(id)
       }
     }
@@ -244,6 +513,7 @@ export function ToursBrowser({
     query,
     activeLocations,
     activeDurations,
+    activeDifficulties,
     priceActive,
     priceRange,
   ])
@@ -260,6 +530,9 @@ export function ToursBrowser({
       const matchesDuration =
         activeDurations.size === 0 ||
         activeDurations.has(durationBucket(t.duration))
+      const matchesDifficulty =
+        activeDifficulties.size === 0 ||
+        (t.difficulty != null && activeDifficulties.has(t.difficulty.trim()))
       const matchesPrice =
         !priceActive ||
         t.price === 0 ||
@@ -269,7 +542,13 @@ export function ToursBrowser({
         t.title.toLowerCase().includes(q) ||
         t.location.toLowerCase().includes(q) ||
         t.tag.toLowerCase().includes(q)
-      if (matchesCategory && matchesDuration && matchesPrice && matchesQuery) {
+      if (
+        matchesCategory &&
+        matchesDuration &&
+        matchesDifficulty &&
+        matchesPrice &&
+        matchesQuery
+      ) {
         for (const id of t.locationIds) set.add(id)
       }
     }
@@ -278,6 +557,54 @@ export function ToursBrowser({
     tours,
     query,
     activeCategories,
+    activeDurations,
+    activeDifficulties,
+    priceActive,
+    priceRange,
+  ])
+
+  // Difficulty labels that still have results given every OTHER active filter
+  // (ignoring the difficulty selection itself).
+  const enabledDifficulties = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const set = new Set<string>()
+    for (const t of tours) {
+      const d = t.difficulty?.trim()
+      if (!d) continue
+      const matchesCategory =
+        activeCategories.size === 0 ||
+        t.categoryIds.some((id) => activeCategories.has(id))
+      const matchesLocation =
+        activeLocations.size === 0 ||
+        t.locationIds.some((id) => activeLocations.has(id))
+      const matchesDuration =
+        activeDurations.size === 0 ||
+        activeDurations.has(durationBucket(t.duration))
+      const matchesPrice =
+        !priceActive ||
+        t.price === 0 ||
+        (t.price >= priceRange[0] && t.price <= priceRange[1])
+      const matchesQuery =
+        q === "" ||
+        t.title.toLowerCase().includes(q) ||
+        t.location.toLowerCase().includes(q) ||
+        t.tag.toLowerCase().includes(q)
+      if (
+        matchesCategory &&
+        matchesLocation &&
+        matchesDuration &&
+        matchesPrice &&
+        matchesQuery
+      ) {
+        set.add(d)
+      }
+    }
+    return set
+  }, [
+    tours,
+    query,
+    activeCategories,
+    activeLocations,
     activeDurations,
     priceActive,
     priceRange,
@@ -295,6 +622,121 @@ export function ToursBrowser({
 
   const sidebar = (
     <div className="flex flex-col gap-6">
+      {/* Travel dates (server-side availability) */}
+      <FilterSection title="Travel dates">
+        <div className="flex flex-col gap-2">
+          <button
+            ref={dateBtnRef}
+            type="button"
+            onClick={openDatePopover}
+            aria-expanded={dateOpen}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
+          >
+            <Calendar
+              className="size-4 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <span
+              className={
+                "truncate text-sm " +
+                (datesLabel ? "text-foreground" : "text-muted-foreground")
+              }
+            >
+              {datesLabel ?? "Starting date — Final date"}
+            </span>
+          </button>
+
+          {dateOpen &&
+            createPortal(
+              <div
+                ref={datePopRef}
+                style={{
+                  position: "fixed",
+                  top: datePos.top,
+                  left: datePos.left,
+                  width: "min(92vw, 40rem)",
+                }}
+                className="z-50 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:p-4"
+              >
+                <RangeCalendar
+                  from={draftFrom}
+                  to={draftTo}
+                  onChange={handleCalendarChange}
+                />
+              </div>,
+              document.body,
+            )}
+
+          {hasDateSearch && (
+            <button
+              type="button"
+              onClick={clearDates}
+              className="self-start text-sm font-medium text-primary hover:underline"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
+      </FilterSection>
+
+      {/* Travelers (affects availability when dates are set) */}
+      <FilterSection title="Travelers">
+        <div className="flex flex-col gap-2">
+          <button
+            ref={paxBtnRef}
+            type="button"
+            onClick={openPaxPopover}
+            aria-expanded={paxOpen}
+            className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-secondary/40"
+          >
+            <span className="flex items-center gap-2 text-sm text-foreground">
+              <User className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              {travelersLabel}
+            </span>
+            {paxOpen ? (
+              <ChevronUp
+                className="size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+            ) : (
+              <ChevronDown
+                className="size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+
+          {paxOpen &&
+            createPortal(
+              <div
+                ref={paxPopRef}
+                style={{
+                  position: "fixed",
+                  top: paxPos.top,
+                  left: paxPos.left,
+                  width: "min(90vw, 20rem)",
+                }}
+                className="z-50 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
+              >
+                <Stepper
+                  label="Adults"
+                  value={draftAdults}
+                  min={1}
+                  onChange={setDraftAdults}
+                />
+                <div className="my-3 h-px bg-border" />
+                <Stepper
+                  label="Children"
+                  value={draftChildren}
+                  min={0}
+                  onChange={setDraftChildren}
+                />
+              </div>,
+              document.body,
+            )}
+        </div>
+      </FilterSection>
+
       {/* Duration */}
       {allDurationBuckets.length > 1 && (
         <FilterSection title="Duration">
@@ -310,6 +752,28 @@ export function ToursBrowser({
                   onClick={() => toggleSet(setActiveDurations, bucket)}
                 >
                   {durationLabel(bucket)}
+                </Chip>
+              )
+            })}
+          </div>
+        </FilterSection>
+      )}
+
+      {/* Difficulty */}
+      {allDifficulties.length > 0 && (
+        <FilterSection title="Difficulty">
+          <div className="flex flex-wrap gap-2">
+            {allDifficulties.map((d) => {
+              const enabled = enabledDifficulties.has(d)
+              const active = activeDifficulties.has(d)
+              return (
+                <Chip
+                  key={d}
+                  active={active}
+                  disabled={!enabled && !active}
+                  onClick={() => toggleDifficulty(d)}
+                >
+                  {d}
                 </Chip>
               )
             })}
@@ -427,7 +891,7 @@ export function ToursBrowser({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by tour, location or category…"
-              className="pl-9"
+              className="border-0 pl-9 focus-visible:ring-0 focus-visible:ring-offset-0"
               aria-label="Search tours"
             />
           </div>
@@ -454,7 +918,7 @@ export function ToursBrowser({
           "lg:sticky lg:top-24 " + (showFilters ? "block" : "hidden lg:block")
         }
       >
-        <div className="relative rounded-2xl border border-border bg-card p-5 shadow-sm lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        <div className="relative rounded-2xl bg-card p-5 shadow-sm lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           {activeFilterCount > 0 && (
             <button
               type="button"
@@ -541,7 +1005,7 @@ export function ToursBrowser({
                     </span>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                  <div className="mt-5 flex items-center justify-between pt-4">
                     <div>
                       <span className="text-xs text-muted-foreground">From</span>
                       <p className="font-heading text-xl font-extrabold text-foreground">
@@ -575,7 +1039,7 @@ function FilterSection({
   children: React.ReactNode
 }) {
   return (
-    <div className="border-t border-border pt-5 first:border-t-0 first:pt-0">
+    <div>
       <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-wide text-foreground">
         {title}
       </h3>
@@ -665,15 +1129,55 @@ function Chip({
       onClick={onClick}
       disabled={disabled}
       className={
-        "flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all active:scale-95 " +
+        "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-95 " +
         (active
-          ? "border-primary bg-primary text-primary-foreground glow-primary"
+          ? "bg-primary text-primary-foreground glow-primary"
           : disabled
-            ? "cursor-not-allowed border-border/50 bg-card text-muted-foreground/40 active:scale-100"
-            : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground")
+            ? "cursor-not-allowed bg-secondary/50 text-muted-foreground/40 active:scale-100"
+            : "bg-secondary text-muted-foreground hover:bg-card hover:text-foreground")
       }
     >
       {children}
     </button>
+  )
+}
+
+function Stepper({
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-base font-medium text-foreground">{label}</span>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={value <= min}
+          aria-label={`Decrease ${label.toLowerCase()}`}
+          className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
+        </button>
+        <span className="w-5 text-center text-base font-semibold tabular-nums text-foreground">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          aria-label={`Increase ${label.toLowerCase()}`}
+          className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        >
+          <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
   )
 }

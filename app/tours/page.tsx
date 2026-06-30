@@ -53,12 +53,25 @@ export default async function ToursPage({
     getCategories(),
   ])
 
-  // Resolve the category from either ?experience= (search widget) or ?category=.
-  const slug = params.experience || params.category
-  const activeCategory = slug
-    ? categories.find((c) => c.slug === slug)
-    : undefined
-  const activeName = activeCategory ? categoryName(activeCategory, locale) : null
+  // Resolve categories from either ?experience= (search widget, may be a
+  // comma-separated list) or ?category= (single). Multi-select is supported.
+  const slugs = (params.experience || params.category || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const activeCategories = slugs
+    .map((slug) => categories.find((c) => c.slug === slug))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c))
+  const activeCategoryIds = activeCategories.map((c) => c.id)
+  // A single category drives the page title/description; multiple shows a count.
+  const activeCategory =
+    activeCategories.length === 1 ? activeCategories[0] : undefined
+  const activeName =
+    activeCategories.length === 1
+      ? categoryName(activeCategories[0], locale)
+      : activeCategories.length > 1
+        ? `${activeCategories.length} experiences`
+        : null
 
   // Parse date + traveler search context.
   const from = params.from?.match(/^\d{4}-\d{2}-\d{2}$/) ? params.from : null
@@ -68,11 +81,14 @@ export default async function ToursPage({
   const pax = adults + children
   const hasDateSearch = Boolean(from)
 
-  // Start from tours matching the chosen experience, then narrow by date
-  // availability when a date was selected.
-  let tours = activeCategory
-    ? allTours.filter((t) => t.categoryIds.includes(activeCategory.id))
-    : allTours
+  // Start from tours matching ANY of the chosen experiences, then narrow by
+  // date availability when a date was selected.
+  let tours =
+    activeCategoryIds.length > 0
+      ? allTours.filter((t) =>
+          t.categoryIds.some((id) => activeCategoryIds.includes(id)),
+        )
+      : allTours
   if (hasDateSearch && from && to) {
     tours = await filterToursByAvailability(tours, from, to, pax)
   }
@@ -89,7 +105,7 @@ export default async function ToursPage({
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1">
-        <section className="border-b border-border bg-secondary/40">
+        <section className="bg-secondary/40">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
             <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
               Tours & adventures
@@ -156,7 +172,7 @@ export default async function ToursPage({
             <ToursBrowser
               tours={tours}
               categories={categories}
-              initialCategoryId={activeCategory?.id ?? null}
+              initialCategoryIds={activeCategoryIds}
             />
           )}
         </section>

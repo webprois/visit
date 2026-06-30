@@ -435,7 +435,13 @@ export function ToursWorkspace({
                     onValueChange={(v) => setBulkCategory(v ?? "")}
                   >
                     <SelectTrigger className="h-9 flex-1" aria-label="Bulk category">
-                      <SelectValue placeholder="Choose category" />
+                      <SelectValue placeholder="Choose category">
+                        {bulkCategory
+                          ? (categories.find(
+                              (c) => String(c.id) === bulkCategory,
+                            )?.name ?? "Choose category")
+                          : "Choose category"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (

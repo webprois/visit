@@ -8,8 +8,7 @@ import {
   User,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
-  ChevronRight,
+  Check,
   Minus,
   Plus,
   Snowflake,
@@ -25,38 +24,18 @@ import {
   Utensils,
   Building2,
   Bike,
+  Bird,
+  Bus,
+  Zap,
+  Compass,
+  TreePine,
+  Palette,
   MapPin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { RangeCalendar, toYmd, shortLabel } from "@/components/range-calendar"
 
 export type Experience = { slug: string; label: string }
-
-/* ---------- date helpers (local, timezone-safe) ---------- */
-
-function toYmd(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-  return `${y}-${m}-${day}`
-}
-
-function sameDay(a: Date, b: Date): boolean {
-  return toYmd(a) === toYmd(b)
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
-}
-
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-]
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-function shortLabel(d: Date): string {
-  return `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}`
-}
 
 /* ---------- experience icon mapping ---------- */
 
@@ -64,20 +43,30 @@ function experienceIcon(label: string) {
   const l = label.toLowerCase()
   if (l.includes("northern light")) return Snowflake
   if (l.includes("ice") || l.includes("glacier")) return Mountain
+  if (l.includes("bus") || l.includes("minivan") || l.includes("minibus"))
+    return Bus
   if (l.includes("self drive") || l.includes("car") || l.includes("super jeep"))
     return Car
-  if (l.includes("hik") || l.includes("walk")) return Footprints
+  if (l.includes("hik") || l.includes("walk") || l.includes("trek"))
+    return Footprints
   if (l.includes("sightsee")) return Binoculars
-  if (l.includes("whale") || l.includes("bird")) return Fish
+  if (l.includes("bird")) return Bird
+  if (l.includes("whale")) return Fish
   if (l.includes("snorkel") || l.includes("div") || l.includes("raft") || l.includes("kayak"))
     return Waves
   if (l.includes("boat") || l.includes("ferry") || l.includes("sail")) return Ship
   if (l.includes("snowmobile") || l.includes("hot spring") || l.includes("spa") || l.includes("wellness"))
     return Sparkles
   if (l.includes("photo")) return Camera
-  if (l.includes("food") || l.includes("drink")) return Utensils
-  if (l.includes("city") || l.includes("culture")) return Building2
+  if (l.includes("food") || l.includes("drink") || l.includes("culinary"))
+    return Utensils
+  if (l.includes("art") || l.includes("culture") || l.includes("museum"))
+    return Palette
+  if (l.includes("city")) return Building2
+  if (l.includes("adrenaline") || l.includes("extreme")) return Zap
+  if (l.includes("nature") || l.includes("wildlife")) return TreePine
   if (l.includes("horse") || l.includes("bike") || l.includes("cycl")) return Bike
+  if (l.includes("adventure") || l.includes("explor")) return Compass
   return MapPin
 }
 
@@ -85,7 +74,8 @@ function experienceIcon(label: string) {
 
 export function TourSearch({ experiences }: { experiences: Experience[] }) {
   const router = useRouter()
-  const [experience, setExperience] = useState<Experience | null>(null)
+  // Multi-select: the set of chosen experiences. Empty = "Any experience".
+  const [selected, setSelected] = useState<Experience[]>([])
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
   const [adults, setAdults] = useState(1)
@@ -117,9 +107,19 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
     setOpenPanel((p) => (p === panel ? null : panel))
   }
 
+  // Add or remove an experience from the current selection.
+  function toggleExperience(exp: Experience) {
+    setSelected((prev) =>
+      prev.some((e) => e.slug === exp.slug)
+        ? prev.filter((e) => e.slug !== exp.slug)
+        : [...prev, exp],
+    )
+  }
+
   function onSearch() {
     const params = new URLSearchParams()
-    if (experience) params.set("experience", experience.slug)
+    if (selected.length > 0)
+      params.set("experience", selected.map((e) => e.slug).join(","))
     if (from) params.set("from", toYmd(from))
     if (to ?? from) params.set("to", toYmd(to ?? (from as Date)))
     params.set("adults", String(adults))
@@ -131,6 +131,13 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
     const total = adults + children
     return `${total} ${total === 1 ? "traveler" : "travelers"}`
   })()
+
+  const experienceLabel =
+    selected.length === 0
+      ? "Choose an experience"
+      : selected.length === 1
+        ? selected[0].label
+        : `${selected.length} experiences`
 
   const datesLabel =
     from && to
@@ -159,10 +166,10 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             <span
               className={
                 "truncate text-base " +
-                (experience ? "text-foreground" : "text-muted-foreground")
+                (selected.length > 0 ? "text-foreground" : "text-muted-foreground")
               }
             >
-              {experience?.label ?? "Choose an experience"}
+              {experienceLabel}
             </span>
             {openPanel === "exp" ? (
               <ChevronUp className="size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -175,11 +182,11 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             <div className="absolute left-0 top-full z-30 mt-1 max-h-80 w-[min(92vw,26rem)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl">
               <button
                 type="button"
-                onClick={() => {
-                  setExperience(null)
-                  setOpenPanel(null)
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60"
+                onClick={() => setSelected([])}
+                className={
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60 " +
+                  (selected.length === 0 ? "bg-secondary/60 font-semibold" : "")
+                }
               >
                 <Search className="size-5 shrink-0 text-primary" aria-hidden="true" />
                 Any experience
@@ -188,22 +195,26 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
                 .sort((a, b) => a.label.localeCompare(b.label, "is"))
                 .map((exp) => {
                 const Icon = experienceIcon(exp.label)
-                const active = experience?.slug === exp.slug
+                const active = selected.some((e) => e.slug === exp.slug)
                 return (
                   <button
                     key={exp.slug}
                     type="button"
-                    onClick={() => {
-                      setExperience(exp)
-                      setOpenPanel(null)
-                    }}
+                    onClick={() => toggleExperience(exp)}
+                    aria-pressed={active}
                     className={
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base hover:bg-secondary/60 " +
                       (active ? "bg-secondary/60 font-semibold" : "")
                     }
                   >
                     <Icon className="size-5 shrink-0 text-primary" aria-hidden="true" />
-                    {exp.label}
+                    <span className="flex-1 truncate">{exp.label}</span>
+                    {active && (
+                      <Check
+                        className="size-5 shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
+                    )}
                   </button>
                 )
               })}
@@ -327,9 +338,9 @@ function Stepper({
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`Decrease ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          <Minus className="size-4" aria-hidden="true" />
+          <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
         </button>
         <span className="w-5 text-center text-base font-semibold tabular-nums text-foreground">
           {value}
@@ -338,205 +349,10 @@ function Stepper({
           type="button"
           onClick={() => onChange(value + 1)}
           aria-label={`Increase ${label.toLowerCase()}`}
-          className="flex size-9 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10"
+            className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
         >
-          <Plus className="size-4" aria-hidden="true" />
+          <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
         </button>
-      </div>
-    </div>
-  )
-}
-
-/* ---------- two-month range calendar ---------- */
-
-function RangeCalendar({
-  from,
-  to,
-  onChange,
-}: {
-  from: Date | null
-  to: Date | null
-  onChange: (from: Date | null, to: Date | null) => void
-}) {
-  const today = startOfDay(new Date())
-  const [viewMonth, setViewMonth] = useState(
-    () => new Date(today.getFullYear(), today.getMonth(), 1),
-  )
-
-  function handlePick(day: Date) {
-    // No start yet, or a full range exists → start a new range.
-    if (!from || (from && to)) {
-      onChange(day, null)
-      return
-    }
-    // Start exists, picking the end.
-    if (day < from) {
-      onChange(day, null)
-    } else {
-      onChange(from, day)
-    }
-  }
-
-  const nextMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
-  const canGoPrev =
-    viewMonth.getFullYear() > today.getFullYear() ||
-    (viewMonth.getFullYear() === today.getFullYear() &&
-      viewMonth.getMonth() > today.getMonth())
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() =>
-            setViewMonth(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1),
-            )
-          }
-          disabled={!canGoPrev}
-          aria-label="Previous month"
-          className="flex size-9 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronLeft className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            setViewMonth(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1),
-            )
-          }
-          aria-label="Next month"
-          className="flex size-9 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-secondary"
-        >
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </button>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        <MonthGrid
-          month={viewMonth}
-          today={today}
-          from={from}
-          to={to}
-          onPick={handlePick}
-        />
-        <div className="hidden sm:block">
-          <MonthGrid
-            month={nextMonth}
-            today={today}
-            from={from}
-            to={to}
-            onPick={handlePick}
-          />
-        </div>
-      </div>
-
-      {/* Footer: selected range summary + clear */}
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
-        <p className="text-sm text-muted-foreground">
-          {from && to ? (
-            <span className="text-foreground">
-              {shortLabel(from)} – {shortLabel(to)}
-            </span>
-          ) : from ? (
-            <>
-              <span className="text-foreground">{shortLabel(from)}</span>
-              {" — select an end date"}
-            </>
-          ) : (
-            "Select your travel dates"
-          )}
-        </p>
-        {(from || to) && (
-          <button
-            type="button"
-            onClick={() => onChange(null, null)}
-            className="text-sm font-semibold text-primary hover:underline"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function MonthGrid({
-  month,
-  today,
-  from,
-  to,
-  onPick,
-}: {
-  month: Date
-  today: Date
-  from: Date | null
-  to: Date | null
-  onPick: (day: Date) => void
-}) {
-  const year = month.getFullYear()
-  const m = month.getMonth()
-  const firstWeekday = new Date(year, m, 1).getDay()
-  const daysInMonth = new Date(year, m + 1, 0).getDate()
-
-  const cells: (Date | null)[] = []
-  for (let i = 0; i < firstWeekday; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, m, d))
-
-  return (
-    <div>
-      <p className="mb-2 text-center font-heading text-base font-bold text-foreground">
-        {MONTHS[m]} {year}
-      </p>
-      <div className="grid grid-cols-7 gap-y-1">
-        {WEEKDAYS.map((w) => (
-          <div
-            key={w}
-            className="pb-1 text-center text-xs font-medium text-muted-foreground"
-          >
-            {w}
-          </div>
-        ))}
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} aria-hidden="true" />
-          const disabled = day < today
-          const isFrom = from && sameDay(day, from)
-          const isTo = to && sameDay(day, to)
-          const inRange =
-            from && to && day > from && day < to
-          const isEdge = isFrom || isTo
-
-          return (
-            <div
-              key={i}
-              className={
-                "flex justify-center " +
-                (inRange || isEdge ? "bg-primary/10 " : "") +
-                (isFrom && to ? "rounded-l-full " : "") +
-                (isTo ? "rounded-r-full " : "")
-              }
-            >
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => onPick(day)}
-                aria-label={`${MONTHS[m]} ${day.getDate()}, ${year}`}
-                className={
-                  "flex size-9 items-center justify-center rounded-full text-sm transition-colors " +
-                  (disabled
-                    ? "cursor-not-allowed text-muted-foreground/40 "
-                    : "text-foreground hover:bg-primary/20 ") +
-                  (isEdge
-                    ? "bg-primary font-bold text-primary-foreground hover:bg-primary "
-                    : "")
-                }
-              >
-                {day.getDate()}
-              </button>
-            </div>
-          )
-        })}
       </div>
     </div>
   )

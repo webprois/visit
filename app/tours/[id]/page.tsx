@@ -471,7 +471,7 @@ export default async function TourPage({
 
         {/* Related tours */}
         {related.length > 0 && (
-          <section className="border-t border-border bg-secondary/40 py-14">
+          <section className="bg-secondary/40 py-14">
             <div className="mx-auto max-w-7xl px-4 md:px-6">
               <h2 className="font-heading text-2xl font-extrabold text-foreground md:text-3xl">
                 Explore similar adventures

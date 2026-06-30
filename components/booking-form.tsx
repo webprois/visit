@@ -693,7 +693,7 @@ export function BookingForm({
             id="booking-date"
             value={date}
             onChange={(e) => onDateChange(e.target.value)}
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {dates.map((d) => (
               <option key={d} value={d}>
@@ -716,7 +716,7 @@ export function BookingForm({
                 setSlotId(e.target.value)
                 setQtyByLine({})
               }}
-              className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {slotsForDate.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -765,9 +765,9 @@ export function BookingForm({
                       onClick={() => bumpQty(line.id, -1)}
                       disabled={qty <= 0}
                       aria-label={`Decrease ${line.title}`}
-                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                      className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      <Minus className="size-4" aria-hidden="true" />
+                      <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                     </button>
                     <span className="w-6 text-center text-sm font-semibold text-foreground">
                       {qty}
@@ -777,9 +777,9 @@ export function BookingForm({
                       onClick={() => bumpQty(line.id, 1)}
                       disabled={atCapacity}
                       aria-label={`Increase ${line.title}`}
-                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                      className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      <Plus className="size-4" aria-hidden="true" />
+                      <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -940,9 +940,9 @@ export function BookingForm({
                           onClick={() => setAddonQty(extra, qty - 1)}
                           disabled={qty <= 0}
                           aria-label={`Decrease ${extra.title}`}
-                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
+                          className="flex size-9 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                         >
-                          <Minus className="size-4" aria-hidden="true" />
+                          <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                         </button>
                         <span className="w-6 text-center text-sm font-semibold text-foreground">
                           {qty}
@@ -951,9 +951,9 @@ export function BookingForm({
                           type="button"
                           onClick={() => setAddonQty(extra, qty + 1)}
                           aria-label={`Increase ${extra.title}`}
-                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground"
+                          className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                         >
-                          <Plus className="size-4" aria-hidden="true" />
+                          <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -994,7 +994,7 @@ export function BookingForm({
                       setRoomNumber("")
                     }}
                     required={pickupRequired}
-                    className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">
                       {pickupRequired
@@ -1030,7 +1030,7 @@ export function BookingForm({
                       id="booking-dropoff"
                       value={dropoffId}
                       onChange={(e) => setDropoffId(e.target.value)}
-                      className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="">Same as pickup location</option>
                       {dropoffOptions.map((p) => (
@@ -1055,7 +1055,7 @@ export function BookingForm({
                 {guestSlots.map((g) => (
                   <div key={g.key} className="flex flex-col gap-1.5">
                     <Label>{g.label}</Label>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <Input
                         id={`guest-${g.key}-first`}
                         value={firstByGuest[g.key] ?? ""}

@@ -141,32 +141,48 @@ function mapActivity(activity: BokunActivity): Tour {
   }
 }
 
+async function fetchPage(page: number, pageSize: number) {
+  // Request English content so the public site defaults to English regardless
+  // of each tour's base language in Bokun.
+  return bokunRequest<BokunSearchResponse>("POST", "/activity.json/search?lang=en", {
+    page,
+    pageSize,
+  })
+}
+
 async function fetchAllToursUncached(): Promise<Tour[]> {
   const pageSize = 50
-  let page = 1
+  const MAX_PAGES = 100 // hard safety cap (covers far more than today's catalog)
+  const CONCURRENCY = 6
   // De-duplicate by id: Bokun's paginated search can repeat activities across
   // pages, which otherwise causes duplicate React keys and inflated counts.
   const byId = new Map<number, Tour>()
 
-  while (true) {
-    // Request English content so the public site defaults to English
-    // regardless of each tour's base language in Bokun.
-    const data = await bokunRequest<BokunSearchResponse>(
-      "POST",
-      "/activity.json/search?lang=en",
-      { page, pageSize },
-    )
-    if (!data?.items?.length) break
-
-    for (const item of data.items) {
+  const collect = (data: BokunSearchResponse | null) => {
+    for (const item of data?.items ?? []) {
       const tour = mapActivity(item)
       if (tour.id != null && !byId.has(tour.id)) byId.set(tour.id, tour)
     }
+  }
 
-    const total = data.totalHits ?? byId.size
-    if (byId.size >= total || data.items.length < pageSize) break
-    page += 1
-    if (page > 50) break // safety cap
+  // Fetch page 1 first to learn the total result count. Bokun uses page-based
+  // pagination with a fixed pageSize, so page N maps to [(N-1)*pageSize,
+  // N*pageSize) even when an individual page returns fewer than pageSize items
+  // (which Bokun does mid-list). We therefore page all the way to lastPage
+  // instead of stopping at the first short page, which previously dropped tours.
+  const first = await fetchPage(1, pageSize)
+  collect(first)
+  if (!first?.items?.length) return Array.from(byId.values())
+
+  const total = first.totalHits ?? first.items.length
+  const lastPage = Math.min(MAX_PAGES, Math.ceil(total / pageSize))
+
+  // Fetch the remaining pages in bounded-concurrency batches for speed.
+  for (let start = 2; start <= lastPage; start += CONCURRENCY) {
+    const batch: number[] = []
+    for (let p = start; p < start + CONCURRENCY && p <= lastPage; p++) batch.push(p)
+    const results = await Promise.all(batch.map((p) => fetchPage(p, pageSize)))
+    results.forEach(collect)
   }
 
   return Array.from(byId.values())
@@ -176,7 +192,7 @@ async function fetchAllToursUncached(): Promise<Tour[]> {
  * Fetches all bookable activities from Bokun and caches the small mapped
  * result for an hour, so repeat page loads are instant.
  */
-export const fetchAllTours = unstable_cache(fetchAllToursUncached, ["bokun-all-tours-v3"], {
+export const fetchAllTours = unstable_cache(fetchAllToursUncached, ["bokun-all-tours-v4"], {
   revalidate: 3600,
   tags: ["bokun-tours"],
 })
