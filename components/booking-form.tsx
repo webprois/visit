@@ -1055,7 +1055,7 @@ export function BookingForm({
                 {guestSlots.map((g) => (
                   <div key={g.key} className="flex flex-col gap-1.5">
                     <Label>{g.label}</Label>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <Input
                         id={`guest-${g.key}-first`}
                         value={firstByGuest[g.key] ?? ""}
