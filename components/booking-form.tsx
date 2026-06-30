@@ -765,9 +765,9 @@ export function BookingForm({
                       onClick={() => bumpQty(line.id, -1)}
                       disabled={qty <= 0}
                       aria-label={`Decrease ${line.title}`}
-                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                      className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      <Minus className="size-4" aria-hidden="true" />
+                      <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                     </button>
                     <span className="w-6 text-center text-sm font-semibold text-foreground">
                       {qty}
@@ -777,9 +777,9 @@ export function BookingForm({
                       onClick={() => bumpQty(line.id, 1)}
                       disabled={atCapacity}
                       aria-label={`Increase ${line.title}`}
-                      className="flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                      className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                      <Plus className="size-4" aria-hidden="true" />
+                      <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -940,9 +940,9 @@ export function BookingForm({
                           onClick={() => setAddonQty(extra, qty - 1)}
                           disabled={qty <= 0}
                           aria-label={`Decrease ${extra.title}`}
-                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-40"
+                          className="flex size-9 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                         >
-                          <Minus className="size-4" aria-hidden="true" />
+                          <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                         </button>
                         <span className="w-6 text-center text-sm font-semibold text-foreground">
                           {qty}
@@ -951,9 +951,9 @@ export function BookingForm({
                           type="button"
                           onClick={() => setAddonQty(extra, qty + 1)}
                           aria-label={`Increase ${extra.title}`}
-                          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground"
+                          className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                         >
-                          <Plus className="size-4" aria-hidden="true" />
+                          <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
                         </button>
                       </div>
                     </div>
