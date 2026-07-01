@@ -3,9 +3,11 @@ import Link from "next/link"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import { TourSearch, type Experience } from "@/components/tour-search"
+import { getServerDict } from "@/lib/get-dictionary"
 import { cn } from "@/lib/utils"
 
-export function Hero({ experiences }: { experiences: Experience[] }) {
+export async function Hero({ experiences }: { experiences: Experience[] }) {
+  const dict = await getServerDict()
   return (
     <section id="top" className="relative isolate z-30">
       <Image
@@ -23,16 +25,14 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground backdrop-blur">
           <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
-          Trusted by 500+ travellers
+          {dict.hero.badge}
         </span>
 
         <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
-          Ready for adventure in the land of fire and ice?
+          {dict.hero.title}
         </h1>
         <p className="max-w-xl text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
-          Explore over 70 handpicked tours across Iceland — from glacier hikes
-          and northern lights to the Golden Circle. Let&apos;s create
-          unforgettable memories together.
+          {dict.hero.subtitle}
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -46,14 +46,14 @@ export function Hero({ experiences }: { experiences: Experience[] }) {
               }),
             )}
           >
-            Explore Tours
+            {dict.hero.exploreTours}
           </Link>
           <Button
             size="lg"
             variant="secondary"
             className="rounded-full bg-foreground/10 text-foreground backdrop-blur hover:bg-foreground/20"
           >
-            Plan a Private Trip
+            {dict.hero.privateTrip}
           </Button>
         </div>
 

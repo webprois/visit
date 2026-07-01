@@ -5,16 +5,18 @@ import Image from "next/image"
 import { Menu, X } from "lucide-react"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { CurrencySwitcher } from "@/components/currency-switcher"
+import { useDict } from "@/components/i18n-provider"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
-
-const navLinks = [
-  { label: "All Tours", href: "/tours" },
-  { label: "Transfers", href: "/#transfers" },
-  { label: "Why Us", href: "/#why" },
-]
 
 export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
   const [open, setOpen] = useState(false)
+  const dict = useDict()
+
+  const navLinks = [
+    { label: dict.nav.allTours, href: "/tours" },
+    { label: dict.nav.transfers, href: "/#transfers" },
+    { label: dict.nav.whyUs, href: "/#why" },
+  ]
 
   return (
     <header className="sticky top-0 z-50 bg-background/85 backdrop-blur-md">

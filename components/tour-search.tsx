@@ -34,6 +34,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RangeCalendar, toYmd, shortLabel } from "@/components/range-calendar"
+import { useDict } from "@/components/i18n-provider"
+import { fmt } from "@/lib/translations"
 
 export type Experience = { slug: string; label: string }
 
@@ -74,6 +76,7 @@ function experienceIcon(label: string) {
 
 export function TourSearch({ experiences }: { experiences: Experience[] }) {
   const router = useRouter()
+  const dict = useDict()
   // Multi-select: the set of chosen experiences. Empty = "Any experience".
   const [selected, setSelected] = useState<Experience[]>([])
   const [from, setFrom] = useState<Date | null>(null)
@@ -129,15 +132,17 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
 
   const travelersLabel = (() => {
     const total = adults + children
-    return `${total} ${total === 1 ? "traveler" : "travelers"}`
+    return fmt(total === 1 ? dict.search.traveler : dict.search.travelers, {
+      count: total,
+    })
   })()
 
   const experienceLabel =
     selected.length === 0
-      ? "Choose an experience"
+      ? dict.search.experiencePlaceholder
       : selected.length === 1
         ? selected[0].label
-        : `${selected.length} experiences`
+        : fmt(dict.search.experiencesSelected, { count: selected.length })
 
   const datesLabel =
     from && to
@@ -155,7 +160,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
         {/* Experience */}
         <div className="relative flex flex-col gap-1.5">
           <span className="px-1 text-xs font-semibold text-muted-foreground">
-            Choose your perfect Icelandic experience
+            {dict.search.experienceLabel}
           </span>
           <button
             type="button"
@@ -189,7 +194,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
                 }
               >
                 <Search className="size-5 shrink-0 text-primary" aria-hidden="true" />
-                Any experience
+                {dict.search.anyExperience}
               </button>
               {[...experiences]
                 .sort((a, b) => a.label.localeCompare(b.label, "is"))
@@ -225,7 +230,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
         {/* Dates */}
         <div className="relative flex flex-col gap-1.5">
           <span className="px-1 text-xs font-semibold text-muted-foreground">
-            Select dates
+            {dict.search.datesLabel}
           </span>
           <button
             type="button"
@@ -240,7 +245,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
                 (datesLabel ? "text-foreground" : "text-muted-foreground")
               }
             >
-              {datesLabel ?? "Starting date — Final date"}
+              {datesLabel ?? dict.search.datesPlaceholder}
             </span>
           </button>
 
@@ -262,7 +267,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
         {/* Travelers */}
         <div className="relative flex flex-col gap-1.5">
           <span className="px-1 text-xs font-semibold text-muted-foreground">
-            Add travelers
+            {dict.search.travelersLabel}
           </span>
           <button
             type="button"
@@ -284,14 +289,14 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
           {openPanel === "pax" && (
             <div className="absolute left-0 top-full z-30 mt-1 w-[min(90vw,20rem)] rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl">
               <Stepper
-                label="Adults"
+                label={dict.search.adults}
                 value={adults}
                 min={1}
                 onChange={setAdults}
               />
               <div className="my-3 h-px bg-border" />
               <Stepper
-                label="Children"
+                label={dict.search.children}
                 value={children}
                 min={0}
                 onChange={setChildren}
@@ -308,7 +313,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
             className="h-[46px] rounded-xl text-base font-bold md:px-8"
           >
             <Search className="size-5" aria-hidden="true" />
-            Search Now
+            {dict.search.searchNow}
           </Button>
         </div>
       </div>

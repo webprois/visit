@@ -1,23 +1,29 @@
 import Image from "next/image"
 import type { HomeCategory } from "@/lib/tours"
+import { getServerDict } from "@/lib/get-dictionary"
+import { fmt } from "@/lib/translations"
 
-export function TourCategories({ categories }: { categories: HomeCategory[] }) {
+export async function TourCategories({
+  categories,
+}: {
+  categories: HomeCategory[]
+}) {
   if (categories.length === 0) return null
+  const dict = await getServerDict()
 
   return (
     <section id="categories" className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
       <div className="mb-10 flex flex-col gap-3 md:mb-12 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
-            Choose your activity
+            {dict.categories.eyebrow}
           </p>
           <h2 className="mt-2 max-w-xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
-            Explore Iceland by adventure
+            {dict.categories.title}
           </h2>
         </div>
         <p className="max-w-md text-pretty leading-relaxed text-muted-foreground">
-          Browse our most popular categories and dive into unforgettable
-          experiences across the whole island.
+          {dict.categories.subtitle}
         </p>
       </div>
 
@@ -41,7 +47,9 @@ export function TourCategories({ categories }: { categories: HomeCategory[] }) {
                 {cat.name}
               </h3>
               <p className="text-sm text-foreground/80">
-                {cat.count} {cat.count === 1 ? "tour" : "tours"}
+                {fmt(cat.count === 1 ? dict.categories.tour : dict.categories.tours, {
+                  count: cat.count,
+                })}
               </p>
             </div>
           </a>

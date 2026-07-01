@@ -1,24 +1,25 @@
 import { Button } from "@/components/ui/button"
 import { transfers } from "@/lib/data"
 import { Bus, Users, ArrowRight } from "lucide-react"
+import { getServerDict } from "@/lib/get-dictionary"
+import { fmt } from "@/lib/translations"
 
-export function Transportation() {
+export async function Transportation() {
+  const dict = await getServerDict()
   return (
     <section id="transfers" className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div>
           <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
-            Services &amp; Transportation
+            {dict.transfers.eyebrow}
           </p>
           <h2 className="mt-2 text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
-            Get from point A to B. Hassle free.
+            {dict.transfers.title}
           </h2>
           <p className="mt-4 max-w-md text-pretty leading-relaxed text-muted-foreground">
-            Whether you need swift airport transfers, a convenient ride to the
-            Blue Lagoon, or a journey from your hotel to key destinations,
-            we&apos;ve got you covered with reliable service across Iceland.
+            {dict.transfers.subtitle}
           </p>
-          <Button className="mt-6 rounded-full">See all transfers</Button>
+          <Button className="mt-6 rounded-full">{dict.transfers.seeAll}</Button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -41,7 +42,7 @@ export function Transportation() {
               <div className="flex items-center justify-between border-t border-border pt-3">
                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Users className="size-4" aria-hidden="true" />
-                  Max {t.maxPeople}
+                  {fmt(dict.transfers.max, { count: t.maxPeople })}
                 </span>
                 <span className="flex items-center gap-1 font-heading text-lg font-extrabold text-foreground">
                   ${t.price}

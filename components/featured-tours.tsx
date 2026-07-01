@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { featuredTours, type Tour } from "@/lib/data"
 import { tourBlurb } from "@/lib/tour-blurb"
 import { Price } from "@/components/price"
+import { getServerDict } from "@/lib/get-dictionary"
 import { Clock, MapPin, Star } from "lucide-react"
 
 type FeaturedTour = Tour & {
@@ -12,19 +13,20 @@ type FeaturedTour = Tour & {
 }
 
 
-export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
+export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
   const list: FeaturedTour[] =
     tours && tours.length > 0 ? tours.slice(0, 6) : featuredTours
+  const dict = await getServerDict()
   return (
     <section id="tours" className="bg-secondary/50 py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="mb-10 flex flex-col gap-3 md:mb-12 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
-              Discover our tours
+              {dict.featured.eyebrow}
             </p>
             <h2 className="mt-2 max-w-xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
-              Handpicked adventures
+              {dict.featured.title}
             </h2>
           </div>
           <a
@@ -34,7 +36,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
               className: "rounded-full md:self-end",
             })}
           >
-            View all tours
+            {dict.featured.viewAll}
           </a>
         </div>
 
@@ -84,7 +86,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
 
                 <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
                   <div>
-                    <span className="text-xs text-muted-foreground">From</span>
+                    <span className="text-xs text-muted-foreground">{dict.featured.from}</span>
                     <p className="font-heading text-xl font-extrabold text-foreground">
                       <Price isk={tour.price} />
                     </p>
@@ -95,7 +97,7 @@ export function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
                       className: "rounded-full",
                     })}
                   >
-                    View tour
+                    {dict.featured.viewTour}
                   </span>
                 </div>
               </div>

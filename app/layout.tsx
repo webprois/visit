@@ -3,8 +3,11 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Inter } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { CurrencyProvider } from '@/components/currency-provider'
+import { I18nProvider } from '@/components/i18n-provider'
 import { getCurrency } from '@/lib/get-currency'
 import { getExchangeRates } from '@/lib/exchange-rates'
+import { getLocale } from '@/lib/get-locale'
+import { getDictionary } from '@/lib/translations'
 import './globals.css'
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
@@ -49,20 +52,24 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const [currency, rates] = await Promise.all([
+  const [currency, rates, locale] = await Promise.all([
     getCurrency(),
     getExchangeRates(),
+    getLocale(),
   ])
+  const dict = getDictionary(locale)
 
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${inter.variable} ${bricolage.variable} bg-background`}
     >
       <body className="font-sans antialiased">
-        <CurrencyProvider initialCurrency={currency} rates={rates}>
-          {children}
-        </CurrencyProvider>
+        <I18nProvider locale={locale} dict={dict}>
+          <CurrencyProvider initialCurrency={currency} rates={rates}>
+            {children}
+          </CurrencyProvider>
+        </I18nProvider>
         <Toaster richColors position="top-center" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
