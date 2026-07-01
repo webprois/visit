@@ -9,7 +9,7 @@ import {
   type ItineraryStep,
 } from "@/lib/bokun"
 import { db } from "@/lib/db"
-import { eq, and, gte, lte, or, inArray, sql } from "drizzle-orm"
+import { eq, and, gte, lte, or, inArray, notInArray, sql } from "drizzle-orm"
 import {
   tourOverride,
   tourCategory,
@@ -510,20 +510,50 @@ async function filterToursByAvailabilityLive(
 const AVAILABILITY_WINDOW_DAYS = 365
 
 /**
- * Refresh the server-side availability cache for every Bokun tour. Fetches a
- * rolling window (today → +1 year) of departures per tour and upserts them
- * into `tour_availability`, replacing that tour's future rows. Intended to be
- * run on a schedule by the availability cron. Returns a small summary.
+ * Refresh the server-side availability cache for every *published* tour.
+ * Fetches a rolling window (today → +1 year) of departures per tour and
+ * upserts them into `tour_availability`, replacing that tour's future rows.
+ *
+ * Only tours an admin has explicitly published (`tourOverride.visible`) are
+ * cached, since those are the only ones that can appear in search. Future rows
+ * for tours that are no longer published are pruned so the cache stays in sync
+ * with what the site shows. Intended to be run on a schedule by the
+ * availability cron. Returns a small summary.
  */
 export async function refreshTourAvailability(): Promise<{
   tours: number
   rows: number
 }> {
-  const tours = await fetchAllTours()
+  const [allTours, visibleOverrides] = await Promise.all([
+    fetchAllTours(),
+    db
+      .select({ bokunId: tourOverride.bokunId })
+      .from(tourOverride)
+      .where(eq(tourOverride.visible, true)),
+  ])
+
+  // Only keep tours that both exist in Bokun and are published on the site.
+  const visibleIds = new Set(visibleOverrides.map((o) => o.bokunId))
+  const tours = allTours.filter((t) => visibleIds.has(String(t.id)))
+
   const today = new Date().toISOString().slice(0, 10)
   const end = new Date(Date.now() + AVAILABILITY_WINDOW_DAYS * 86_400_000)
     .toISOString()
     .slice(0, 10)
+
+  // Prune future availability for any tour that is no longer published, so the
+  // cache never serves departures for hidden tours.
+  const keepIds = tours.map((t) => String(t.id))
+  await db
+    .delete(tourAvailability)
+    .where(
+      and(
+        gte(tourAvailability.date, today),
+        keepIds.length > 0
+          ? notInArray(tourAvailability.bokunId, keepIds)
+          : sql`true`,
+      ),
+    )
 
   let totalRows = 0
 
