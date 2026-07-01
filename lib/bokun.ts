@@ -483,7 +483,12 @@ function msToDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10)
 }
 
-async function fetchTourAvailabilityUncached(
+/**
+ * Uncached availability fetch straight from Bokun. Used by the availability
+ * refresh cron so it always writes fresh data to the DB. Prefer
+ * `fetchTourAvailability` (cached) for request-time reads.
+ */
+export async function fetchTourAvailabilityUncached(
   bokunId: string,
   start: string,
   end: string,

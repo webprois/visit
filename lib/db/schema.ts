@@ -215,6 +215,31 @@ export const booking = pgTable("booking", {
     .defaultNow(),
 })
 
+/**
+ * Server-side cache of Bokun availability, one row per (tour, day). Refreshed
+ * on a schedule by a cron job so tour search can filter by availability with a
+ * single fast DB query instead of calling Bokun for every tour on each search.
+ */
+export const tourAvailability = pgTable(
+  "tour_availability",
+  {
+    bokunId: text("bokunId").notNull(),
+    // Local day in YYYY-MM-DD form.
+    date: text("date").notNull(),
+    // Seats left for the day (ignore when `unlimited`).
+    seats: integer("seats").notNull().default(0),
+    unlimited: boolean("unlimited").notNull().default(false),
+    minPax: integer("minPax").notNull().default(1),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.bokunId, t.date] }),
+  }),
+)
+
+export type TourAvailability = typeof tourAvailability.$inferSelect
+export type NewTourAvailability = typeof tourAvailability.$inferInsert
+
 export type Booking = typeof booking.$inferSelect
 export type NewBooking = typeof booking.$inferInsert
 
