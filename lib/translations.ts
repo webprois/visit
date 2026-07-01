@@ -252,6 +252,41 @@ const en = {
     errEmail: "Please enter your email.",
     errPhone: "Please enter your phone number.",
   },
+  payment: {
+    missingRef: "Missing booking reference.",
+    checking: "Checking your payment…",
+    loadError: "We couldn't load your booking",
+    loadErrorText:
+      "If you were charged, contact us and we'll sort it out right away.",
+    confirmed: "Booking confirmed!",
+    confirmedSentTo: "A confirmation has been sent to {email}.",
+    browseMore: "Browse more tours",
+    failed: "Payment didn't go through",
+    failedText: "You haven't been charged. You can try booking again.",
+    receivedConfirming: "Payment received — confirming your booking…",
+    receivedText:
+      "This usually takes a few seconds. You can keep this page open.",
+    traveller: "traveller",
+    travellers: "travellers",
+    total: "Total",
+    browseTours: "Browse tours",
+    callToBook: "Call {phone}",
+    cancelledTitle: "Payment cancelled",
+    cancelledText:
+      "You haven't been charged and your booking wasn't completed. You're welcome to try again whenever you're ready.",
+    returnConfirmed: "Booking confirmed",
+    returnFailed: "Payment unsuccessful",
+    returnPending: "Payment processing",
+    returnConfirmedText:
+      "Thank you! Your booking is confirmed and a confirmation has been sent to {email}.",
+    returnFailedText:
+      "Your payment didn't go through and you have not been charged. Please try again or contact us to book.",
+    returnPendingText:
+      "We're confirming your payment. This can take a moment — refresh this page shortly.",
+    participant: "participant",
+    participants: "participants",
+    tryAgain: "Try again",
+  },
 }
 
 export type Dictionary = typeof en
@@ -510,6 +545,41 @@ const es: Dictionary = {
     errEmail: "Por favor, introduce tu correo electrónico.",
     errPhone: "Por favor, introduce tu número de teléfono.",
   },
+  payment: {
+    missingRef: "Falta la referencia de la reserva.",
+    checking: "Comprobando tu pago…",
+    loadError: "No pudimos cargar tu reserva",
+    loadErrorText:
+      "Si se te ha cobrado, contáctanos y lo resolveremos de inmediato.",
+    confirmed: "¡Reserva confirmada!",
+    confirmedSentTo: "Se ha enviado una confirmación a {email}.",
+    browseMore: "Ver más tours",
+    failed: "El pago no se completó",
+    failedText: "No se te ha cobrado. Puedes intentar reservar de nuevo.",
+    receivedConfirming: "Pago recibido — confirmando tu reserva…",
+    receivedText:
+      "Esto suele tardar unos segundos. Puedes mantener esta página abierta.",
+    traveller: "viajero",
+    travellers: "viajeros",
+    total: "Total",
+    browseTours: "Ver tours",
+    callToBook: "Llama al {phone}",
+    cancelledTitle: "Pago cancelado",
+    cancelledText:
+      "No se te ha cobrado y tu reserva no se completó. Puedes intentarlo de nuevo cuando quieras.",
+    returnConfirmed: "Reserva confirmada",
+    returnFailed: "Pago no realizado",
+    returnPending: "Procesando el pago",
+    returnConfirmedText:
+      "¡Gracias! Tu reserva está confirmada y se ha enviado una confirmación a {email}.",
+    returnFailedText:
+      "Tu pago no se completó y no se te ha cobrado. Inténtalo de nuevo o contáctanos para reservar.",
+    returnPendingText:
+      "Estamos confirmando tu pago. Puede tardar un momento — actualiza esta página en breve.",
+    participant: "participante",
+    participants: "participantes",
+    tryAgain: "Intentar de nuevo",
+  },
 }
 
 /** Portuguese */
@@ -766,6 +836,41 @@ const pt: Dictionary = {
     errEmail: "Por favor, introduza o seu e-mail.",
     errPhone: "Por favor, introduza o seu número de telefone.",
   },
+  payment: {
+    missingRef: "Falta a referência da reserva.",
+    checking: "A verificar o seu pagamento…",
+    loadError: "Não foi possível carregar a sua reserva",
+    loadErrorText:
+      "Se foi cobrado, contacte-nos e resolveremos de imediato.",
+    confirmed: "Reserva confirmada!",
+    confirmedSentTo: "Foi enviada uma confirmação para {email}.",
+    browseMore: "Ver mais tours",
+    failed: "O pagamento não foi concluído",
+    failedText: "Não foi cobrado. Pode tentar reservar novamente.",
+    receivedConfirming: "Pagamento recebido — a confirmar a sua reserva…",
+    receivedText:
+      "Isto costuma demorar alguns segundos. Pode manter esta página aberta.",
+    traveller: "viajante",
+    travellers: "viajantes",
+    total: "Total",
+    browseTours: "Ver tours",
+    callToBook: "Ligue para {phone}",
+    cancelledTitle: "Pagamento cancelado",
+    cancelledText:
+      "Não foi cobrado e a sua reserva não foi concluída. Pode tentar novamente quando quiser.",
+    returnConfirmed: "Reserva confirmada",
+    returnFailed: "Pagamento não efetuado",
+    returnPending: "A processar o pagamento",
+    returnConfirmedText:
+      "Obrigado! A sua reserva está confirmada e foi enviada uma confirmação para {email}.",
+    returnFailedText:
+      "O seu pagamento não foi concluído e não foi cobrado. Tente novamente ou contacte-nos para reservar.",
+    returnPendingText:
+      "Estamos a confirmar o seu pagamento. Pode demorar um momento — atualize esta página em breve.",
+    participant: "participante",
+    participants: "participantes",
+    tryAgain: "Tentar novamente",
+  },
   }
 
 /** Italian */
@@ -1020,9 +1125,44 @@ const it: Dictionary = {
     errEmail: "Inserisci la tua email.",
     errPhone: "Inserisci il tuo numero di telefono.",
   },
-}
-
-const DICTIONARIES: Record<Locale, Dictionary> = { en, es, pt, it }
+  payment: {
+    missingRef: "Riferimento della prenotazione mancante.",
+    checking: "Verifica del pagamento in corso…",
+    loadError: "Non siamo riusciti a caricare la tua prenotazione",
+    loadErrorText:
+      "Se ti è stato addebitato, contattaci e lo risolveremo subito.",
+    confirmed: "Prenotazione confermata!",
+    confirmedSentTo: "Una conferma è stata inviata a {email}.",
+    browseMore: "Scopri altri tour",
+    failed: "Il pagamento non è andato a buon fine",
+    failedText: "Non ti è stato addebitato nulla. Puoi riprovare a prenotare.",
+    receivedConfirming: "Pagamento ricevuto — conferma della prenotazione…",
+    receivedText:
+      "Di solito richiede qualche secondo. Puoi lasciare aperta questa pagina.",
+    traveller: "viaggiatore",
+    travellers: "viaggiatori",
+    total: "Totale",
+    browseTours: "Sfoglia i tour",
+    callToBook: "Chiama il {phone}",
+    cancelledTitle: "Pagamento annullato",
+    cancelledText:
+      "Non ti è stato addebitato nulla e la prenotazione non è stata completata. Puoi riprovare quando vuoi.",
+    returnConfirmed: "Prenotazione confermata",
+    returnFailed: "Pagamento non riuscito",
+    returnPending: "Elaborazione del pagamento",
+    returnConfirmedText:
+      "Grazie! La tua prenotazione è confermata e una conferma è stata inviata a {email}.",
+    returnFailedText:
+      "Il tuo pagamento non è andato a buon fine e non ti è stato addebitato nulla. Riprova o contattaci per prenotare.",
+    returnPendingText:
+      "Stiamo confermando il tuo pagamento. Può richiedere un momento — aggiorna questa pagina a breve.",
+    participant: "partecipante",
+    participants: "partecipanti",
+    tryAgain: "Riprova",
+  },
+  }
+  
+  const DICTIONARIES: Record<Locale, Dictionary> = { en, es, pt, it }
 
 /** Return the full UI dictionary for a locale (falls back to English). */
 export function getDictionary(locale: Locale): Dictionary {

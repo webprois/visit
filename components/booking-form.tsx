@@ -1277,7 +1277,7 @@ export function BookingForm({
                     onClick={goBack}
                     className="rounded-full"
                   >
-                    Back
+                    {t.back}
                   </Button>
                 )}
                 {step < totalSteps ? (
@@ -1288,7 +1288,7 @@ export function BookingForm({
                     disabled={step === 1 && totalPax <= 0}
                     className="flex-1 rounded-full"
                   >
-                    Continue
+                    {t.continue}
                   </Button>
                 ) : (
                   <Button
@@ -1300,10 +1300,10 @@ export function BookingForm({
                     {pending ? (
                       <>
                         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                        Redirecting…
+                        {t.redirecting}
                       </>
                     ) : (
-                      "Confirm & pay"
+                      t.confirmPay
                     )}
                   </Button>
                 )}
@@ -1311,18 +1311,17 @@ export function BookingForm({
 
               {step === totalSteps && (
                 <p className="text-center text-xs text-muted-foreground">
-                  Secure payment via Teya. You won&apos;t be charged until you
-                  confirm.
+                  {t.securePayment}
                 </p>
               )}
             </div>
 
             {/* Trust badges */}
             <ul className="grid grid-cols-1 gap-2.5 border-t border-border pt-5 text-sm text-muted-foreground">
-              {trust.map((t) => (
-                <li key={t.text} className="flex items-center gap-2">
-                  <t.icon className="size-4 text-primary" aria-hidden="true" />
-                  {t.text}
+              {trust.map((badge) => (
+                <li key={badge.text} className="flex items-center gap-2">
+                  <badge.icon className="size-4 text-primary" aria-hidden="true" />
+                  {badge.text}
                 </li>
               ))}
             </ul>
