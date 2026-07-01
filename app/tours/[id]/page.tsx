@@ -213,20 +213,20 @@ export default async function TourPage({
                     with the facts (absolute) so the spacing below the hero stays
                     constant regardless of how tall the title is. */}
                 <div className="mt-6 rounded-2xl border border-border bg-card/80 p-5 backdrop-blur lg:absolute lg:bottom-0 lg:right-0 lg:mt-0 lg:w-64">
-                  <span className="text-xs text-muted-foreground">From</span>
+                  <span className="text-xs text-muted-foreground">{dict.detail.from}</span>
                   <p className="font-heading text-3xl font-extrabold text-foreground">
-                    <Price isk={priceAmount} fallback="Contact us" />
+                    <Price isk={priceAmount} fallback={dict.detail.contactUs} />
                   </p>
                   {priceAmount > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      per person
+                      {dict.detail.perPerson}
                     </span>
                   )}
                   <a
                     href="#book"
                     className="mt-4 flex w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    Book now
+                    {dict.detail.bookNow}
                   </a>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export default async function TourPage({
                   id="about-heading"
                   className="font-heading text-2xl font-extrabold text-foreground md:text-3xl"
                 >
-                  About this tour
+                  {dict.detail.about}
                 </h2>
                 {paragraphs.length > 0 ? (
                   <div className="mt-4 flex flex-col gap-4 text-pretty text-base leading-relaxed text-muted-foreground">
@@ -264,8 +264,7 @@ export default async function TourPage({
                   </div>
                 ) : (
                   <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                    {tour.excerpt?.trim() ||
-                      "Contact us for full details about this experience."}
+                    {tour.excerpt?.trim() || dict.detail.aboutFallback}
                   </p>
                 )}
               </section>
@@ -277,13 +276,13 @@ export default async function TourPage({
                     id="included-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    What&apos;s included
+                    {dict.detail.whatsIncluded}
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {tour.includedItems.length > 0 && (
                       <div className="rounded-2xl border border-border bg-card p-5">
                         <p className="font-heading text-sm font-bold text-foreground">
-                          Included
+                          {dict.detail.included}
                         </p>
                         <ul className="mt-3 flex flex-col gap-2.5">
                           {tour.includedItems.map((item, i) => (
@@ -304,7 +303,7 @@ export default async function TourPage({
                     {tour.excludedItems.length > 0 && (
                       <div className="rounded-2xl border border-border bg-card p-5">
                         <p className="font-heading text-sm font-bold text-foreground">
-                          Not included
+                          {dict.detail.notIncluded}
                         </p>
                         <ul className="mt-3 flex flex-col gap-2.5">
                           {tour.excludedItems.map((item, i) => (
@@ -333,7 +332,7 @@ export default async function TourPage({
                     id="itinerary-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    Itinerary
+                    {dict.detail.itinerary}
                   </h2>
                   <ol className="relative mt-6 flex flex-col gap-7 border-l border-border pl-7">
                     {tour.itinerary.map((step, i) => (
@@ -365,7 +364,7 @@ export default async function TourPage({
                     id="know-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    Know before you go
+                    {dict.detail.knowBefore}
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {detail?.requirements && (
@@ -383,7 +382,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            What to bring
+                            {dict.detail.whatToBring}
                           </p>
                         </div>
                         <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
@@ -404,7 +403,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            Good to know
+                            {dict.detail.goodToKnow}
                           </p>
                         </div>
                         <ul className="mt-3 flex flex-col gap-2.5">
@@ -431,7 +430,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            Important information
+                            {dict.detail.importantInfo}
                           </p>
                         </div>
                         <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
@@ -475,7 +474,7 @@ export default async function TourPage({
           <section className="bg-secondary/40 py-14">
             <div className="mx-auto max-w-7xl px-4 md:px-6">
               <h2 className="font-heading text-2xl font-extrabold text-foreground md:text-3xl">
-                Explore similar adventures
+                {dict.detail.relatedTitle}
               </h2>
               <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((t) => (
@@ -511,7 +510,7 @@ export default async function TourPage({
                         </span>
                       </div>
                       <div className="mt-5 border-t border-border pt-4">
-                        <span className="text-xs text-muted-foreground">From</span>
+                        <span className="text-xs text-muted-foreground">{dict.detail.from}</span>
                         <p className="font-heading text-xl font-extrabold text-foreground">
                           <Price isk={t.price} />
                         </p>

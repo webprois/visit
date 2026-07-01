@@ -25,6 +25,8 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { startBooking, type BookingInput } from "@/app/actions/booking"
+import { useDict } from "@/components/i18n-provider"
+import { fmt } from "@/lib/translations"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 // Full country dialing list. `iso` is the unique select value (some countries
@@ -235,15 +237,8 @@ const PHONE_CODES: { iso: string; dial: string; name: string }[] = [
 // (https://visit.is/terms-and-conditions/). Partner tours may differ per the
 // operator's terms shown on the ticket.
 const TERMS_URL = "https://visit.is/terms-and-conditions/"
-const CANCELLATION_SUMMARY = "Free cancellation up to 72h before"
 
 type StepKey = "tour" | "details" | "addons" | "confirm"
-const STEP_LABELS: Record<StepKey, string> = {
-  tour: "Tour",
-  details: "Details",
-  addons: "Add-ons",
-  confirm: "Confirm",
-}
 
 /** Mirror of the server's BookableSlot, kept structural to avoid importing server code. */
 type Tier = { unitIsk: number; minPax: number; maxPax: number }
@@ -343,6 +338,14 @@ export function BookingForm({
   /** "From" price shown before any participants are selected. */
   startingPriceIsk?: number
 }) {
+  const dict = useDict()
+  const t = dict.booking
+  const STEP_LABELS: Record<StepKey, string> = {
+    tour: t.stepTour,
+    details: t.stepDetails,
+    addons: t.stepAddons,
+    confirm: t.stepConfirm,
+  }
   const pickupPlaces = pickup?.pickupPlaces ?? []
   const dropoffPlaces = pickup?.dropoffPlaces ?? []
   // Bokun often returns no separate drop-off list even when pickup is offered;
@@ -371,7 +374,7 @@ export function BookingForm({
   const lines: PriceLine[] = useMemo(() => {
     if (!slot) return []
     if (slot.pricedPerPerson) return slot.lines
-    return [{ id: 0, title: "Participants", minAge: 0, tiers: [] }]
+    return [{ id: 0, title: t.participants, minAge: 0, tiers: [] }]
   }, [slot])
 
   const [qtyByLine, setQtyByLine] = useState<Record<number, number>>({})
@@ -491,27 +494,27 @@ export function BookingForm({
       return
     }
     if (!slot) {
-      setError("Please choose a date.")
+      setError(t.errChooseDate)
       return
     }
     if (totalPax <= 0) {
-      setError("Please add at least one participant.")
+      setError(t.errAddParticipant)
       return
     }
     if (totalPax < slot.minPax) {
-      setError(`This tour requires at least ${slot.minPax} participants.`)
+      setError(fmt(t.errMinParticipants, { count: slot.minPax }))
       return
     }
     if (!slot.unlimited && totalPax > slot.seats) {
-      setError(`Only ${slot.seats} seats left for this date.`)
+      setError(fmt(t.errSeatsLeft, { count: slot.seats }))
       return
     }
     if (pickupRequired && !selectedPickup) {
-      setError("Please choose a pickup location.")
+      setError(t.errChoosePickup)
       return
     }
     if (needsRoomNumber && !roomNumber.trim()) {
-      setError("Please enter your room number for the pickup.")
+      setError(t.errRoomNumber)
       return
     }
     if (
@@ -521,19 +524,19 @@ export function BookingForm({
           !(lastByGuest[g.key] ?? "").trim(),
       )
     ) {
-      setError("Please enter a first and last name for each participant.")
+      setError(t.errGuestNames)
       return
     }
     if (!firstName.trim() || !lastName.trim()) {
-      setError("Please enter your name.")
+      setError(t.errYourName)
       return
     }
     if (!email.trim()) {
-      setError("Please enter your email.")
+      setError(t.errEmail)
       return
     }
     if (!phone.trim()) {
-      setError("Please enter your phone number.")
+      setError(t.errPhone)
       return
     }
 
@@ -586,19 +589,19 @@ export function BookingForm({
   function validateStep1(): boolean {
     setError(null)
     if (!slot) {
-      setError("Please choose a date.")
+      setError(t.errChooseDate)
       return false
     }
     if (totalPax <= 0) {
-      setError("Please add at least one participant.")
+      setError(t.errAddParticipant)
       return false
     }
     if (totalPax < slot.minPax) {
-      setError(`This tour requires at least ${slot.minPax} participants.`)
+      setError(fmt(t.errMinParticipants, { count: slot.minPax }))
       return false
     }
     if (!slot.unlimited && totalPax > slot.seats) {
-      setError(`Only ${slot.seats} seats left for this date.`)
+      setError(fmt(t.errSeatsLeft, { count: slot.seats }))
       return false
     }
     return true
@@ -607,11 +610,11 @@ export function BookingForm({
   function validateStep2(): boolean {
     setError(null)
     if (pickupRequired && !selectedPickup) {
-      setError("Please choose a pickup location.")
+      setError(t.errChoosePickup)
       return false
     }
     if (needsRoomNumber && !roomNumber.trim()) {
-      setError("Please enter your room number for the pickup.")
+      setError(t.errRoomNumber)
       return false
     }
     if (
@@ -621,7 +624,7 @@ export function BookingForm({
           !(lastByGuest[g.key] ?? "").trim(),
       )
     ) {
-      setError("Please enter a first and last name for each participant.")
+      setError(t.errGuestNames)
       return false
     }
     return true
@@ -644,10 +647,10 @@ export function BookingForm({
       <>
         <div className="hidden rounded-2xl border border-border bg-card p-6 shadow-sm lg:block">
           <p className="font-heading text-lg font-bold text-foreground">
-            Online booking isn&apos;t available
+            {t.noOnlineTitle}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Contact us and we&apos;ll arrange your booking directly.
+            {t.noOnlineText}
           </p>
           <a
             href={`tel:${fallbackPhone.replace(/\s/g, "")}`}
@@ -663,7 +666,7 @@ export function BookingForm({
             className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"
           >
             <Phone className="size-4" aria-hidden="true" />
-            Call to book — {fallbackPhone}
+            {fmt(t.callToBook, { phone: fallbackPhone })}
           </a>
         </div>
       </>
@@ -674,10 +677,10 @@ export function BookingForm({
   const showFrom = totalPax <= 0 && startingPriceIsk > 0
 
   const trust: { icon: typeof Zap; text: string }[] = [
-    { icon: Zap, text: "Instant confirmation" },
-    { icon: ShieldCheck, text: CANCELLATION_SUMMARY },
-    { icon: Compass, text: "Local expert guide" },
-    { icon: Lock, text: "Secure booking" },
+    { icon: Zap, text: t.instantConfirmation },
+    { icon: ShieldCheck, text: t.cancellationSummary },
+    { icon: Compass, text: t.localGuide },
+    { icon: Lock, text: t.secureBooking },
   ]
 
   /** Date + departure + participant steppers — reused in card and overlay. */
@@ -687,7 +690,7 @@ export function BookingForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="booking-date" className="flex items-center gap-1.5">
             <CalendarDays className="size-4 text-primary" aria-hidden="true" />
-            Date
+            {t.date}
           </Label>
           <select
             id="booking-date"
@@ -707,7 +710,7 @@ export function BookingForm({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="booking-time" className="flex items-center gap-1.5">
               <Clock className="size-4 text-primary" aria-hidden="true" />
-              Departure
+              {t.departure}
             </Label>
             <select
               id="booking-time"
@@ -720,7 +723,7 @@ export function BookingForm({
             >
               {slotsForDate.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.startTime || "Flexible"}
+                  {s.startTime || t.flexible}
                 </option>
               ))}
             </select>
@@ -731,7 +734,7 @@ export function BookingForm({
           <div className="flex flex-col gap-3">
             <Label className="flex items-center gap-1.5">
               <Compass className="size-4 text-primary" aria-hidden="true" />
-              Participants
+              {t.participants}
             </Label>
             {lines.map((line) => {
               const qty = qtyByLine[line.id] ?? 0
@@ -749,13 +752,13 @@ export function BookingForm({
                       {line.title}
                       {line.minAge > 0 && (
                         <span className="ml-1 text-xs text-muted-foreground">
-                          (age {line.minAge}+)
+                          {fmt(t.age, { age: line.minAge })}
                         </span>
                       )}
                     </p>
                     {slot.pricedPerPerson && tier && (
                       <p className="text-xs text-muted-foreground">
-                        <Price isk={tier.unitIsk} /> each
+                        <Price isk={tier.unitIsk} /> {t.each}
                       </p>
                     )}
                   </div>
@@ -764,7 +767,7 @@ export function BookingForm({
                       type="button"
                       onClick={() => bumpQty(line.id, -1)}
                       disabled={qty <= 0}
-                      aria-label={`Decrease ${line.title}`}
+                      aria-label={fmt(t.decrease, { label: line.title })}
                       className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
@@ -776,7 +779,7 @@ export function BookingForm({
                       type="button"
                       onClick={() => bumpQty(line.id, 1)}
                       disabled={atCapacity}
-                      aria-label={`Increase ${line.title}`}
+                      aria-label={fmt(t.increase, { label: line.title })}
                       className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
@@ -790,8 +793,10 @@ export function BookingForm({
                 className={`text-xs ${atCapacity ? "text-destructive" : "text-muted-foreground"}`}
               >
                 {atCapacity
-                  ? "No more seats available for this departure."
-                  : `${seatsLeft} ${seatsLeft === 1 ? "seat" : "seats"} left for this departure.`}
+                  ? t.noSeats
+                  : fmt(seatsLeft === 1 ? t.seatLeft : t.seatsLeft, {
+                      count: seatsLeft,
+                    })}
               </p>
             )}
           </div>
@@ -807,11 +812,11 @@ export function BookingForm({
         <div className="min-w-0">
           {showFrom && (
             <span className="block text-[11px] leading-none text-muted-foreground">
-              From
+              {t.from}
             </span>
           )}
           <span className="font-heading text-lg font-extrabold text-foreground">
-            <Price isk={headlinePriceIsk} fallback="Select dates" />
+            <Price isk={headlinePriceIsk} fallback={t.selectDates} />
           </span>
         </div>
         <Button
@@ -824,7 +829,7 @@ export function BookingForm({
           }
           className="shrink-0 rounded-full"
         >
-          Book now
+          {t.bookNow}
         </Button>
       </div>
 
@@ -835,7 +840,7 @@ export function BookingForm({
       >
             <div>
               <p className="font-heading text-xl font-extrabold text-foreground">
-                Complete your booking
+                {t.completeBooking}
               </p>
 
               {/* Step indicator */}
@@ -900,7 +905,7 @@ export function BookingForm({
 
                 {totalPax <= 0 && (
                   <p className="-mt-1 text-xs text-muted-foreground">
-                    Select participants to see final pricing.
+                    {t.selectToSeePricing}
                   </p>
                 )}
               </>
@@ -912,7 +917,7 @@ export function BookingForm({
                 {/* Add-ons */}
             {extras.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
-                <p className="text-sm font-semibold text-foreground">Add-ons</p>
+                <p className="text-sm font-semibold text-foreground">{t.addons}</p>
                 {extras.map((extra) => {
                   const qty = qtyByAddon[extra.id] ?? 0
                   return (
@@ -926,7 +931,7 @@ export function BookingForm({
                         </p>
                         <p className="text-xs text-muted-foreground">
                           <Price isk={extra.unitIsk} />
-                          {extra.pricedPerPerson ? " per person" : " each"}
+                          {extra.pricedPerPerson ? t.perPerson : t.eachSuffix}
                         </p>
                         {extra.information && (
                           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -939,7 +944,7 @@ export function BookingForm({
                           type="button"
                           onClick={() => setAddonQty(extra, qty - 1)}
                           disabled={qty <= 0}
-                          aria-label={`Decrease ${extra.title}`}
+                          aria-label={fmt(t.decrease, { label: extra.title })}
                           className="flex size-9 items-center justify-center rounded-full bg-foreground/10 text-foreground transition-colors hover:bg-foreground/20 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           <Minus className="size-5" strokeWidth={2.5} aria-hidden="true" />
@@ -950,7 +955,7 @@ export function BookingForm({
                         <button
                           type="button"
                           onClick={() => setAddonQty(extra, qty + 1)}
-                          aria-label={`Increase ${extra.title}`}
+                          aria-label={fmt(t.increase, { label: extra.title })}
                           className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                         >
                           <Plus className="size-5" strokeWidth={2.5} aria-hidden="true" />
@@ -971,15 +976,15 @@ export function BookingForm({
             {pickupPlaces.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Pick-up</p>
+                  <p className="text-sm font-semibold text-foreground">{t.pickup}</p>
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    Included in price
+                    {t.includedInPrice}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="booking-pickup">
-                    Where should we pick you up?
+                    {t.pickupWhere}
                     {pickupRequired && (
                       <span className="ml-0.5 text-destructive" aria-hidden="true">
                         *
@@ -997,9 +1002,7 @@ export function BookingForm({
                     className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">
-                      {pickupRequired
-                        ? "Select a pickup location"
-                        : "I'll meet at the starting location"}
+                      {pickupRequired ? t.selectPickup : t.meetAtStart}
                     </option>
                     {pickupPlaces.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -1011,12 +1014,12 @@ export function BookingForm({
 
                 {needsRoomNumber && (
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="booking-room">Room number</Label>
+                    <Label htmlFor="booking-room">{t.roomNumber}</Label>
                     <Input
                       id="booking-room"
                       value={roomNumber}
                       onChange={(e) => setRoomNumber(e.target.value)}
-                      placeholder="e.g. 204"
+                      placeholder={t.roomPlaceholder}
                     />
                   </div>
                 )}
@@ -1024,7 +1027,7 @@ export function BookingForm({
                 {dropoffOptions.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="booking-dropoff">
-                      Where should we drop you off?
+                      {t.dropoffWhere}
                     </Label>
                     <select
                       id="booking-dropoff"
@@ -1032,7 +1035,7 @@ export function BookingForm({
                       onChange={(e) => setDropoffId(e.target.value)}
                       className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      <option value="">Same as pickup location</option>
+                      <option value="">{t.sameAsPickup}</option>
                       {dropoffOptions.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.title}
@@ -1049,8 +1052,8 @@ export function BookingForm({
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">
                   {guestSlots.length === 1
-                    ? "Participant name"
-                    : "Participant names"}
+                    ? t.participantName
+                    : t.participantNames}
                 </p>
                 {guestSlots.map((g) => (
                   <div key={g.key} className="flex flex-col gap-1.5">
@@ -1067,8 +1070,8 @@ export function BookingForm({
                         }
                         required
                         autoComplete="off"
-                        placeholder="First name"
-                        aria-label={`${g.label} first name`}
+                        placeholder={t.firstName}
+                        aria-label={fmt(t.guestFirstName, { label: g.label })}
                       />
                       <Input
                         id={`guest-${g.key}-last`}
@@ -1081,8 +1084,8 @@ export function BookingForm({
                         }
                         required
                         autoComplete="off"
-                        placeholder="Last name"
-                        aria-label={`${g.label} last name`}
+                        placeholder={t.lastName}
+                        aria-label={fmt(t.guestLastName, { label: g.label })}
                       />
                     </div>
                   </div>
@@ -1098,11 +1101,11 @@ export function BookingForm({
             {/* Contact details */}
             <div className="flex flex-col gap-3 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
-                Contact details
+                {t.contactDetails}
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-first-name">First name</Label>
+                  <Label htmlFor="booking-first-name">{t.firstName}</Label>
                   <Input
                     id="booking-first-name"
                     value={firstName}
@@ -1112,7 +1115,7 @@ export function BookingForm({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-last-name">Last name</Label>
+                  <Label htmlFor="booking-last-name">{t.lastName}</Label>
                   <Input
                     id="booking-last-name"
                     value={lastName}
@@ -1123,7 +1126,7 @@ export function BookingForm({
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-email">Email</Label>
+                <Label htmlFor="booking-email">{t.email}</Label>
                 <Input
                   id="booking-email"
                   type="email"
@@ -1134,14 +1137,14 @@ export function BookingForm({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-phone">Phone</Label>
+                <Label htmlFor="booking-phone">{t.phone}</Label>
                 <div className="flex gap-2">
                   <Select
                     value={phoneCountry}
                     onValueChange={(v) => v && setPhoneCountry(v)}
                   >
                     <SelectTrigger
-                      aria-label="Phone country code"
+                      aria-label={t.phoneCountryCode}
                       className="h-11 w-20 shrink-0 rounded-lg border-input bg-background"
                     >
                       <span className="text-sm font-medium">{phoneDial}</span>
@@ -1161,7 +1164,7 @@ export function BookingForm({
                     onChange={(e) => setPhone(e.target.value)}
                     required
                     autoComplete="tel-national"
-                    placeholder="Phone number"
+                    placeholder={t.phoneNumber}
                     className="flex-1"
                   />
                 </div>
@@ -1171,7 +1174,7 @@ export function BookingForm({
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
-                Order summary
+                {t.orderSummary}
               </p>
               {totalPax > 0 && (
                 <div className="flex flex-col gap-1.5">
@@ -1222,17 +1225,14 @@ export function BookingForm({
             </div>
 
             <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-              <p>
-                Free cancellation up to 72 hours before departure. 20% fee
-                within 48–72 hours; no refund within 48 hours.
-              </p>
+              <p>{t.cancellationPolicy}</p>
               <a
                 href={TERMS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-primary hover:underline"
               >
-                See full cancellation terms
+                {t.seeFullTerms}
               </a>
             </div>
               </>
@@ -1248,7 +1248,7 @@ export function BookingForm({
             <div className="flex flex-col gap-3 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
-                  {totalPax > 0 ? "Total" : "From"}
+                  {totalPax > 0 ? t.total : t.from}
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   {totalPax > 0 ? (
@@ -1257,12 +1257,12 @@ export function BookingForm({
                     <>
                       <Price isk={startingPriceIsk} />
                       <span className="ml-1 text-sm font-normal text-muted-foreground">
-                        / person
+                        {t.perPersonSuffix}
                       </span>
                     </>
                   ) : (
                     <span className="text-base font-semibold text-muted-foreground">
-                      Select participants
+                      {t.selectParticipants}
                     </span>
                   )}
                 </span>
