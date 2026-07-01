@@ -9,6 +9,7 @@ import { TourMapSection } from "@/components/tour/tour-map-section"
 import { getFullTour, getRelatedTours } from "@/lib/tours"
 import { fetchBookableSlots, fetchTourExtras, fetchTourPickup } from "@/lib/bokun"
 import { getLocale } from "@/lib/get-locale"
+import { getDictionary, fmt } from "@/lib/translations"
 import { Price } from "@/components/price"
 import {
   Clock,
@@ -27,11 +28,6 @@ import {
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
-
-const TYPE_LABELS: Record<"day" | "multi-day", string> = {
-  day: "Day Tour",
-  "multi-day": "Multi-Day Tour",
-}
 
 export async function generateMetadata({
   params,
@@ -58,6 +54,7 @@ export default async function TourPage({
 }) {
   const { id } = await params
   const locale = await getLocale()
+  const dict = getDictionary(locale)
   const tour = await getFullTour(id, locale)
   if (!tour) notFound()
 
@@ -92,8 +89,8 @@ export default async function TourPage({
   }
 
   // Resolved display values (admin override → Bokun → fallback).
-  const durationText = tour.duration || detail?.durationText || "Flexible"
-  const locationText = tour.location || detail?.location || "Iceland"
+  const durationText = tour.duration || detail?.durationText || dict.detail.flexible
+  const locationText = tour.location || detail?.location || dict.detail.iceland
   const priceAmount = tour.price > 0 ? tour.price : (detail?.priceAmount ?? 0)
 
   const paragraphs = tour.fullDescription
@@ -103,14 +100,18 @@ export default async function TourPage({
 
   // Hero facts — compact, scannable tour basics, all consolidated into the
   // header (the separate quick-facts strip was dropped to avoid duplication).
+  const typeLabel =
+    tour.tourType === "multi-day" ? dict.detail.multiDayTour : dict.detail.dayTour
   const heroFacts = [
-    { icon: CalendarDays, text: TYPE_LABELS[tour.tourType] },
+    { icon: CalendarDays, text: typeLabel },
     { icon: Clock, text: durationText },
     { icon: MapPin, text: locationText },
     tour.groupSizeLabel ? { icon: Users, text: tour.groupSizeLabel } : null,
     tour.difficultyLabel ? { icon: Gauge, text: tour.difficultyLabel } : null,
-    detail?.hasPickup ? { icon: Bus, text: "Hotel pickup included" } : null,
-    detail?.minAge ? { icon: Baby, text: `Min age ${detail.minAge}` } : null,
+    detail?.hasPickup ? { icon: Bus, text: dict.detail.hotelPickup } : null,
+    detail?.minAge
+      ? { icon: Baby, text: fmt(dict.detail.minAge, { age: detail.minAge }) }
+      : null,
   ].filter((x): x is { icon: typeof Clock; text: string } => Boolean(x))
 
   // Prefer the admin-curated gallery; fall back to Bokun photos, then the hero.
@@ -158,14 +159,14 @@ export default async function TourPage({
                 className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"
               >
                 <a href="/" className="transition-colors hover:text-foreground">
-                  Home
+                  {dict.detail.home}
                 </a>
                 <ChevronRight className="size-4" aria-hidden="true" />
                 <a
                   href="/tours"
                   className="transition-colors hover:text-foreground"
                 >
-                  Tours
+                  {dict.detail.tours}
                 </a>
                 <ChevronRight className="size-4" aria-hidden="true" />
                 <span className="truncate text-foreground">{tour.title}</span>

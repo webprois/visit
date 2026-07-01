@@ -1,12 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2 } from "lucide-react"
+import { getServerDict } from "@/lib/get-dictionary"
 
 /**
  * Instant loading UI for the tours route. Because `/tours` is force-dynamic and
  * may block on live Bokun availability lookups, this skeleton renders the moment
  * the user hits "Search", so the transition feels responsive instead of frozen.
  */
-export default function ToursLoading() {
+export default async function ToursLoading() {
+  const dict = await getServerDict()
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Hero */}
@@ -19,7 +21,7 @@ export default function ToursLoading() {
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
-              Checking live availability…
+              {dict.toursLoading.checking}
             </span>
             <Skeleton className="h-8 w-40 rounded-full" />
             <Skeleton className="h-8 w-32 rounded-full" />

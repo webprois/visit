@@ -11,6 +11,8 @@ import { tourBlurb } from "@/lib/tour-blurb"
 import type { TourCategory } from "@/lib/db/schema"
 import { Price } from "@/components/price"
 import { PriceRangeSlider } from "@/components/price-range-slider"
+import { useDict } from "@/components/i18n-provider"
+import { fmt, type Dictionary } from "@/lib/translations"
 import {
   RangeCalendar,
   toYmd,
@@ -51,8 +53,10 @@ function durationBucket(duration: string): number {
   return 1
 }
 
-function durationLabel(bucket: number): string {
-  return bucket <= 1 ? "Day tour" : `${bucket} days`
+function durationLabel(bucket: number, dict: Dictionary): string {
+  return bucket <= 1
+    ? dict.browser.dayTour
+    : fmt(dict.browser.days, { count: bucket })
 }
 
 export function ToursBrowser({
@@ -68,6 +72,7 @@ export function ToursBrowser({
   initialCategoryIds?: number[]
 }) {
   const router = useRouter()
+  const dict = useDict()
   const searchParams = useSearchParams()
   // Current travel-date search context (server-side availability filter).
   const dateFrom = searchParams.get("from") ?? ""
@@ -158,7 +163,10 @@ export function ToursBrowser({
   const urlAdults = Math.max(1, Number(searchParams.get("adults")) || 1)
   const urlChildren = Math.max(0, Number(searchParams.get("children")) || 0)
   const urlPax = urlAdults + urlChildren
-  const travelersLabel = `${urlPax} ${urlPax === 1 ? "traveler" : "travelers"}`
+  const travelersLabel = fmt(
+    urlPax === 1 ? dict.browser.traveler : dict.browser.travelers2,
+    { count: urlPax },
+  )
 
   // Travelers popover (mirrors the home search widget). Portaled like the
   // calendar so it isn't clipped by the sidebar's scroll container. We keep a
@@ -623,7 +631,7 @@ export function ToursBrowser({
   const sidebar = (
     <div className="flex flex-col gap-6">
       {/* Travel dates (server-side availability) */}
-      <FilterSection title="Travel dates">
+      <FilterSection title={dict.browser.travelDates}>
         <div className="flex flex-col gap-2">
           <button
             ref={dateBtnRef}
@@ -642,7 +650,7 @@ export function ToursBrowser({
                 (datesLabel ? "text-foreground" : "text-muted-foreground")
               }
             >
-              {datesLabel ?? "Starting date — Final date"}
+              {datesLabel ?? dict.browser.datesPlaceholder}
             </span>
           </button>
 
@@ -673,14 +681,14 @@ export function ToursBrowser({
               onClick={clearDates}
               className="self-start text-sm font-medium text-primary hover:underline"
             >
-              Clear dates
+              {dict.browser.clearDates}
             </button>
           )}
         </div>
       </FilterSection>
 
       {/* Travelers (affects availability when dates are set) */}
-      <FilterSection title="Travelers">
+      <FilterSection title={dict.browser.travelers}>
         <div className="flex flex-col gap-2">
           <button
             ref={paxBtnRef}
@@ -719,14 +727,14 @@ export function ToursBrowser({
                 className="z-50 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
               >
                 <Stepper
-                  label="Adults"
+                  label={dict.browser.adults}
                   value={draftAdults}
                   min={1}
                   onChange={setDraftAdults}
                 />
                 <div className="my-3 h-px bg-border" />
                 <Stepper
-                  label="Children"
+                  label={dict.browser.children}
                   value={draftChildren}
                   min={0}
                   onChange={setDraftChildren}
@@ -739,7 +747,7 @@ export function ToursBrowser({
 
       {/* Duration */}
       {allDurationBuckets.length > 1 && (
-        <FilterSection title="Duration">
+        <FilterSection title={dict.browser.duration}>
           <div className="flex flex-wrap gap-2">
             {allDurationBuckets.map((bucket) => {
               const enabled = enabledDurationBuckets.has(bucket)
@@ -751,7 +759,7 @@ export function ToursBrowser({
                   disabled={!enabled && !active}
                   onClick={() => toggleSet(setActiveDurations, bucket)}
                 >
-                  {durationLabel(bucket)}
+                  {durationLabel(bucket, dict)}
                 </Chip>
               )
             })}
@@ -761,7 +769,7 @@ export function ToursBrowser({
 
       {/* Difficulty */}
       {allDifficulties.length > 0 && (
-        <FilterSection title="Difficulty">
+        <FilterSection title={dict.browser.difficulty}>
           <div className="flex flex-wrap gap-2">
             {allDifficulties.map((d) => {
               const enabled = enabledDifficulties.has(d)
@@ -783,7 +791,7 @@ export function ToursBrowser({
 
       {/* Price range */}
       {priceBounds.max > priceBounds.min && (
-        <FilterSection title="Price">
+        <FilterSection title={dict.browser.price}>
           <PriceRangeSlider
             min={priceBounds.min}
             max={priceBounds.max}
@@ -792,13 +800,13 @@ export function ToursBrowser({
           />
           <div className="mt-3 flex items-center justify-between text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Min price</p>
+              <p className="text-xs text-muted-foreground">{dict.browser.minPrice}</p>
               <p className="font-semibold text-foreground">
                 <Price isk={priceRange[0]} />
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Max price</p>
+              <p className="text-xs text-muted-foreground">{dict.browser.maxPrice}</p>
               <p className="font-semibold text-foreground">
                 <Price isk={priceRange[1]} />
               </p>
@@ -809,16 +817,17 @@ export function ToursBrowser({
 
       {/* Activities (categories) */}
       {availableCategories.length > 0 && (
-        <FilterSection title="Activities">
+        <FilterSection title={dict.browser.activities}>
           <FilterSearch
             value={activitySearch}
             onChange={setActivitySearch}
-            label="Search activities"
+            label={dict.browser.searchActivities}
+            placeholder={dict.browser.searchShort}
           />
           <ul className="mt-3 flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
             {shownCategories.length === 0 ? (
               <li className="px-1 py-2 text-sm text-muted-foreground">
-                No matches
+                {dict.browser.noMatches}
               </li>
             ) : (
               shownCategories.map((c) => (
@@ -839,16 +848,17 @@ export function ToursBrowser({
 
       {/* Starting location */}
       {availableLocations.length > 0 && (
-        <FilterSection title="Starting location">
+        <FilterSection title={dict.browser.startingLocation}>
           <FilterSearch
             value={locationSearch}
             onChange={setLocationSearch}
-            label="Search locations"
+            label={dict.browser.searchLocations}
+            placeholder={dict.browser.searchShort}
           />
           <ul className="mt-3 flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
             {shownLocations.length === 0 ? (
               <li className="px-1 py-2 text-sm text-muted-foreground">
-                No matches
+                {dict.browser.noMatches}
               </li>
             ) : (
               shownLocations.map((loc) => (
@@ -890,9 +900,9 @@ export function ToursBrowser({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by tour, location or category…"
+              placeholder={dict.browser.searchPlaceholder}
               className="border-0 pl-9 focus-visible:ring-0 focus-visible:ring-offset-0"
-              aria-label="Search tours"
+              aria-label={dict.browser.searchAria}
             />
           </div>
           <button
@@ -902,7 +912,7 @@ export function ToursBrowser({
             aria-expanded={showFilters}
           >
             <SlidersHorizontal className="size-4" aria-hidden="true" />
-            Filters
+            {dict.browser.filters}
             {activeFilterCount > 0 && (
               <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
                 {activeFilterCount}
@@ -926,7 +936,7 @@ export function ToursBrowser({
               className="absolute right-5 top-5 z-10 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               <X className="size-3.5" aria-hidden="true" />
-              Clear all
+              {dict.browser.clearAll}
             </button>
           )}
           {sidebar}
@@ -936,16 +946,21 @@ export function ToursBrowser({
       {/* Results */}
       <div>
         <p className="mb-5 text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? "tour" : "tours"}
+          {fmt(
+            filtered.length === 1
+              ? dict.browser.resultTour
+              : dict.browser.resultTours,
+            { count: filtered.length },
+          )}
         </p>
 
         {filtered.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-10 text-center">
             <p className="font-heading text-lg font-bold text-foreground">
-              No tours found
+              {dict.browser.noToursTitle}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Try adjusting or clearing your filters.
+              {dict.browser.noToursText}
             </p>
             {activeFilterCount > 0 && (
               <button
@@ -953,7 +968,7 @@ export function ToursBrowser({
                 onClick={clearAll}
                 className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline"
               >
-                Clear all filters
+                {dict.browser.clearAllFilters}
               </button>
             )}
           </div>
@@ -1007,7 +1022,7 @@ export function ToursBrowser({
 
                   <div className="mt-5 flex items-center justify-between pt-4">
                     <div>
-                      <span className="text-xs text-muted-foreground">From</span>
+                      <span className="text-xs text-muted-foreground">{dict.browser.from}</span>
                       <p className="font-heading text-xl font-extrabold text-foreground">
                         <Price isk={tour.price} />
                       </p>
@@ -1018,7 +1033,7 @@ export function ToursBrowser({
                         className: "rounded-full",
                       })}
                     >
-                      View tour
+                      {dict.browser.viewTour}
                     </span>
                   </div>
                 </div>
@@ -1052,10 +1067,12 @@ function FilterSearch({
   value,
   onChange,
   label,
+  placeholder,
 }: {
   value: string
   onChange: (v: string) => void
   label: string
+  placeholder: string
 }) {
   return (
     <div className="relative">
@@ -1067,7 +1084,7 @@ function FilterSearch({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search…"
+        placeholder={placeholder}
         className="h-9 pl-9"
         aria-label={label}
       />

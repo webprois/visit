@@ -1,8 +1,11 @@
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Phone, Mail, MapPin } from "lucide-react"
+import { getServerDict } from "@/lib/get-dictionary"
+import { fmt } from "@/lib/translations"
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const dict = await getServerDict()
   return (
     <footer className="bg-background">
       {/* CTA */}
@@ -10,22 +13,22 @@ export function SiteFooter() {
         <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground md:flex-row md:items-center md:justify-between md:p-12">
           <div>
             <h2 className="text-balance font-heading text-2xl font-extrabold md:text-3xl">
-              Start your Icelandic adventure today
+              {dict.footer.ctaTitle}
             </h2>
             <p className="mt-2 max-w-md text-pretty leading-relaxed text-muted-foreground">
-              Questions? We&apos;re here to help you plan the perfect trip.
+              {dict.footer.ctaSubtitle}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button size="lg" className="rounded-full">
-              Browse tours
+              {dict.footer.browseTours}
             </Button>
             <Button
               size="lg"
               variant="outline"
               className="rounded-full"
             >
-              Contact us
+              {dict.footer.contactUs}
             </Button>
           </div>
         </div>
@@ -44,22 +47,32 @@ export function SiteFooter() {
             />
           </a>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Your gateway to extraordinary adventures in the land of fire and ice.
+            {dict.footer.tagline}
           </p>
         </div>
 
         <FooterCol
-          title="Tours"
-          links={["Day Tours", "Multi-Day Tours", "Private Tours", "Self Drive"]}
+          title={dict.footer.toursTitle}
+          links={[
+            dict.footer.dayTours,
+            dict.footer.multiDayTours,
+            dict.footer.privateTours,
+            dict.footer.selfDrive,
+          ]}
         />
         <FooterCol
-          title="Company"
-          links={["About Us", "Why Book With Us", "Reviews", "Contact"]}
+          title={dict.footer.companyTitle}
+          links={[
+            dict.footer.aboutUs,
+            dict.footer.whyBook,
+            dict.footer.reviews,
+            dict.footer.contact,
+          ]}
         />
 
         <div>
           <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-foreground">
-            Get in touch
+            {dict.footer.getInTouch}
           </h3>
           <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
@@ -80,10 +93,10 @@ export function SiteFooter() {
 
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground md:flex-row md:px-6">
-          <p>© {new Date().getFullYear()} visit.is — Tours &amp; Travel. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} visit.is — {dict.footer.rights}</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-foreground">Privacy</a>
-            <a href="#" className="hover:text-foreground">Terms</a>
+            <a href="#" className="hover:text-foreground">{dict.footer.privacy}</a>
+            <a href="#" className="hover:text-foreground">{dict.footer.terms}</a>
           </div>
         </div>
       </div>
