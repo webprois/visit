@@ -156,7 +156,7 @@ export default async function TourPage({
           </div>
 
           {/* Breadcrumb pinned to the top, just under the sticky header. */}
-          <div className="mx-auto w-full max-w-7xl px-4 pt-24 md:px-6 md:pt-28">
+          <div className="mx-auto w-full max-w-7xl px-4 pt-16 md:px-6 md:pt-20">
             <nav
               aria-label="Breadcrumb"
               className="flex items-center gap-1 text-sm text-muted-foreground"
