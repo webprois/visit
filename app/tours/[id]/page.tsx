@@ -156,7 +156,7 @@ export default async function TourPage({
           </div>
 
           {/* Mobile only: breadcrumb pinned to the top, just under the header. */}
-          <div className="mx-auto w-full max-w-7xl px-4 pt-16 md:pt-20 lg:hidden">
+          <div className="mx-auto w-full max-w-7xl px-4 pt-6 md:pt-20 lg:hidden">
             <nav
               aria-label="Breadcrumb"
               className="flex items-center gap-1 text-sm text-muted-foreground"
