@@ -7,7 +7,7 @@ import { getServerDict } from "@/lib/get-dictionary"
 import { Clock, MapPin, Star } from "lucide-react"
 
 type FeaturedTour = Tour & {
-  tourType?: "day" | "multi-day"
+  tourType?: "day" | "multi-day" | "admission" | "transfer"
   excerpt?: string | null
   categoryName?: string | null
 }

@@ -46,7 +46,7 @@ type StatusFilter =
   | "uncategorized"
   | "missing"
   | "hidden"
-type TypeFilter = "all" | "day" | "multi-day"
+type TypeFilter = "all" | "day" | "multi-day" | "admission" | "transfer"
 
 const STATUS_LABELS: Record<StatusFilter, string> = {
   all: "All statuses",
@@ -62,6 +62,8 @@ const TYPE_LABELS: Record<TypeFilter, string> = {
   all: "All types",
   day: "Day tour",
   "multi-day": "Multi-day tour",
+  admission: "Admission",
+  transfer: "Transfer",
 }
 
 function formatUpdated(value: Date | null): string {
@@ -358,6 +360,8 @@ export function ToursWorkspace({
                   <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="day">Day tour</SelectItem>
                   <SelectItem value="multi-day">Multi-day tour</SelectItem>
+                  <SelectItem value="admission">Admission</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
 

@@ -18,7 +18,7 @@ import {
   fetchTourDetail,
   type TourTranslation,
 } from "@/lib/bokun"
-import { autoCategorizeTours } from "@/lib/tours"
+import { autoCategorizeTours, TOUR_TYPES, type TourType } from "@/lib/tours"
 import { translateTexts } from "@/lib/translate"
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
 import { generateText, Output } from "ai"
@@ -246,7 +246,9 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     ...(gallerySet ?? {}),
     // Keep the legacy single-category column in sync with the first selection.
     categoryId: categoryIds[0] ?? null,
-    tourType: input.tourType === "multi-day" ? "multi-day" : "day",
+    tourType: TOUR_TYPES.includes(input.tourType as TourType)
+      ? (input.tourType as TourType)
+      : "day",
     ...(typeof input.visible === "boolean" ? { visible: input.visible } : {}),
     // Route stops drive the coordinates when provided; otherwise fall back to
     // the single-coordinate inputs (each only touched when explicitly passed).

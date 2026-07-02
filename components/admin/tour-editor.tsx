@@ -67,6 +67,14 @@ type LangContent = {
 
 type ContentByLang = Record<Locale, LangContent>
 
+/** Display labels for each tour type value. */
+const TOUR_TYPE_LABELS: Record<string, string> = {
+  day: "Day Tour",
+  "multi-day": "Multi-Day Tour",
+  admission: "Admission",
+  transfer: "Transfer",
+}
+
 type EditorTab =
   | "overview"
   | "content"
@@ -781,14 +789,14 @@ export function TourEditor({
         >
           <SelectTrigger className="h-11 w-full">
             <SelectValue>
-              {(value: string) =>
-                value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
-              }
+              {(value: string) => TOUR_TYPE_LABELS[value] ?? "Day Tour"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="day">Day Tour</SelectItem>
             <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
+            <SelectItem value="admission">Admission</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
           </SelectContent>
         </Select>
       </Field>

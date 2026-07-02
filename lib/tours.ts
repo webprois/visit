@@ -25,7 +25,15 @@ import {
 import type { Tour } from "@/lib/data"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
 
-export type TourType = "day" | "multi-day"
+export type TourType = "day" | "multi-day" | "admission" | "transfer"
+
+/** All valid tour types, used to validate stored/incoming values. */
+export const TOUR_TYPES: TourType[] = [
+  "day",
+  "multi-day",
+  "admission",
+  "transfer",
+]
 
 /** Resolve a category's display name for a locale, falling back to English. */
 export function categoryName(c: TourCategory, locale: Locale): string {
@@ -410,7 +418,9 @@ export async function getMergedTours(
       categoryNames,
       locationIds,
       locationNames,
-      tourType: o?.tourType === "multi-day" ? "multi-day" : "day",
+      tourType: TOUR_TYPES.includes(o?.tourType as TourType)
+        ? (o!.tourType as TourType)
+        : "day",
       sortOrder: o?.sortOrder ?? 0,
       updatedAt: o?.updatedAt ?? null,
     }
