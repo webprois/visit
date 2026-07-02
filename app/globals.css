@@ -156,10 +156,15 @@
   font-size: 14px;
   line-height: 1.4;
 }
-/* Leaflet's `.leaflet-container a` (blue, higher specificity) otherwise wins
-   over Tailwind text-color classes on the "View tour" button. */
-.leaflet-popup-content a {
-  color: var(--primary-foreground);
+/* Leaflet defaults `.leaflet-popup-content p { margin: 18px 0 }`, which adds a
+   big gap around the price paragraph — reset it. */
+.leaflet-popup-content p {
+  margin: 0;
+}
+/* Leaflet's `.leaflet-container a` (blue) has equal specificity and loads
+   later, so force the CTA text to the near-white primary-foreground colour. */
+.leaflet-popup-content a.bg-primary {
+  color: var(--primary-foreground) !important;
 }
 .leaflet-popup-tip {
   background: var(--card) !important;
