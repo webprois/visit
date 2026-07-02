@@ -206,7 +206,7 @@ export default async function TourPage({
 
           <div className="w-full">
             {/* pb keeps content off the section edge. */}
-            <div className="mx-auto max-w-7xl px-4 pb-8 pt-6 md:px-6 md:pb-12">
+            <div className="mx-auto max-w-7xl px-4 pb-4 pt-6 md:px-6 md:pb-12">
               <div className="lg:relative">
                 {/* Left: title + subtitle + facts */}
                 <div className="lg:max-w-[calc(100%-18rem)]">
@@ -294,7 +294,7 @@ export default async function TourPage({
         </section>
 
         {/* Body */}
-        <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
+        <section className="mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-6 md:py-14">
           <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[1fr_380px]">
             {/* Left: content */}
             <div className="flex flex-col gap-12">
