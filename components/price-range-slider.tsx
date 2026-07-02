@@ -35,7 +35,7 @@ export function PriceRangeSlider({
   )
 
   return (
-    <div className="relative h-5 select-none">
+    <div className="relative mx-2.5 h-5 select-none">
       {/* Base track */}
       <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-secondary" />
       {/* Filled range */}
