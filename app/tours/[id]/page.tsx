@@ -137,8 +137,11 @@ export default async function TourPage({
       <SiteHeader locale={locale} />
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
-        <section className="relative">
-          <div className="relative h-[52vh] min-h-[26rem] w-full overflow-hidden md:h-[60vh]">
+        <section className="relative isolate flex min-h-[52vh] flex-col justify-end overflow-hidden md:min-h-[60vh]">
+          {/* Background image + overlays fill the whole section so the content
+              can grow (e.g. long titles on mobile) without hiding behind the
+              sticky header. */}
+          <div className="absolute inset-0 -z-10">
             <Image
               src={heroImage || "/placeholder.svg"}
               alt={tour.title}
@@ -152,8 +155,9 @@ export default async function TourPage({
             <div className="absolute inset-0 bg-background/20" />
           </div>
 
-          <div className="absolute inset-x-0 bottom-0">
-            <div className="mx-auto max-w-7xl px-4 pb-8 md:px-6 md:pb-12">
+          <div className="w-full">
+            {/* pt clears the sticky header; pb keeps content off the section edge. */}
+            <div className="mx-auto max-w-7xl px-4 pb-8 pt-24 md:px-6 md:pb-12 md:pt-28">
               <nav
                 aria-label="Breadcrumb"
                 className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"
