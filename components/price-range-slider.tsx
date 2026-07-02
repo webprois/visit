@@ -38,10 +38,15 @@ export function PriceRangeSlider({
     <div className="relative mx-2.5 h-5 select-none">
       {/* Base track */}
       <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-secondary" />
-      {/* Filled range */}
+      {/* Filled range. Positions track the thumb centers, which the browser
+          insets by half a thumb-width (0.625rem) at each extreme, so the fill
+          never spills past the handles. */}
       <div
         className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
-        style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
+        style={{
+          left: `calc(0.625rem + ${lowPct / 100} * (100% - 1.25rem))`,
+          right: `calc(0.625rem + ${(100 - highPct) / 100} * (100% - 1.25rem))`,
+        }}
       />
       {/* Low handle */}
       <input
