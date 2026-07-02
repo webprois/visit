@@ -10,6 +10,7 @@ import { getFullTour, getRelatedTours } from "@/lib/tours"
 import { fetchBookableSlots, fetchTourExtras, fetchTourPickup } from "@/lib/bokun"
 import { getLocale } from "@/lib/get-locale"
 import { getDictionary, fmt } from "@/lib/translations"
+import { translateTexts } from "@/lib/translate"
 import { Price } from "@/components/price"
 import {
   Clock,
@@ -86,6 +87,33 @@ export default async function TourPage({
     pickup = await fetchTourPickup(tour.bokunId)
   } catch {
     pickup = null
+  }
+
+  // Auto-translate dynamic booking content (add-on names/descriptions and
+  // participant category labels) coming straight from Bokun in English into the
+  // active language. All strings are batched into one cached call; English is a
+  // no-op. On failure the original English text is used.
+  if (locale !== "en") {
+    const extraStrings = extras.flatMap((e) => [e.title, e.information])
+    const lineTitles = slots.flatMap((s) => s.lines.map((l) => l.title))
+    const sources = [...extraStrings, ...lineTitles]
+
+    if (sources.length > 0) {
+      const translated = await translateTexts(sources, locale)
+      const map = new Map<string, string>()
+      sources.forEach((src, i) => map.set(src, translated[i] ?? src))
+      const tr = (s: string) => map.get(s) ?? s
+
+      extras = extras.map((e) => ({
+        ...e,
+        title: tr(e.title),
+        information: tr(e.information),
+      }))
+      slots = slots.map((s) => ({
+        ...s,
+        lines: s.lines.map((l) => ({ ...l, title: tr(l.title) })),
+      }))
+    }
   }
 
   // Resolved display values (admin override → Bokun → fallback).

@@ -237,6 +237,32 @@ export const tourAvailability = pgTable(
   }),
 )
 
+/**
+ * Machine-translation cache for dynamic Bokun content (add-on names, participant
+ * category labels, etc.) that has no admin-managed translation. Keyed by a hash
+ * of the source English text plus the target language, so each unique string is
+ * only sent to the translation model once per language.
+ */
+export const translationCache = pgTable(
+  "translation_cache",
+  {
+    // sha-256 hex of the trimmed source text.
+    hash: text("hash").notNull(),
+    lang: text("lang").notNull(),
+    sourceText: text("source_text").notNull(),
+    translated: text("translated").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.hash, t.lang] }),
+  }),
+)
+
+export type TranslationCache = typeof translationCache.$inferSelect
+export type NewTranslationCache = typeof translationCache.$inferInsert
+
 export type TourAvailability = typeof tourAvailability.$inferSelect
 export type NewTourAvailability = typeof tourAvailability.$inferInsert
 
