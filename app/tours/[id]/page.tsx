@@ -455,7 +455,7 @@ export default async function TourPage({
             {/* Right: booking panel */}
             <aside
               id="book"
-              className="scroll-mt-24 pb-24 lg:self-start lg:pb-0"
+              className="scroll-mt-24 lg:self-start"
             >
               <BookingForm
                 bokunId={tour.bokunId}
