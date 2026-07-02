@@ -152,7 +152,6 @@ export function TourEditor({
   const [translating, setTranslating] = useState(false)
 
   // Shared (language-independent) settings.
-  const [location, setLocation] = useState(tour.location)
   const [duration, setDuration] = useState(tour.duration)
   const [difficulty, setDifficulty] = useState(tour.difficulty ?? "")
   const [groupSize, setGroupSize] = useState(tour.groupSize ?? "")
@@ -303,9 +302,9 @@ export function TourEditor({
 
   function toggleLocation(id: number) {
     markDirty()
-    setLocationIds((prev) =>
-      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id],
-    )
+    // Single-select: choosing a location replaces the current one; tapping the
+    // selected one again clears it.
+    setLocationIds((prev) => (prev[0] === id ? [] : [id]))
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -420,7 +419,10 @@ export function TourEditor({
         title: en.title,
         excerpt: en.excerpt,
         description: en.description,
-        location,
+        // Location label is driven by the selected starting location, falling
+        // back to the tour's existing value when none is assigned.
+        location:
+          locations.find((l) => l.id === locationIds[0])?.name ?? tour.location,
         duration,
         difficulty,
         groupSize,
@@ -666,8 +668,8 @@ export function TourEditor({
         )}
         <p className="mt-1 text-xs text-muted-foreground">
           {locationIds.length === 0
-            ? "No starting location set. Tap to assign one or more."
-            : `${locationIds.length} selected.`}
+            ? "No starting location set. Tap one to assign it. This also sets the tour's location label."
+            : "This location is also shown as the tour's location label."}
         </p>
       </Field>
     </div>
@@ -784,18 +786,6 @@ export function TourEditor({
             <SelectItem value="Challenging">Challenging</SelectItem>
           </SelectContent>
         </Select>
-      </Field>
-
-      <Field label="Location" htmlFor="location">
-        <Input
-          id="location"
-          value={location}
-          onChange={(e) => {
-            markDirty()
-            setLocation(e.target.value)
-          }}
-          className="h-11"
-        />
       </Field>
 
       <Field label="Duration" htmlFor="duration">
