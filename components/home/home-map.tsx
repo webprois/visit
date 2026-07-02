@@ -91,7 +91,7 @@ export default function HomeMap({
   points: MapTourPoint[]
   labels: Labels
 }) {
-  const [view, setView] = useState<"map" | "satellite">("map")
+  const [view, setView] = useState<"map" | "satellite">("satellite")
 
   return (
     <div className="relative h-full w-full">
