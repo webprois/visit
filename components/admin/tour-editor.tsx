@@ -33,7 +33,6 @@ import {
   Plus,
   Search,
   Globe,
-  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -72,7 +71,6 @@ type EditorTab =
   | "categories"
   | "images"
   | "seo"
-  | "bokun"
 
 const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "overview", label: "Overview" },
@@ -80,7 +78,6 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "categories", label: "Categories" },
   { id: "images", label: "Images" },
   { id: "seo", label: "SEO", soon: true },
-  { id: "bokun", label: "Bokun", soon: true },
 ]
 
 function emptyLang(): LangContent {
@@ -1091,15 +1088,6 @@ export function TourEditor({
           icon={Globe}
           title="SEO settings"
           desc="Custom URL slug, meta title and description, and social share previews. Coming in the next phase."
-        />
-      )
-      break
-    case "bokun":
-      tabContent = (
-        <ComingSoon
-          icon={RefreshCw}
-          title="Bokun sync"
-          desc="View sync history, see what changed, and re-sync this tour from Bokun on demand. Coming in the next phase."
         />
       )
       break
