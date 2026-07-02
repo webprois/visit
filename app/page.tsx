@@ -75,6 +75,7 @@ export default async function Page() {
         excerpt: t.excerpt,
         location: t.location,
         duration: t.duration,
+        difficulty: t.difficulty,
         price: t.price,
         category: t.categoryName,
         iconName: cat?.icon ?? null,

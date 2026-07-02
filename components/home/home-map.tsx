@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import L from "leaflet"
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
 import MarkerClusterGroup from "react-leaflet-cluster"
-import { ChevronLeft, ChevronRight, Clock, MapPin } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Gauge, MapPin } from "lucide-react"
 import Link from "next/link"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { Price } from "@/components/price"
@@ -23,6 +23,8 @@ export type MapTourPoint = {
   excerpt: string | null
   location: string
   duration: string
+  /** Difficulty label (e.g. "Easy", "Moderate"), when known. */
+  difficulty: string | null
   price: number
   category: string | null
   /** Lucide icon name from the tour's primary category (see category-icons). */
@@ -157,6 +159,12 @@ function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels 
             <Clock className="size-3.5 shrink-0" aria-hidden="true" />
             {point.duration}
           </span>
+          {point.difficulty && (
+            <span className="flex items-center gap-1">
+              <Gauge className="size-3.5 shrink-0" aria-hidden="true" />
+              {point.difficulty}
+            </span>
+          )}
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1.5">
