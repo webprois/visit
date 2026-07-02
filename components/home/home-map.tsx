@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import L from "leaflet"
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
+import MarkerClusterGroup from "react-leaflet-cluster"
 import { Clock, MapPin } from "lucide-react"
 import Link from "next/link"
 import { getCategoryIcon } from "@/lib/category-icons"
@@ -46,6 +47,19 @@ function markerIcon(point: MapTourPoint): L.DivIcon {
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
+  })
+}
+
+/** Build a branded circular cluster bubble showing how many tours it holds. */
+function clusterIcon(cluster: { getChildCount: () => number }): L.DivIcon {
+  const count = cluster.getChildCount()
+  // Grow the bubble slightly for denser clusters.
+  const size = count < 10 ? 40 : count < 50 ? 48 : 56
+  return L.divIcon({
+    className: "",
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px;background:var(--primary, #ec4647);color:#fff;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.45);font-weight:800;font-size:14px;">${count}</span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   })
 }
 
@@ -124,7 +138,14 @@ export default function HomeMap({
 
         <FitToPoints points={points} />
 
-        {points.map((p) => (
+        <MarkerClusterGroup
+          iconCreateFunction={clusterIcon}
+          showCoverageOnHover={false}
+          maxClusterRadius={45}
+          spiderfyOnMaxZoom
+          chunkedLoading
+        >
+          {points.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon(p)}>
             <Popup>
               <div className="w-56 overflow-hidden">
@@ -174,7 +195,8 @@ export default function HomeMap({
               </div>
             </Popup>
           </Marker>
-        ))}
+          ))}
+        </MarkerClusterGroup>
       </MapContainer>
     </div>
   )
