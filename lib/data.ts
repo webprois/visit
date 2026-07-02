@@ -18,6 +18,9 @@ export type Tour = {
   operator?: string | null
   /** Raw Bokun activity category codes, e.g. ["NATURE", "GLACIER_HIKING"]. */
   bokunCategories?: string[]
+  /** Starting-point coordinates from Bokun's Google place (null when unknown). */
+  lat?: number | null
+  lng?: number | null
 }
 
 export type Transfer = {
