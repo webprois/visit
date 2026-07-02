@@ -24,13 +24,16 @@ const pin = L.divIcon({
   iconAnchor: [14, 14],
 })
 
-/** Small numbered dot for a secondary stop on the tour's route. */
-function stopDotIcon(index: number): L.DivIcon {
+/** Small numbered dot for a stop on the tour's route. */
+function stopDotIcon(index: number, primary = false): L.DivIcon {
+  // The first stop is drawn slightly larger with a halo to read as the start.
+  const size = primary ? 30 : 24
+  const halo = primary ? "box-shadow:0 0 0 6px rgba(236,70,71,0.25);" : "box-shadow:0 2px 6px rgba(0,0,0,0.45);"
   return L.divIcon({
     className: "",
-    html: `<span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#ec4647;color:#fff;border:2px solid #fff5f5;box-shadow:0 2px 6px rgba(0,0,0,0.45);font-weight:700;font-size:12px;">${index + 1}</span>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px;background:#ec4647;color:#fff;border:2px solid #fff5f5;${halo}font-weight:700;font-size:${primary ? 13 : 12}px;">${index + 1}</span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   })
 }
 
@@ -137,8 +140,13 @@ export default function TourMap({
           />
         )}
 
-        {/* Primary starting-point marker. */}
-        <Marker position={[route[0].lat, route[0].lng]} icon={pin} title={label} />
+        {/* Primary starting-point marker: numbered "1" on a route, otherwise
+            a plain location pin for single-location tours. */}
+        <Marker
+          position={[route[0].lat, route[0].lng]}
+          icon={hasRoute ? stopDotIcon(0, true) : pin}
+          title={label}
+        />
 
         {/* Numbered dots for the remaining stops. */}
         {hasRoute &&
