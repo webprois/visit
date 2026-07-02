@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react"
 import {
   CalendarDays,
   Check,
+  ChevronDown,
   Clock,
   Compass,
   Loader2,
@@ -14,10 +15,18 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react"
+import { es as esLocale, it as itLocale, pt as ptLocale } from "date-fns/locale"
+import type { Locale as DateFnsLocale } from "date-fns"
 import { Price } from "@/components/price"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -25,7 +34,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { startBooking, type BookingInput } from "@/app/actions/booking"
-import { useDict } from "@/components/i18n-provider"
+import { useDict, useLocale } from "@/components/i18n-provider"
 import { fmt } from "@/lib/translations"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
@@ -292,14 +301,34 @@ export type BookingPickup = {
   dropoffPlaces: BookingPickupPlace[]
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso + "T00:00:00")
-  return d.toLocaleDateString("en-GB", {
+function formatDate(iso: string, locale = "en-GB"): string {
+  const d = parseISODate(iso)
+  return d.toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",
   })
+}
+
+/** Parse a `YYYY-MM-DD` availability date as local midnight. */
+function parseISODate(iso: string): Date {
+  return new Date(iso + "T00:00:00")
+}
+
+/** Format a Date back to `YYYY-MM-DD` in local time (avoids UTC shifting). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+/** Map the app locale to a date-fns locale for the calendar (default en). */
+const DATE_FNS_LOCALES: Record<string, DateFnsLocale> = {
+  es: esLocale,
+  pt: ptLocale,
+  it: itLocale,
 }
 
 /** Client-side mirror of priceSlotIsk (server recomputes authoritatively). */
@@ -340,6 +369,8 @@ export function BookingForm({
 }) {
   const dict = useDict()
   const t = dict.booking
+  const locale = useLocale()
+  const dateFnsLocale = DATE_FNS_LOCALES[locale]
   const STEP_LABELS: Record<StepKey, string> = {
     tour: t.stepTour,
     details: t.stepDetails,
@@ -359,6 +390,17 @@ export function BookingForm({
   }, [slots])
 
   const [date, setDate] = useState<string>(dates[0] ?? "")
+  const [dateOpen, setDateOpen] = useState(false)
+
+  // Calendar helpers: only dates with availability are selectable, and the
+  // month navigation is bounded to the first/last available departures.
+  const availableSet = useMemo(() => new Set(dates), [dates])
+  const selectedDate = date ? parseISODate(date) : undefined
+  const firstDate = dates[0] ? parseISODate(dates[0]) : undefined
+  const lastDate = dates.length
+    ? parseISODate(dates[dates.length - 1])
+    : undefined
+
   const slotsForDate = useMemo(
     () => slots.filter((s) => s.date === date),
     [slots, date],
@@ -692,18 +734,41 @@ export function BookingForm({
             <CalendarDays className="size-4 text-primary" aria-hidden="true" />
             {t.date}
           </Label>
-          <select
-            id="booking-date"
-            value={date}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {dates.map((d) => (
-              <option key={d} value={d}>
-                {formatDate(d)}
-              </option>
-            ))}
-          </select>
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  id="booking-date"
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full justify-between rounded-lg border-border bg-secondary px-3 text-sm font-normal text-foreground hover:bg-secondary"
+                >
+                  {date ? formatDate(date, locale) : t.selectDates}
+                  <ChevronDown
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </Button>
+              }
+            />
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                locale={dateFnsLocale}
+                selected={selectedDate}
+                defaultMonth={selectedDate ?? firstDate}
+                startMonth={firstDate}
+                endMonth={lastDate}
+                disabled={(day) => !availableSet.has(toISODate(day))}
+                onSelect={(day) => {
+                  if (!day) return
+                  onDateChange(toISODate(day))
+                  setDateOpen(false)
+                }}
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {slotsForDate.length > 1 && (
