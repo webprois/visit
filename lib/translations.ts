@@ -59,6 +59,7 @@ const en = {
     mapView: "Map",
     satelliteView: "Satellite",
     toursOnMap: "{count} tours on the map",
+    routeLocation: "Tour route & location",
   },
   why: {
     title: "Why book with us?",
@@ -353,6 +354,7 @@ const es: Dictionary = {
     mapView: "Mapa",
     satelliteView: "Satélite",
     toursOnMap: "{count} tours en el mapa",
+    routeLocation: "Ruta y ubicación del tour",
   },
   why: {
     title: "¿Por qué reservar con nosotros?",
@@ -653,6 +655,7 @@ const pt: Dictionary = {
     mapView: "Mapa",
     satelliteView: "Satélite",
     toursOnMap: "{count} tours no mapa",
+    routeLocation: "Rota e localização do tour",
   },
   why: {
     title: "Porquê reservar connosco?",
@@ -953,6 +956,7 @@ const it: Dictionary = {
     mapView: "Mappa",
     satelliteView: "Satellite",
     toursOnMap: "{count} tour sulla mappa",
+    routeLocation: "Percorso e posizione del tour",
   },
   why: {
     title: "Perché prenotare con noi?",

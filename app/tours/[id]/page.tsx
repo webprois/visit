@@ -502,11 +502,15 @@ export default async function TourPage({
               )}
 
               {/* Route map */}
-              {detail?.lat != null && detail?.lng != null && (
+              {tour.lat != null && tour.lng != null && (
                 <TourMapSection
-                  lat={detail.lat}
-                  lng={detail.lng}
+                  lat={tour.lat}
+                  lng={tour.lng}
                   location={locationText}
+                  stops={tour.mapStops}
+                  heading={dict.map.routeLocation}
+                  mapLabel={dict.map.mapView}
+                  satelliteLabel={dict.map.satelliteView}
                 />
               )}
             </div>
