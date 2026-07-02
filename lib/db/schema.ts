@@ -6,6 +6,7 @@ import {
   serial,
   integer,
   jsonb,
+  doublePrecision,
   primaryKey,
 } from "drizzle-orm/pg-core"
 
@@ -100,6 +101,13 @@ export const tourOverride = pgTable("tour_override", {
   gallery: text("gallery"),
   categoryId: integer("categoryId"),
   sortOrder: integer("sortOrder").notNull().default(0),
+  // Admin-set starting-point coordinates for the homepage map. When null we
+  // fall back to Bokun's coordinates for the tour (if any).
+  mapLat: doublePrecision("mapLat"),
+  mapLng: doublePrecision("mapLng"),
+  // When false, the tour is hidden from the homepage map (but can still be
+  // published and listed elsewhere). Defaults to true.
+  showOnMap: boolean("showOnMap").notNull().default(true),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })
 

@@ -55,6 +55,7 @@ export default async function Page() {
     .filter(
       (t) =>
         t.id != null &&
+        t.showOnMap !== false &&
         typeof t.lat === "number" &&
         typeof t.lng === "number" &&
         inIceland(t.lat, t.lng),

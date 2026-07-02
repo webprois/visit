@@ -45,6 +45,7 @@ import {
   translateTourContent,
   type TourTranslationInput,
 } from "@/app/actions/admin"
+import { LocationPicker } from "@/components/admin/location-picker"
 import type { MergedTour, GalleryImage } from "@/lib/tours"
 import type { TourCategory, StartingLocation } from "@/lib/db/schema"
 import type { TourTranslation } from "@/lib/bokun"
@@ -166,6 +167,10 @@ export function TourEditor({
   )
   const [tourType, setTourType] = useState<string>(tour.tourType)
   const [featured, setFeatured] = useState(tour.featured)
+  // Map: admin-set starting-point coordinates and homepage-map visibility.
+  const [mapLat, setMapLat] = useState<number | null>(tour.mapLat ?? null)
+  const [mapLng, setMapLng] = useState<number | null>(tour.mapLng ?? null)
+  const [showOnMap, setShowOnMap] = useState<boolean>(tour.showOnMap ?? true)
 
   const [uploading, setUploading] = useState(false)
   const [pendingAction, setPendingAction] = useState<
@@ -418,6 +423,9 @@ export function TourEditor({
         locationIds,
         tourType,
         visible,
+        mapLat,
+        mapLng,
+        showOnMap,
       })
       // Full per-language content.
       await saveTourTranslations(tour.bokunId, byLang)
@@ -854,6 +862,20 @@ export function TourEditor({
               placeholder="One or two lines shown on the tour card"
             />
           </Field>
+          <LocationPicker
+            lat={mapLat}
+            lng={mapLng}
+            showOnMap={showOnMap}
+            onChangeCoords={(nextLat, nextLng) => {
+              markDirty()
+              setMapLat(nextLat)
+              setMapLng(nextLng)
+            }}
+            onToggleShow={(value) => {
+              markDirty()
+              setShowOnMap(value)
+            }}
+          />
         </>
       )
       break

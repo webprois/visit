@@ -264,6 +264,11 @@ export type MergedTour = Tour & {
   locationNames: string[]
   tourType: TourType
   sortOrder: number
+  /** Whether this tour is shown on the homepage map. */
+  showOnMap: boolean
+  /** Admin-set map coordinates (null when unset — the map falls back to Bokun). */
+  mapLat: number | null
+  mapLng: number | null
   updatedAt: Date | null
 }
 
@@ -356,6 +361,12 @@ export async function getMergedTours(
     return {
       ...t,
       bokunId,
+      // Admin-set coordinates take precedence over Bokun's, when provided.
+      lat: o?.mapLat ?? t.lat ?? null,
+      lng: o?.mapLng ?? t.lng ?? null,
+      mapLat: o?.mapLat ?? null,
+      mapLng: o?.mapLng ?? null,
+      showOnMap: o?.showOnMap ?? true,
       title: tr("title") || o?.title?.trim() || t.title,
       image: o?.imageUrl || t.image,
       location: o?.location?.trim() || t.location,

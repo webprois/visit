@@ -167,6 +167,11 @@ export type TourOverrideInput = {
   tourType?: string
   /** Optional publish state. true = Published, false = Draft. */
   visible?: boolean
+  /** Map starting-point coordinates. Pass null to clear, undefined to leave. */
+  mapLat?: number | null
+  mapLng?: number | null
+  /** Whether the tour is shown on the homepage map. */
+  showOnMap?: boolean
 }
 
 export async function saveTourOverride(bokunId: string, input: TourOverrideInput) {
@@ -200,6 +205,16 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     categoryId: categoryIds[0] ?? null,
     tourType: input.tourType === "multi-day" ? "multi-day" : "day",
     ...(typeof input.visible === "boolean" ? { visible: input.visible } : {}),
+    // Map coordinates: only touched when explicitly provided (null clears them).
+    ...(input.mapLat !== undefined
+      ? { mapLat: Number.isFinite(input.mapLat as number) ? input.mapLat : null }
+      : {}),
+    ...(input.mapLng !== undefined
+      ? { mapLng: Number.isFinite(input.mapLng as number) ? input.mapLng : null }
+      : {}),
+    ...(typeof input.showOnMap === "boolean"
+      ? { showOnMap: input.showOnMap }
+      : {}),
   })
   // Replace the tour's category links with the new selection.
   await db.delete(tourCategoryLink).where(eq(tourCategoryLink.bokunId, bokunId))
