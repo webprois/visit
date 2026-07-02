@@ -112,6 +112,9 @@ export const tourOverride = pgTable("tour_override", {
   // When false, the tour is hidden from the homepage map (but can still be
   // published and listed elsewhere). Defaults to true.
   showOnMap: boolean("showOnMap").notNull().default(true),
+  // When true, the tour is hidden from the admin workspace list and excluded
+  // from the "Total" count (surfaced under its own "Hidden" stat instead).
+  hidden: boolean("hidden").notNull().default(false),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })
 

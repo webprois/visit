@@ -267,6 +267,8 @@ export type MergedTour = Tour & {
   sortOrder: number
   /** Whether this tour is shown on the homepage map. */
   showOnMap: boolean
+  /** Admin-only: hide from the workspace list and exclude from the Total count. */
+  hidden: boolean
   /** Admin-set map coordinates (null when unset — the map falls back to Bokun). */
   mapLat: number | null
   mapLng: number | null
@@ -387,6 +389,7 @@ export async function getMergedTours(
       mapLng: o?.mapLng ?? null,
       mapStops,
       showOnMap: o?.showOnMap ?? true,
+      hidden: o?.hidden ?? false,
       title: tr("title") || o?.title?.trim() || t.title,
       image: o?.imageUrl || t.image,
       location: o?.location?.trim() || t.location,

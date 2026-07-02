@@ -58,11 +58,17 @@ export async function setTourVisibility(bokunId: string, visible: boolean) {
   revalidateAll()
 }
 
-export async function setTourFeatured(bokunId: string, featured: boolean) {
+  export async function setTourFeatured(bokunId: string, featured: boolean) {
   await requireAuth()
   await upsertOverride(bokunId, { featured })
   revalidateAll()
-}
+  }
+
+  export async function setTourHidden(bokunId: string, hidden: boolean) {
+  await requireAuth()
+  await upsertOverride(bokunId, { hidden })
+  revalidateAll()
+  }
 
 /* ---------------- Bulk tour actions ---------------- */
 
@@ -178,6 +184,8 @@ export type TourOverrideInput = {
   mapStops?: { name?: string | null; lat: number; lng: number }[]
   /** Whether the tour is shown on the homepage map. */
   showOnMap?: boolean
+  /** Admin-only: hide from the workspace list and exclude from the Total count. */
+  hidden?: boolean
 }
 
 export async function saveTourOverride(bokunId: string, input: TourOverrideInput) {
@@ -255,6 +263,7 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     ...(typeof input.showOnMap === "boolean"
       ? { showOnMap: input.showOnMap }
       : {}),
+    ...(typeof input.hidden === "boolean" ? { hidden: input.hidden } : {}),
   })
   // Replace the tour's category links with the new selection.
   await db.delete(tourCategoryLink).where(eq(tourCategoryLink.bokunId, bokunId))

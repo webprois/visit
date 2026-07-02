@@ -39,6 +39,7 @@ import {
   saveTourOverride,
   saveTourTranslations,
   setTourFeatured,
+  setTourHidden,
   getTourTranslations,
   getTourTranslationContent,
   getBokunGallery,
@@ -168,6 +169,7 @@ export function TourEditor({
   )
   const [tourType, setTourType] = useState<string>(tour.tourType)
   const [featured, setFeatured] = useState(tour.featured)
+  const [hidden, setHidden] = useState(tour.hidden)
   // Map: ordered route stops (single stop = simple location) and visibility.
   // Seed from stored stops, falling back to a single legacy coordinate.
   const [mapStops, setMapStops] = useState<MapStop[]>(() => {
@@ -461,6 +463,16 @@ export function TourEditor({
     })
   }
 
+  function toggleHidden() {
+    const next = !hidden
+    setHidden(next)
+    startTransition(async () => {
+      await setTourHidden(tour.bokunId, next)
+      toast.success(next ? "Tour hidden" : "Tour restored")
+      router.refresh()
+    })
+  }
+
   const current = content[lang]
 
   // Hero image (shared across languages).
@@ -734,16 +746,28 @@ export function TourEditor({
         </span>
         <div className="flex items-center justify-between gap-2">
           <StatusBadge visible={tour.visible} />
-          <Button
-            type="button"
-            variant={featured ? "default" : "outline"}
-            size="sm"
-            onClick={toggleFeatured}
-            disabled={isPending}
-          >
-            <Star className={featured ? "size-4 fill-current" : "size-4"} />
-            {featured ? "Featured" : "Feature"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={featured ? "default" : "outline"}
+              size="sm"
+              onClick={toggleFeatured}
+              disabled={isPending}
+            >
+              <Star className={featured ? "size-4 fill-current" : "size-4"} />
+              {featured ? "Featured" : "Feature"}
+            </Button>
+            <Button
+              type="button"
+              variant={hidden ? "default" : "outline"}
+              size="sm"
+              onClick={toggleHidden}
+              disabled={isPending}
+            >
+              <EyeOff className="size-4" />
+              {hidden ? "Hidden" : "Hide"}
+            </Button>
+          </div>
         </div>
       </div>
 
