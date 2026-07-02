@@ -76,6 +76,10 @@ export default async function Page() {
         location: t.location,
         duration: t.duration,
         difficulty: t.difficulty,
+        // Route stops (kept only when inside Iceland) for multi-location tours.
+        stops: (t.mapStops ?? [])
+          .filter((s) => inIceland(s.lat, s.lng))
+          .map((s) => ({ name: s.name, lat: s.lat, lng: s.lng })),
         price: t.price,
         category: t.categoryName,
         iconName: cat?.icon ?? null,

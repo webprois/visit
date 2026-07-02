@@ -102,14 +102,25 @@ export const tourOverride = pgTable("tour_override", {
   categoryId: integer("categoryId"),
   sortOrder: integer("sortOrder").notNull().default(0),
   // Admin-set starting-point coordinates for the homepage map. When null we
-  // fall back to Bokun's coordinates for the tour (if any).
+  // fall back to Bokun's coordinates for the tour (if any). For multi-stop
+  // tours this mirrors the first stop (kept for backwards compatibility).
   mapLat: doublePrecision("mapLat"),
   mapLng: doublePrecision("mapLng"),
+  // Ordered list of route stops for multi-location tours (e.g. self-drives),
+  // stored as JSON: [{ name, lat, lng }]. Empty for single-location tours.
+  mapStops: jsonb("mapStops").$type<MapStop[]>().notNull().default([]),
   // When false, the tour is hidden from the homepage map (but can still be
   // published and listed elsewhere). Defaults to true.
   showOnMap: boolean("showOnMap").notNull().default(true),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })
+
+/** A single stop on a multi-location tour route. */
+export type MapStop = {
+  name: string
+  lat: number
+  lng: number
+}
 
 /**
  * Per-tour, per-language editable content. One row per (tour, language).

@@ -20,6 +20,7 @@ import {
   tourAvailability,
   type TourCategory,
   type StartingLocation,
+  type MapStop,
 } from "@/lib/db/schema"
 import type { Tour } from "@/lib/data"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
@@ -269,6 +270,8 @@ export type MergedTour = Tour & {
   /** Admin-set map coordinates (null when unset — the map falls back to Bokun). */
   mapLat: number | null
   mapLng: number | null
+  /** Ordered route stops for multi-location tours (empty for single-location). */
+  mapStops: MapStop[]
   updatedAt: Date | null
 }
 
@@ -358,14 +361,31 @@ export async function getMergedTours(
     const tr = (field: "title" | "excerpt" | "description"): string | null =>
       byLang?.[locale]?.[field]?.trim() || byLang?.en?.[field]?.trim() || null
 
+    // Normalize the stored route stops (guard against bad JSON / stray values).
+    const mapStops: MapStop[] = Array.isArray(o?.mapStops)
+      ? o!.mapStops.filter(
+          (s): s is MapStop =>
+            !!s &&
+            typeof s.lat === "number" &&
+            typeof s.lng === "number" &&
+            Number.isFinite(s.lat) &&
+            Number.isFinite(s.lng),
+        )
+      : []
+    // The primary marker sits at the first stop, then the admin's single
+    // coordinate, then Bokun's coordinate.
+    const primaryLat = mapStops[0]?.lat ?? o?.mapLat ?? t.lat ?? null
+    const primaryLng = mapStops[0]?.lng ?? o?.mapLng ?? t.lng ?? null
+
     return {
       ...t,
       bokunId,
       // Admin-set coordinates take precedence over Bokun's, when provided.
-      lat: o?.mapLat ?? t.lat ?? null,
-      lng: o?.mapLng ?? t.lng ?? null,
+      lat: primaryLat,
+      lng: primaryLng,
       mapLat: o?.mapLat ?? null,
       mapLng: o?.mapLng ?? null,
+      mapStops,
       showOnMap: o?.showOnMap ?? true,
       title: tr("title") || o?.title?.trim() || t.title,
       image: o?.imageUrl || t.image,

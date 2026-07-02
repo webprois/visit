@@ -170,6 +170,12 @@ export type TourOverrideInput = {
   /** Map starting-point coordinates. Pass null to clear, undefined to leave. */
   mapLat?: number | null
   mapLng?: number | null
+  /**
+   * Ordered route stops for multi-location tours. When provided (even as an
+   * empty array) the stored stops are replaced and mapLat/mapLng are synced to
+   * the first stop. Pass `undefined` to leave stops untouched.
+   */
+  mapStops?: { name?: string | null; lat: number; lng: number }[]
   /** Whether the tour is shown on the homepage map. */
   showOnMap?: boolean
 }
@@ -191,6 +197,35 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     gallerySet = { gallery: clean.length > 0 ? JSON.stringify(clean) : null }
   }
 
+  // Normalize route stops when provided, and sync the legacy single coordinate
+  // to the first stop so anything reading mapLat/mapLng keeps working.
+  let stopsSet:
+    | {
+        mapStops: { name: string; lat: number; lng: number }[]
+        mapLat: number | null
+        mapLng: number | null
+      }
+    | undefined
+  if (input.mapStops !== undefined) {
+    const cleanStops = input.mapStops
+      .filter(
+        (s) =>
+          s &&
+          Number.isFinite(s.lat) &&
+          Number.isFinite(s.lng),
+      )
+      .map((s) => ({
+        name: typeof s.name === "string" ? s.name.trim() : "",
+        lat: s.lat,
+        lng: s.lng,
+      }))
+    stopsSet = {
+      mapStops: cleanStops,
+      mapLat: cleanStops[0]?.lat ?? null,
+      mapLng: cleanStops[0]?.lng ?? null,
+    }
+  }
+
   await upsertOverride(bokunId, {
     title: input.title?.trim() || null,
     excerpt: input.excerpt?.trim() || null,
@@ -205,13 +240,18 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     categoryId: categoryIds[0] ?? null,
     tourType: input.tourType === "multi-day" ? "multi-day" : "day",
     ...(typeof input.visible === "boolean" ? { visible: input.visible } : {}),
-    // Map coordinates: only touched when explicitly provided (null clears them).
-    ...(input.mapLat !== undefined
-      ? { mapLat: Number.isFinite(input.mapLat as number) ? input.mapLat : null }
-      : {}),
-    ...(input.mapLng !== undefined
-      ? { mapLng: Number.isFinite(input.mapLng as number) ? input.mapLng : null }
-      : {}),
+    // Route stops drive the coordinates when provided; otherwise fall back to
+    // the single-coordinate inputs (each only touched when explicitly passed).
+    ...(stopsSet
+      ? stopsSet
+      : {
+          ...(input.mapLat !== undefined
+            ? { mapLat: Number.isFinite(input.mapLat as number) ? input.mapLat : null }
+            : {}),
+          ...(input.mapLng !== undefined
+            ? { mapLng: Number.isFinite(input.mapLng as number) ? input.mapLng : null }
+            : {}),
+        }),
     ...(typeof input.showOnMap === "boolean"
       ? { showOnMap: input.showOnMap }
       : {}),

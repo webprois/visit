@@ -4,9 +4,23 @@ import "leaflet/dist/leaflet.css"
 import { useEffect, useState } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import L from "leaflet"
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet"
 import MarkerClusterGroup from "react-leaflet-cluster"
-import { ChevronLeft, ChevronRight, Clock, Gauge, MapPin } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Gauge,
+  MapPin,
+  Route,
+} from "lucide-react"
 import Link from "next/link"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { Price } from "@/components/price"
@@ -25,6 +39,8 @@ export type MapTourPoint = {
   duration: string
   /** Difficulty label (e.g. "Easy", "Moderate"), when known. */
   difficulty: string | null
+  /** Ordered route stops for multi-location tours (empty for single-location). */
+  stops: { name: string; lat: number; lng: number }[]
   price: number
   category: string | null
   /** Lucide icon name from the tour's primary category (see category-icons). */
@@ -52,6 +68,16 @@ function markerIcon(point: MapTourPoint): L.DivIcon {
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
+  })
+}
+
+/** Small numbered dot for a secondary stop on a selected tour's route. */
+function stopDotIcon(index: number, color: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:${color};color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.45);font-weight:700;font-size:11px;">${index + 1}</span>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   })
 }
 
@@ -165,6 +191,12 @@ function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels 
               {point.difficulty}
             </span>
           )}
+          {point.stops.length > 1 && (
+            <span className="flex items-center gap-1">
+              <Route className="size-3.5 shrink-0" aria-hidden="true" />
+              {`${point.stops.length} stops`}
+            </span>
+          )}
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1.5">
@@ -196,6 +228,12 @@ export default function HomeMap({
   labels: Labels
 }) {
   const [view, setView] = useState<"map" | "satellite">("satellite")
+  // The tour whose popup is currently open — used to draw its route, if any.
+  const [activeId, setActiveId] = useState<number | null>(null)
+
+  const activePoint = points.find((p) => p.id === activeId) ?? null
+  const activeRoute =
+    activePoint && activePoint.stops.length > 1 ? activePoint.stops : null
 
   return (
     <div className="relative h-full w-full">
@@ -250,13 +288,46 @@ export default function HomeMap({
           chunkedLoading
         >
           {points.map((p) => (
-          <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon(p)}>
+          <Marker
+            key={p.id}
+            position={[p.lat, p.lng]}
+            icon={markerIcon(p)}
+            eventHandlers={{
+              popupopen: () => setActiveId(p.id),
+              popupclose: () =>
+                setActiveId((cur) => (cur === p.id ? null : cur)),
+            }}
+          >
             <Popup>
               <TourPopupCard point={p} labels={labels} />
             </Popup>
           </Marker>
           ))}
         </MarkerClusterGroup>
+
+        {/* Route for the selected multi-location tour: a dashed line plus a
+            numbered dot at each stop beyond the (already-shown) first one. */}
+        {activeRoute && activePoint && (
+          <>
+            <Polyline
+              positions={activeRoute.map((s) => [s.lat, s.lng])}
+              pathOptions={{
+                color: activePoint.color,
+                weight: 3,
+                opacity: 0.9,
+                dashArray: "6 8",
+              }}
+            />
+            {activeRoute.slice(1).map((s, i) => (
+              <Marker
+                key={`${activePoint.id}-stop-${i}`}
+                position={[s.lat, s.lng]}
+                icon={stopDotIcon(i + 1, activePoint.color)}
+                interactive={false}
+              />
+            ))}
+          </>
+        )}
       </MapContainer>
     </div>
   )

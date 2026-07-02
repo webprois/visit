@@ -47,7 +47,7 @@ import {
 } from "@/app/actions/admin"
 import { LocationPicker } from "@/components/admin/location-picker"
 import type { MergedTour, GalleryImage } from "@/lib/tours"
-import type { TourCategory, StartingLocation } from "@/lib/db/schema"
+import type { TourCategory, StartingLocation, MapStop } from "@/lib/db/schema"
 import type { TourTranslation } from "@/lib/bokun"
 import { LOCALES, LOCALE_LABELS, LOCALE_SHORT, type Locale } from "@/lib/i18n"
 
@@ -167,9 +167,14 @@ export function TourEditor({
   )
   const [tourType, setTourType] = useState<string>(tour.tourType)
   const [featured, setFeatured] = useState(tour.featured)
-  // Map: admin-set starting-point coordinates and homepage-map visibility.
-  const [mapLat, setMapLat] = useState<number | null>(tour.mapLat ?? null)
-  const [mapLng, setMapLng] = useState<number | null>(tour.mapLng ?? null)
+  // Map: ordered route stops (single stop = simple location) and visibility.
+  // Seed from stored stops, falling back to a single legacy coordinate.
+  const [mapStops, setMapStops] = useState<MapStop[]>(() => {
+    if (tour.mapStops && tour.mapStops.length > 0) return tour.mapStops
+    if (tour.mapLat != null && tour.mapLng != null)
+      return [{ name: "", lat: tour.mapLat, lng: tour.mapLng }]
+    return []
+  })
   const [showOnMap, setShowOnMap] = useState<boolean>(tour.showOnMap ?? true)
 
   const [uploading, setUploading] = useState(false)
@@ -423,8 +428,7 @@ export function TourEditor({
         locationIds,
         tourType,
         visible,
-        mapLat,
-        mapLng,
+        mapStops,
         showOnMap,
       })
       // Full per-language content.
@@ -863,13 +867,11 @@ export function TourEditor({
             />
           </Field>
           <LocationPicker
-            lat={mapLat}
-            lng={mapLng}
+            stops={mapStops}
             showOnMap={showOnMap}
-            onChangeCoords={(nextLat, nextLng) => {
+            onChangeStops={(next) => {
               markDirty()
-              setMapLat(nextLat)
-              setMapLng(nextLng)
+              setMapStops(next)
             }}
             onToggleShow={(value) => {
               markDirty()
