@@ -137,7 +137,7 @@ export default async function TourPage({
       <SiteHeader locale={locale} />
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
-        <section className="relative isolate flex min-h-[52vh] flex-col justify-between overflow-hidden md:min-h-[60vh]">
+        <section className="relative isolate flex min-h-[52vh] flex-col justify-between overflow-hidden md:min-h-[60vh] lg:justify-end">
           {/* Background image + overlays fill the whole section so the content
               can grow (e.g. long titles on mobile) without hiding behind the
               sticky header. */}
@@ -155,8 +155,8 @@ export default async function TourPage({
             <div className="absolute inset-0 bg-background/20" />
           </div>
 
-          {/* Breadcrumb pinned to the top, just under the sticky header. */}
-          <div className="mx-auto w-full max-w-7xl px-4 pt-16 md:px-6 md:pt-20">
+          {/* Mobile only: breadcrumb pinned to the top, just under the header. */}
+          <div className="mx-auto w-full max-w-7xl px-4 pt-16 md:pt-20 lg:hidden">
             <nav
               aria-label="Breadcrumb"
               className="flex items-center gap-1 text-sm text-muted-foreground"
@@ -182,6 +182,30 @@ export default async function TourPage({
               <div className="lg:relative">
                 {/* Left: title + subtitle + facts */}
                 <div className="lg:max-w-[calc(100%-18rem)]">
+                  {/* Desktop only: breadcrumb grouped above the title. */}
+                  <nav
+                    aria-label="Breadcrumb"
+                    className="mb-4 hidden items-center gap-1 text-sm text-muted-foreground lg:flex"
+                  >
+                    <a
+                      href="/"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      {dict.detail.home}
+                    </a>
+                    <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                    <a
+                      href="/tours"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      {dict.detail.tours}
+                    </a>
+                    <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                    <span className="truncate text-foreground">
+                      {tour.title}
+                    </span>
+                  </nav>
+
                   <div className="flex flex-wrap items-center gap-2">
                     {(tour.categoryNames.length > 0
                       ? tour.categoryNames
