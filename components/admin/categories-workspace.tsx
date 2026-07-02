@@ -37,6 +37,10 @@ import {
   deleteCategory,
   translateCategoryName,
 } from "@/app/actions/admin"
+import {
+  CATEGORY_ICON_NAMES,
+  getCategoryIcon,
+} from "@/lib/category-icons"
 import type { TourCategory } from "@/lib/db/schema"
 
 const LANGS = [
@@ -280,6 +284,8 @@ function CategoryEditor({
   const [description, setDescription] = useState(category.description ?? "")
   const [sortOrder, setSortOrder] = useState<string>(String(category.sortOrder))
   const [imageUrl, setImageUrl] = useState(category.imageUrl ?? "")
+  const [icon, setIcon] = useState<string>(category.icon ?? "")
+  const [iconSearch, setIconSearch] = useState("")
   const [names, setNames] = useState<Record<LangKey, string>>({
     nameEn: category.nameEn ?? "",
     nameEs: category.nameEs ?? "",
@@ -348,6 +354,7 @@ function CategoryEditor({
         description,
         sortOrder: Number(sortOrder),
         imageUrl,
+        icon,
         ...names,
         // English is the source language: keep it in sync with the main name.
         nameEn: name.trim(),
@@ -423,6 +430,60 @@ function CategoryEditor({
                   </Button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Filter icon (shown next to the category in the tours filter list) */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label>Filter icon</Label>
+              {icon && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIcon("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Shown next to this category in the activities filter on the tours
+              page.
+            </p>
+            <Input
+              value={iconSearch}
+              onChange={(e) => setIconSearch(e.target.value)}
+              placeholder="Search icons…"
+              className="h-10"
+            />
+            <div className="grid grid-cols-8 gap-2 sm:grid-cols-12">
+              {CATEGORY_ICON_NAMES.filter((n) =>
+                n.toLowerCase().includes(iconSearch.trim().toLowerCase()),
+              ).map((n) => {
+                const Ico = getCategoryIcon(n)
+                if (!Ico) return null
+                const selected = icon === n
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setIcon(selected ? "" : n)}
+                    title={n}
+                    aria-label={n}
+                    aria-pressed={selected}
+                    className={
+                      "flex aspect-square items-center justify-center rounded-lg border transition-colors " +
+                      (selected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground")
+                    }
+                  >
+                    <Ico className="size-5" aria-hidden="true" />
+                  </button>
+                )
+              })}
             </div>
           </div>
 

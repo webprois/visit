@@ -69,6 +69,8 @@ export const tourCategory = pgTable("tour_category", {
   slug: text("slug").notNull().unique(),
   sortOrder: integer("sortOrder").notNull().default(0),
   imageUrl: text("imageUrl"),
+  // Optional Lucide icon name (see lib/category-icons) shown in filter chips.
+  icon: text("icon"),
   description: text("description"),
   // Translated display names. English is the site default.
   nameEn: text("nameEn"),

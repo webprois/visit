@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import type { MergedTour } from "@/lib/tours"
 import { tourBlurb } from "@/lib/tour-blurb"
 import type { TourCategory } from "@/lib/db/schema"
+import { getCategoryIcon } from "@/lib/category-icons"
 import { Price } from "@/components/price"
 import { PriceRangeSlider } from "@/components/price-range-slider"
 import { useDict } from "@/components/i18n-provider"
@@ -830,17 +831,29 @@ export function ToursBrowser({
                 {dict.browser.noMatches}
               </li>
             ) : (
-              shownCategories.map((c) => (
-                <CheckRow
-                  key={c.id}
-                  checked={activeCategories.has(c.id)}
-                  disabled={
-                    !enabledCategoryIds.has(c.id) && !activeCategories.has(c.id)
-                  }
-                  onChange={() => toggleSet(setActiveCategories, c.id)}
-                  label={c.nameEn?.trim() || c.name}
-                />
-              ))
+              shownCategories.map((c) => {
+                const Ico = getCategoryIcon(c.icon)
+                return (
+                  <CheckRow
+                    key={c.id}
+                    checked={activeCategories.has(c.id)}
+                    disabled={
+                      !enabledCategoryIds.has(c.id) &&
+                      !activeCategories.has(c.id)
+                    }
+                    onChange={() => toggleSet(setActiveCategories, c.id)}
+                    label={c.nameEn?.trim() || c.name}
+                    icon={
+                      Ico ? (
+                        <Ico
+                          className="size-4 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      ) : undefined
+                    }
+                  />
+                )
+              })
             )}
           </ul>
         </FilterSection>

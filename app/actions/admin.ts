@@ -259,6 +259,7 @@ export type CategoryDetailsInput = {
   description?: string | null
   sortOrder?: number | null
   imageUrl?: string | null
+  icon?: string | null
   nameEn?: string | null
   nameEs?: string | null
   namePt?: string | null
@@ -274,6 +275,7 @@ export async function updateCategory(id: number, input: CategoryDetailsInput) {
   const values: Partial<typeof tourCategory.$inferInsert> = {
     description: input.description?.trim() || null,
     imageUrl: input.imageUrl?.trim() || null,
+    icon: input.icon?.trim() || null,
     nameEn: input.nameEn?.trim() || null,
     nameEs: input.nameEs?.trim() || null,
     namePt: input.namePt?.trim() || null,
