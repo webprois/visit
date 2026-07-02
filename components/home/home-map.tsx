@@ -148,49 +148,53 @@ export default function HomeMap({
           {points.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon(p)}>
             <Popup>
-              <div className="w-56 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.image || "/placeholder.svg"}
-                  alt={p.title}
-                  className="-mx-3 -mt-3 mb-2 h-28 w-[calc(100%+1.5rem)] max-w-none object-cover"
-                />
-                {p.category && (
-                  <span
-                    className="text-[11px] font-bold uppercase tracking-wide"
-                    style={{ color: p.color }}
-                  >
-                    {p.category}
-                  </span>
-                )}
-                <h3 className="font-heading text-sm font-bold leading-snug text-foreground">
-                  {p.title}
-                </h3>
-                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="size-3.5" aria-hidden="true" />
-                    {p.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="size-3.5" aria-hidden="true" />
-                    {p.duration}
-                  </span>
-                </div>
-                <div className="mt-2.5 flex items-center justify-between gap-2">
-                  <div className="leading-tight">
-                    <span className="text-[10px] text-muted-foreground">
-                      {labels.from}
+              <div className="w-60">
+                <div className="relative h-28 w-full overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.image || "/placeholder.svg"}
+                    alt={p.title}
+                    className="h-full w-full object-cover"
+                  />
+                  {p.category && (
+                    <span
+                      className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm"
+                      style={{ backgroundColor: p.color }}
+                    >
+                      {p.category}
                     </span>
-                    <p className="font-heading text-base font-extrabold text-foreground">
-                      <Price isk={p.price} />
-                    </p>
+                  )}
+                </div>
+                <div className="p-3">
+                  <h3 className="font-heading text-sm font-bold leading-snug text-card-foreground">
+                    {p.title}
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                      {p.location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+                      {p.duration}
+                    </span>
                   </div>
-                  <Link
-                    href={`/tours/${p.id}`}
-                    className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-                  >
-                    {labels.viewTour}
-                  </Link>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <div className="leading-tight">
+                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {labels.from}
+                      </span>
+                      <p className="font-heading text-lg font-extrabold text-card-foreground">
+                        <Price isk={p.price} />
+                      </p>
+                    </div>
+                    <Link
+                      href={`/tours/${p.id}`}
+                      className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                    >
+                      {labels.viewTour}
+                    </Link>
+                  </div>
                 </div>
               </div>
             </Popup>
