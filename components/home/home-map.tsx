@@ -139,7 +139,7 @@ function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels 
           </>
         )}
       </div>
-      <div className="p-3">
+      <div className="px-3 pb-3 pt-2.5">
         <h3 className="font-heading text-sm font-bold leading-snug text-card-foreground">
           {point.title}
         </h3>
@@ -158,14 +158,14 @@ function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels 
             {point.duration}
           </span>
         </div>
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div className="leading-tight">
-            <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
               {labels.from}
             </span>
-            <p className="font-heading text-lg font-extrabold text-card-foreground">
+            <span className="font-heading text-lg font-extrabold leading-none text-card-foreground">
               <Price isk={point.price} />
-            </p>
+            </span>
           </div>
           <Link
             href={`/tours/${point.id}`}
