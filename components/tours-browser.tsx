@@ -153,13 +153,30 @@ export function ToursBrowser({
     function onResize() {
       setDateOpen(false)
     }
+    // Keep the fixed popover glued to its trigger while the page scrolls.
+    // Close it once the trigger is no longer visible so it can't float over
+    // unrelated content.
+    function onScroll() {
+      const btn = dateBtnRef.current
+      if (!btn) return
+      const r = btn.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > window.innerHeight) {
+        setDateOpen(false)
+        return
+      }
+      const width = Math.min(window.innerWidth - 24, 640)
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setDatePos({ top: r.bottom + 8, left })
+    }
     document.addEventListener("pointerdown", onPointer)
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
+    window.addEventListener("scroll", onScroll, true)
     return () => {
       document.removeEventListener("pointerdown", onPointer)
       document.removeEventListener("keydown", onKey)
       window.removeEventListener("resize", onResize)
+      window.removeEventListener("scroll", onScroll, true)
     }
   }, [dateOpen])
 
@@ -229,13 +246,29 @@ export function ToursBrowser({
     function onResize() {
       closePax()
     }
+    // Keep the fixed popover glued to its trigger while the page scrolls, and
+    // close it once the trigger scrolls out of view.
+    function onScroll() {
+      const btn = paxBtnRef.current
+      if (!btn) return
+      const r = btn.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > window.innerHeight) {
+        closePax()
+        return
+      }
+      const width = Math.min(window.innerWidth - 24, 320)
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
+      setPaxPos({ top: r.bottom + 8, left })
+    }
     document.addEventListener("pointerdown", onPointer)
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
+    window.addEventListener("scroll", onScroll, true)
     return () => {
       document.removeEventListener("pointerdown", onPointer)
       document.removeEventListener("keydown", onKey)
       window.removeEventListener("resize", onResize)
+      window.removeEventListener("scroll", onScroll, true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paxOpen, draftAdults, draftChildren])
