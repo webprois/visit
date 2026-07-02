@@ -137,7 +137,7 @@ export default async function TourPage({
       <SiteHeader locale={locale} />
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
-        <section className="relative isolate flex min-h-[52vh] flex-col justify-end overflow-hidden md:min-h-[60vh]">
+        <section className="relative isolate flex min-h-[52vh] flex-col justify-between overflow-hidden md:min-h-[60vh]">
           {/* Background image + overlays fill the whole section so the content
               can grow (e.g. long titles on mobile) without hiding behind the
               sticky header. */}
@@ -155,27 +155,30 @@ export default async function TourPage({
             <div className="absolute inset-0 bg-background/20" />
           </div>
 
-          <div className="w-full">
-            {/* pt clears the sticky header; pb keeps content off the section edge. */}
-            <div className="mx-auto max-w-7xl px-4 pb-8 pt-24 md:px-6 md:pb-12 md:pt-28">
-              <nav
-                aria-label="Breadcrumb"
-                className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"
+          {/* Breadcrumb pinned to the top, just under the sticky header. */}
+          <div className="mx-auto w-full max-w-7xl px-4 pt-24 md:px-6 md:pt-28">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1 text-sm text-muted-foreground"
+            >
+              <a href="/" className="transition-colors hover:text-foreground">
+                {dict.detail.home}
+              </a>
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              <a
+                href="/tours"
+                className="transition-colors hover:text-foreground"
               >
-                <a href="/" className="transition-colors hover:text-foreground">
-                  {dict.detail.home}
-                </a>
-                <ChevronRight className="size-4" aria-hidden="true" />
-                <a
-                  href="/tours"
-                  className="transition-colors hover:text-foreground"
-                >
-                  {dict.detail.tours}
-                </a>
-                <ChevronRight className="size-4" aria-hidden="true" />
-                <span className="truncate text-foreground">{tour.title}</span>
-              </nav>
+                {dict.detail.tours}
+              </a>
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate text-foreground">{tour.title}</span>
+            </nav>
+          </div>
 
+          <div className="w-full">
+            {/* pb keeps content off the section edge. */}
+            <div className="mx-auto max-w-7xl px-4 pb-8 pt-6 md:px-6 md:pb-12">
               <div className="lg:relative">
                 {/* Left: title + subtitle + facts */}
                 <div className="lg:max-w-[calc(100%-18rem)]">
