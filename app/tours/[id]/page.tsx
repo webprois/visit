@@ -236,7 +236,7 @@ export default async function TourPage({
 
         {/* Body */}
         <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
-          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-12">
+          <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[1fr_380px]">
             {/* Left: content */}
             <div className="flex flex-col gap-12">
               {/* Gallery */}
