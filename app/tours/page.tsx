@@ -6,6 +6,7 @@ import { ToursBrowser } from "@/components/tours-browser"
 import {
   getVisibleTours,
   getCategories,
+  getStartingLocations,
   categoryName,
   filterToursByAvailability,
 } from "@/lib/tours"
@@ -56,10 +57,11 @@ export default async function ToursPage({
 }) {
   const locale = await getLocale()
   const dict = getDictionary(locale)
-  const [params, allTours, categories] = await Promise.all([
+  const [params, allTours, categories, locations] = await Promise.all([
     searchParams,
     getVisibleTours(locale),
     getCategories(),
+    getStartingLocations(),
   ])
 
   // Resolve categories from either ?experience= (search widget, may be a
@@ -190,6 +192,7 @@ export default async function ToursPage({
             <ToursBrowser
               tours={tours}
               categories={categories}
+              locations={locations}
               initialCategoryIds={activeCategoryIds}
             />
           )}

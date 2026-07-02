@@ -8,7 +8,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { MergedTour } from "@/lib/tours"
 import { tourBlurb } from "@/lib/tour-blurb"
-import type { TourCategory } from "@/lib/db/schema"
+import type { TourCategory, StartingLocation } from "@/lib/db/schema"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { Price } from "@/components/price"
 import { PriceRangeSlider } from "@/components/price-range-slider"
@@ -63,11 +63,14 @@ function durationLabel(bucket: number, dict: Dictionary): string {
 export function ToursBrowser({
   tours,
   categories,
+  locations = [],
   initialCategoryId = null,
   initialCategoryIds,
 }: {
   tours: MergedTour[]
   categories: TourCategory[]
+  /** All admin-defined starting locations, ordered by sortOrder. */
+  locations?: StartingLocation[]
   initialCategoryId?: number | null
   /** Multi-select seed; takes precedence over `initialCategoryId` when given. */
   initialCategoryIds?: number[]
@@ -293,9 +296,14 @@ export function ToursBrowser({
     [categories, usedCategoryIds],
   )
 
-  // Only show locations that actually have visible tours, ordered by first
-  // appearance (which follows the locations' sortOrder).
+  // Prefer the full, admin-ordered list of starting locations when provided so
+  // the filter always lists every location (ones without matching tours render
+  // disabled, like the other filters). Fall back to deriving from the visible
+  // tours when no list is passed.
   const availableLocations = useMemo(() => {
+    if (locations.length > 0) {
+      return locations.map((l) => ({ id: l.id, name: l.name }))
+    }
     const byId = new Map<number, string>()
     for (const t of tours) {
       t.locationIds.forEach((id, i) => {
@@ -303,7 +311,7 @@ export function ToursBrowser({
       })
     }
     return [...byId.entries()].map(([id, name]) => ({ id, name }))
-  }, [tours])
+  }, [tours, locations])
 
   // The full ladder of duration buckets present across all tours, ascending.
   const allDurationBuckets = useMemo(() => {
