@@ -45,7 +45,8 @@ type StatusFilter =
   | "featured"
   | "uncategorized"
   | "missing"
-type TypeFilter = "all" | "day" | "multi-day"
+  | "hidden"
+type TypeFilter = "all" | "day" | "multi-day" | "admission" | "transfer"
 
 const STATUS_LABELS: Record<StatusFilter, string> = {
   all: "All statuses",
@@ -54,12 +55,15 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
   featured: "Featured",
   uncategorized: "Uncategorized",
   missing: "Missing content",
+  hidden: "Hidden",
 }
 
 const TYPE_LABELS: Record<TypeFilter, string> = {
   all: "All types",
   day: "Day tour",
   "multi-day": "Multi-day tour",
+  admission: "Admission",
+  transfer: "Transfer",
 }
 
 function formatUpdated(value: Date | null): string {
@@ -97,12 +101,21 @@ export function ToursWorkspace({
   const router = useRouter()
 
   const stats = useMemo(() => {
+    let total = 0
     let published = 0
     let drafts = 0
     let featured = 0
     let uncategorized = 0
     let missingContent = 0
+    let hidden = 0
     for (const t of tours) {
+      // Hidden tours are counted only in their own bucket and excluded from
+      // Total and every other stat.
+      if (t.hidden) {
+        hidden++
+        continue
+      }
+      total++
       if (t.visible) published++
       else drafts++
       if (t.featured) featured++
@@ -110,12 +123,13 @@ export function ToursWorkspace({
       if (isMissingContent(t)) missingContent++
     }
     return {
-      total: tours.length,
+      total,
       published,
       drafts,
       featured,
       uncategorized,
       missingContent,
+      hidden,
     }
   }, [tours])
 
@@ -135,6 +149,13 @@ export function ToursWorkspace({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return tours.filter((t) => {
+      // Hidden tours only appear under the "Hidden" filter; every other view
+      // (including "All statuses") excludes them.
+      if (statusFilter === "hidden") {
+        if (!t.hidden) return false
+      } else if (t.hidden) {
+        return false
+      }
       if (q && !t.title.toLowerCase().includes(q)) return false
       if (statusFilter === "published" && !t.visible) return false
       if (statusFilter === "draft" && t.visible) return false
@@ -216,19 +237,51 @@ export function ToursWorkspace({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <StatChip label="Total" value={stats.total} />
-          <StatChip label="Published" value={stats.published} tone="success" />
-          <StatChip label="Drafts" value={stats.drafts} />
-          <StatChip label="Featured" value={stats.featured} tone="primary" />
+          <StatChip
+            label="Total"
+            value={stats.total}
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          />
+          <StatChip
+            label="Published"
+            value={stats.published}
+            tone="success"
+            active={statusFilter === "published"}
+            onClick={() => setStatusFilter("published")}
+          />
+          <StatChip
+            label="Drafts"
+            value={stats.drafts}
+            active={statusFilter === "draft"}
+            onClick={() => setStatusFilter("draft")}
+          />
+          <StatChip
+            label="Featured"
+            value={stats.featured}
+            tone="primary"
+            active={statusFilter === "featured"}
+            onClick={() => setStatusFilter("featured")}
+          />
           <StatChip
             label="Uncategorized"
             value={stats.uncategorized}
             tone={stats.uncategorized > 0 ? "warning" : undefined}
+            active={statusFilter === "uncategorized"}
+            onClick={() => setStatusFilter("uncategorized")}
           />
           <StatChip
             label="Missing content"
             value={stats.missingContent}
             tone={stats.missingContent > 0 ? "warning" : undefined}
+            active={statusFilter === "missing"}
+            onClick={() => setStatusFilter("missing")}
+          />
+          <StatChip
+            label="Hidden"
+            value={stats.hidden}
+            active={statusFilter === "hidden"}
+            onClick={() => setStatusFilter("hidden")}
           />
         </div>
       </div>
@@ -263,6 +316,7 @@ export function ToursWorkspace({
                   <SelectItem value="featured">Featured</SelectItem>
                   <SelectItem value="uncategorized">Uncategorized</SelectItem>
                   <SelectItem value="missing">Missing content</SelectItem>
+                  <SelectItem value="hidden">Hidden</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -306,6 +360,8 @@ export function ToursWorkspace({
                   <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="day">Day tour</SelectItem>
                   <SelectItem value="multi-day">Multi-day tour</SelectItem>
+                  <SelectItem value="admission">Admission</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -605,10 +661,14 @@ function StatChip({
   label,
   value,
   tone,
+  active,
+  onClick,
 }: {
   label: string
   value: number
   tone?: "success" | "primary" | "warning"
+  active?: boolean
+  onClick?: () => void
 }) {
   const dot =
     tone === "success"
@@ -619,7 +679,16 @@ function StatChip({
           ? "var(--chart-1)"
           : "var(--muted-foreground)"
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors ${
+        active
+          ? "border-primary bg-primary/10"
+          : "border-border bg-card hover:bg-muted"
+      }`}
+    >
       <span
         className="size-1.5 rounded-full"
         style={{ backgroundColor: dot }}
@@ -627,7 +696,7 @@ function StatChip({
       />
       <span className="text-sm font-bold text-foreground">{value}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
+    </button>
   )
 }
 

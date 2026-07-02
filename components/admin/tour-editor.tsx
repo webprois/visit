@@ -39,14 +39,16 @@ import {
   saveTourOverride,
   saveTourTranslations,
   setTourFeatured,
+  setTourHidden,
   getTourTranslations,
   getTourTranslationContent,
   getBokunGallery,
   translateTourContent,
   type TourTranslationInput,
 } from "@/app/actions/admin"
+import { LocationPicker } from "@/components/admin/location-picker"
 import type { MergedTour, GalleryImage } from "@/lib/tours"
-import type { TourCategory, StartingLocation } from "@/lib/db/schema"
+import type { TourCategory, StartingLocation, MapStop } from "@/lib/db/schema"
 import type { TourTranslation } from "@/lib/bokun"
 import { LOCALES, LOCALE_LABELS, LOCALE_SHORT, type Locale } from "@/lib/i18n"
 
@@ -65,11 +67,20 @@ type LangContent = {
 
 type ContentByLang = Record<Locale, LangContent>
 
+/** Display labels for each tour type value. */
+const TOUR_TYPE_LABELS: Record<string, string> = {
+  day: "Day Tour",
+  "multi-day": "Multi-Day Tour",
+  admission: "Admission",
+  transfer: "Transfer",
+}
+
 type EditorTab =
   | "overview"
   | "content"
   | "categories"
   | "images"
+  | "map"
   | "seo"
 
 const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
@@ -77,6 +88,7 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
   { id: "images", label: "Images" },
+  { id: "map", label: "Map" },
   { id: "seo", label: "SEO", soon: true },
 ]
 
@@ -149,7 +161,6 @@ export function TourEditor({
   const [translating, setTranslating] = useState(false)
 
   // Shared (language-independent) settings.
-  const [location, setLocation] = useState(tour.location)
   const [duration, setDuration] = useState(tour.duration)
   const [difficulty, setDifficulty] = useState(tour.difficulty ?? "")
   const [groupSize, setGroupSize] = useState(tour.groupSize ?? "")
@@ -166,6 +177,16 @@ export function TourEditor({
   )
   const [tourType, setTourType] = useState<string>(tour.tourType)
   const [featured, setFeatured] = useState(tour.featured)
+  const [hidden, setHidden] = useState(tour.hidden)
+  // Map: ordered route stops (single stop = simple location) and visibility.
+  // Seed from stored stops, falling back to a single legacy coordinate.
+  const [mapStops, setMapStops] = useState<MapStop[]>(() => {
+    if (tour.mapStops && tour.mapStops.length > 0) return tour.mapStops
+    if (tour.mapLat != null && tour.mapLng != null)
+      return [{ name: "", lat: tour.mapLat, lng: tour.mapLng }]
+    return []
+  })
+  const [showOnMap, setShowOnMap] = useState<boolean>(tour.showOnMap ?? true)
 
   const [uploading, setUploading] = useState(false)
   const [pendingAction, setPendingAction] = useState<
@@ -291,9 +312,9 @@ export function TourEditor({
 
   function toggleLocation(id: number) {
     markDirty()
-    setLocationIds((prev) =>
-      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id],
-    )
+    // Single-select: choosing a location replaces the current one; tapping the
+    // selected one again clears it.
+    setLocationIds((prev) => (prev[0] === id ? [] : [id]))
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -408,7 +429,10 @@ export function TourEditor({
         title: en.title,
         excerpt: en.excerpt,
         description: en.description,
-        location,
+        // Location label is driven by the selected starting location, falling
+        // back to the tour's existing value when none is assigned.
+        location:
+          locations.find((l) => l.id === locationIds[0])?.name ?? tour.location,
         duration,
         difficulty,
         groupSize,
@@ -418,6 +442,8 @@ export function TourEditor({
         locationIds,
         tourType,
         visible,
+        mapStops,
+        showOnMap,
       })
       // Full per-language content.
       await saveTourTranslations(tour.bokunId, byLang)
@@ -441,6 +467,16 @@ export function TourEditor({
     startTransition(async () => {
       await setTourFeatured(tour.bokunId, next)
       toast.success(next ? "Marked as featured" : "Removed from featured")
+      router.refresh()
+    })
+  }
+
+  function toggleHidden() {
+    const next = !hidden
+    setHidden(next)
+    startTransition(async () => {
+      await setTourHidden(tour.bokunId, next)
+      toast.success(next ? "Tour hidden" : "Tour restored")
       router.refresh()
     })
   }
@@ -652,8 +688,8 @@ export function TourEditor({
         )}
         <p className="mt-1 text-xs text-muted-foreground">
           {locationIds.length === 0
-            ? "No starting location set. Tap to assign one or more."
-            : `${locationIds.length} selected.`}
+            ? "No starting location set. Tap one to assign it. This also sets the tour's location label."
+            : "This location is also shown as the tour's location label."}
         </p>
       </Field>
     </div>
@@ -718,16 +754,28 @@ export function TourEditor({
         </span>
         <div className="flex items-center justify-between gap-2">
           <StatusBadge visible={tour.visible} />
-          <Button
-            type="button"
-            variant={featured ? "default" : "outline"}
-            size="sm"
-            onClick={toggleFeatured}
-            disabled={isPending}
-          >
-            <Star className={featured ? "size-4 fill-current" : "size-4"} />
-            {featured ? "Featured" : "Feature"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={featured ? "default" : "outline"}
+              size="sm"
+              onClick={toggleFeatured}
+              disabled={isPending}
+            >
+              <Star className={featured ? "size-4 fill-current" : "size-4"} />
+              {featured ? "Featured" : "Feature"}
+            </Button>
+            <Button
+              type="button"
+              variant={hidden ? "default" : "outline"}
+              size="sm"
+              onClick={toggleHidden}
+              disabled={isPending}
+            >
+              <EyeOff className="size-4" />
+              {hidden ? "Hidden" : "Hide"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -741,14 +789,14 @@ export function TourEditor({
         >
           <SelectTrigger className="h-11 w-full">
             <SelectValue>
-              {(value: string) =>
-                value === "multi-day" ? "Multi-Day Tour" : "Day Tour"
-              }
+              {(value: string) => TOUR_TYPE_LABELS[value] ?? "Day Tour"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="day">Day Tour</SelectItem>
             <SelectItem value="multi-day">Multi-Day Tour</SelectItem>
+            <SelectItem value="admission">Admission</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
           </SelectContent>
         </Select>
       </Field>
@@ -770,18 +818,6 @@ export function TourEditor({
             <SelectItem value="Challenging">Challenging</SelectItem>
           </SelectContent>
         </Select>
-      </Field>
-
-      <Field label="Location" htmlFor="location">
-        <Input
-          id="location"
-          value={location}
-          onChange={(e) => {
-            markDirty()
-            setLocation(e.target.value)
-          }}
-          className="h-11"
-        />
       </Field>
 
       <Field label="Duration" htmlFor="duration">
@@ -855,6 +891,22 @@ export function TourEditor({
             />
           </Field>
         </>
+      )
+      break
+    case "map":
+      tabContent = (
+        <LocationPicker
+          stops={mapStops}
+          showOnMap={showOnMap}
+          onChangeStops={(next) => {
+            markDirty()
+            setMapStops(next)
+          }}
+          onToggleShow={(value) => {
+            markDirty()
+            setShowOnMap(value)
+          }}
+        />
       )
       break
     case "content":

@@ -18,7 +18,7 @@ import {
   fetchTourDetail,
   type TourTranslation,
 } from "@/lib/bokun"
-import { autoCategorizeTours } from "@/lib/tours"
+import { autoCategorizeTours, TOUR_TYPES, type TourType } from "@/lib/tours"
 import { translateTexts } from "@/lib/translate"
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
 import { generateText, Output } from "ai"
@@ -58,11 +58,17 @@ export async function setTourVisibility(bokunId: string, visible: boolean) {
   revalidateAll()
 }
 
-export async function setTourFeatured(bokunId: string, featured: boolean) {
+  export async function setTourFeatured(bokunId: string, featured: boolean) {
   await requireAuth()
   await upsertOverride(bokunId, { featured })
   revalidateAll()
-}
+  }
+
+  export async function setTourHidden(bokunId: string, hidden: boolean) {
+  await requireAuth()
+  await upsertOverride(bokunId, { hidden })
+  revalidateAll()
+  }
 
 /* ---------------- Bulk tour actions ---------------- */
 
@@ -167,6 +173,19 @@ export type TourOverrideInput = {
   tourType?: string
   /** Optional publish state. true = Published, false = Draft. */
   visible?: boolean
+  /** Map starting-point coordinates. Pass null to clear, undefined to leave. */
+  mapLat?: number | null
+  mapLng?: number | null
+  /**
+   * Ordered route stops for multi-location tours. When provided (even as an
+   * empty array) the stored stops are replaced and mapLat/mapLng are synced to
+   * the first stop. Pass `undefined` to leave stops untouched.
+   */
+  mapStops?: { name?: string | null; lat: number; lng: number }[]
+  /** Whether the tour is shown on the homepage map. */
+  showOnMap?: boolean
+  /** Admin-only: hide from the workspace list and exclude from the Total count. */
+  hidden?: boolean
 }
 
 export async function saveTourOverride(bokunId: string, input: TourOverrideInput) {
@@ -186,6 +205,35 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     gallerySet = { gallery: clean.length > 0 ? JSON.stringify(clean) : null }
   }
 
+  // Normalize route stops when provided, and sync the legacy single coordinate
+  // to the first stop so anything reading mapLat/mapLng keeps working.
+  let stopsSet:
+    | {
+        mapStops: { name: string; lat: number; lng: number }[]
+        mapLat: number | null
+        mapLng: number | null
+      }
+    | undefined
+  if (input.mapStops !== undefined) {
+    const cleanStops = input.mapStops
+      .filter(
+        (s) =>
+          s &&
+          Number.isFinite(s.lat) &&
+          Number.isFinite(s.lng),
+      )
+      .map((s) => ({
+        name: typeof s.name === "string" ? s.name.trim() : "",
+        lat: s.lat,
+        lng: s.lng,
+      }))
+    stopsSet = {
+      mapStops: cleanStops,
+      mapLat: cleanStops[0]?.lat ?? null,
+      mapLng: cleanStops[0]?.lng ?? null,
+    }
+  }
+
   await upsertOverride(bokunId, {
     title: input.title?.trim() || null,
     excerpt: input.excerpt?.trim() || null,
@@ -198,8 +246,26 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     ...(gallerySet ?? {}),
     // Keep the legacy single-category column in sync with the first selection.
     categoryId: categoryIds[0] ?? null,
-    tourType: input.tourType === "multi-day" ? "multi-day" : "day",
+    tourType: TOUR_TYPES.includes(input.tourType as TourType)
+      ? (input.tourType as TourType)
+      : "day",
     ...(typeof input.visible === "boolean" ? { visible: input.visible } : {}),
+    // Route stops drive the coordinates when provided; otherwise fall back to
+    // the single-coordinate inputs (each only touched when explicitly passed).
+    ...(stopsSet
+      ? stopsSet
+      : {
+          ...(input.mapLat !== undefined
+            ? { mapLat: Number.isFinite(input.mapLat as number) ? input.mapLat : null }
+            : {}),
+          ...(input.mapLng !== undefined
+            ? { mapLng: Number.isFinite(input.mapLng as number) ? input.mapLng : null }
+            : {}),
+        }),
+    ...(typeof input.showOnMap === "boolean"
+      ? { showOnMap: input.showOnMap }
+      : {}),
+    ...(typeof input.hidden === "boolean" ? { hidden: input.hidden } : {}),
   })
   // Replace the tour's category links with the new selection.
   await db.delete(tourCategoryLink).where(eq(tourCategoryLink.bokunId, bokunId))

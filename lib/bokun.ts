@@ -138,6 +138,8 @@ function mapActivity(activity: BokunActivity): Tour {
     operatorId: activity.vendor?.id ?? null,
     operator: activity.vendor?.title?.trim() || null,
     bokunCategories: activity.activityCategories ?? [],
+    lat: activity.googlePlace?.geoLocationCenter?.lat ?? null,
+    lng: activity.googlePlace?.geoLocationCenter?.lng ?? null,
   }
 }
 
@@ -192,7 +194,7 @@ async function fetchAllToursUncached(): Promise<Tour[]> {
  * Fetches all bookable activities from Bokun and caches the small mapped
  * result for an hour, so repeat page loads are instant.
  */
-export const fetchAllTours = unstable_cache(fetchAllToursUncached, ["bokun-all-tours-v4"], {
+export const fetchAllTours = unstable_cache(fetchAllToursUncached, ["bokun-all-tours-v5"], {
   revalidate: 3600,
   tags: ["bokun-tours"],
 })

@@ -20,11 +20,20 @@ import {
   tourAvailability,
   type TourCategory,
   type StartingLocation,
+  type MapStop,
 } from "@/lib/db/schema"
 import type { Tour } from "@/lib/data"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
 
-export type TourType = "day" | "multi-day"
+export type TourType = "day" | "multi-day" | "admission" | "transfer"
+
+/** All valid tour types, used to validate stored/incoming values. */
+export const TOUR_TYPES: TourType[] = [
+  "day",
+  "multi-day",
+  "admission",
+  "transfer",
+]
 
 /** Resolve a category's display name for a locale, falling back to English. */
 export function categoryName(c: TourCategory, locale: Locale): string {
@@ -264,6 +273,15 @@ export type MergedTour = Tour & {
   locationNames: string[]
   tourType: TourType
   sortOrder: number
+  /** Whether this tour is shown on the homepage map. */
+  showOnMap: boolean
+  /** Admin-only: hide from the workspace list and exclude from the Total count. */
+  hidden: boolean
+  /** Admin-set map coordinates (null when unset — the map falls back to Bokun). */
+  mapLat: number | null
+  mapLng: number | null
+  /** Ordered route stops for multi-location tours (empty for single-location). */
+  mapStops: MapStop[]
   updatedAt: Date | null
 }
 
@@ -353,9 +371,33 @@ export async function getMergedTours(
     const tr = (field: "title" | "excerpt" | "description"): string | null =>
       byLang?.[locale]?.[field]?.trim() || byLang?.en?.[field]?.trim() || null
 
+    // Normalize the stored route stops (guard against bad JSON / stray values).
+    const mapStops: MapStop[] = Array.isArray(o?.mapStops)
+      ? o!.mapStops.filter(
+          (s): s is MapStop =>
+            !!s &&
+            typeof s.lat === "number" &&
+            typeof s.lng === "number" &&
+            Number.isFinite(s.lat) &&
+            Number.isFinite(s.lng),
+        )
+      : []
+    // The primary marker sits at the first stop, then the admin's single
+    // coordinate, then Bokun's coordinate.
+    const primaryLat = mapStops[0]?.lat ?? o?.mapLat ?? t.lat ?? null
+    const primaryLng = mapStops[0]?.lng ?? o?.mapLng ?? t.lng ?? null
+
     return {
       ...t,
       bokunId,
+      // Admin-set coordinates take precedence over Bokun's, when provided.
+      lat: primaryLat,
+      lng: primaryLng,
+      mapLat: o?.mapLat ?? null,
+      mapLng: o?.mapLng ?? null,
+      mapStops,
+      showOnMap: o?.showOnMap ?? true,
+      hidden: o?.hidden ?? false,
       title: tr("title") || o?.title?.trim() || t.title,
       image: o?.imageUrl || t.image,
       location: o?.location?.trim() || t.location,
@@ -376,7 +418,9 @@ export async function getMergedTours(
       categoryNames,
       locationIds,
       locationNames,
-      tourType: o?.tourType === "multi-day" ? "multi-day" : "day",
+      tourType: TOUR_TYPES.includes(o?.tourType as TourType)
+        ? (o!.tourType as TourType)
+        : "day",
       sortOrder: o?.sortOrder ?? 0,
       updatedAt: o?.updatedAt ?? null,
     }

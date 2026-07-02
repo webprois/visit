@@ -51,6 +51,16 @@ const en = {
     from: "From",
     viewTour: "View tour",
   },
+  map: {
+    eyebrow: "Explore the map",
+    title: "Find your adventure across Iceland",
+    subtitle:
+      "Browse every tour by location — from the Reykjanes peninsula to the far eastern fjords. Tap a marker to see the tour.",
+    mapView: "Map",
+    satelliteView: "Satellite",
+    toursOnMap: "{count} tours on the map",
+    routeLocation: "Tour route & location",
+  },
   why: {
     title: "Why book with us?",
     subtitle:
@@ -335,6 +345,16 @@ const es: Dictionary = {
     viewAll: "Ver todos los tours",
     from: "Desde",
     viewTour: "Ver tour",
+  },
+  map: {
+    eyebrow: "Explora el mapa",
+    title: "Encuentra tu aventura por toda Islandia",
+    subtitle:
+      "Explora cada tour por ubicación, desde la península de Reykjanes hasta los fiordos del este. Toca un marcador para ver el tour.",
+    mapView: "Mapa",
+    satelliteView: "Satélite",
+    toursOnMap: "{count} tours en el mapa",
+    routeLocation: "Ruta y ubicación del tour",
   },
   why: {
     title: "¿Por qué reservar con nosotros?",
@@ -627,6 +647,16 @@ const pt: Dictionary = {
     from: "A partir de",
     viewTour: "Ver tour",
   },
+  map: {
+    eyebrow: "Explore o mapa",
+    title: "Encontre a sua aventura por toda a Islândia",
+    subtitle:
+      "Explore cada tour por localização, da península de Reykjanes aos fiordes do leste. Toque num marcador para ver o tour.",
+    mapView: "Mapa",
+    satelliteView: "Satélite",
+    toursOnMap: "{count} tours no mapa",
+    routeLocation: "Rota e localização do tour",
+  },
   why: {
     title: "Porquê reservar connosco?",
     subtitle:
@@ -917,6 +947,16 @@ const it: Dictionary = {
     viewAll: "Vedi tutti i tour",
     from: "Da",
     viewTour: "Vedi il tour",
+  },
+  map: {
+    eyebrow: "Esplora la mappa",
+    title: "Trova la tua avventura in tutta l'Islanda",
+    subtitle:
+      "Esplora ogni tour per posizione, dalla penisola di Reykjanes ai fiordi orientali. Tocca un indicatore per vedere il tour.",
+    mapView: "Mappa",
+    satelliteView: "Satellite",
+    toursOnMap: "{count} tour sulla mappa",
+    routeLocation: "Percorso e posizione del tour",
   },
   why: {
     title: "Perché prenotare con noi?",

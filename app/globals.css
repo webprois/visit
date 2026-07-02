@@ -136,3 +136,65 @@
       0 14px 40px -14px color-mix(in oklch, black 55%, transparent);
   }
 }
+
+/* Dark-theme Leaflet popups and controls for the homepage tours map.
+   Uses !important to reliably win over Leaflet's bundled default styles,
+   which otherwise render a white popup with unreadable light text. */
+.leaflet-popup-content-wrapper {
+  background: var(--card) !important;
+  color: var(--card-foreground) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 18px 45px -14px rgba(0, 0, 0, 0.75) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+  /* Reset Leaflet's default Helvetica/12px so the popup uses the site fonts. */
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+}
+/* Leaflet defaults `.leaflet-popup-content p { margin: 18px 0 }`, which adds a
+   big gap around the price paragraph — reset it. */
+.leaflet-popup-content p {
+  margin: 0;
+}
+/* Leaflet's `.leaflet-container a` (blue) has equal specificity and loads
+   later, so force the CTA text to the near-white primary-foreground colour. */
+.leaflet-popup-content a.bg-primary {
+  color: var(--primary-foreground) !important;
+}
+.leaflet-popup-tip {
+  background: var(--card) !important;
+  box-shadow: none !important;
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted-foreground);
+  width: 28px;
+  height: 28px;
+  padding: 4px 6px 0 0;
+  font-size: 22px;
+  z-index: 2;
+}
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--foreground);
+  background: transparent;
+}
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--card);
+  color: var(--foreground);
+  border-bottom-color: color-mix(in oklch, black 30%, transparent);
+}
+.leaflet-bar a:hover {
+  background: var(--secondary);
+}
+.leaflet-control-attribution {
+  background: color-mix(in oklch, var(--card) 80%, transparent);
+  color: var(--muted-foreground);
+}
+.leaflet-control-attribution a {
+  color: var(--muted-foreground);
+}
