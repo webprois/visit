@@ -71,6 +71,7 @@ type EditorTab =
   | "content"
   | "categories"
   | "images"
+  | "map"
   | "seo"
 
 const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
@@ -78,6 +79,7 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
   { id: "images", label: "Images" },
+  { id: "map", label: "Map" },
   { id: "seo", label: "SEO", soon: true },
 ]
 
@@ -866,19 +868,23 @@ export function TourEditor({
               placeholder="One or two lines shown on the tour card"
             />
           </Field>
-          <LocationPicker
-            stops={mapStops}
-            showOnMap={showOnMap}
-            onChangeStops={(next) => {
-              markDirty()
-              setMapStops(next)
-            }}
-            onToggleShow={(value) => {
-              markDirty()
-              setShowOnMap(value)
-            }}
-          />
         </>
+      )
+      break
+    case "map":
+      tabContent = (
+        <LocationPicker
+          stops={mapStops}
+          showOnMap={showOnMap}
+          onChangeStops={(next) => {
+            markDirty()
+            setMapStops(next)
+          }}
+          onToggleShow={(value) => {
+            markDirty()
+            setShowOnMap(value)
+          }}
+        />
       )
       break
     case "content":
