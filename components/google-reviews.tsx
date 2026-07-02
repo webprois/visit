@@ -1,6 +1,8 @@
 import Image from "next/image"
 import { Star } from "lucide-react"
 import type { GooglePlaceReviews } from "@/lib/google-reviews"
+import { getServerDict } from "@/lib/get-dictionary"
+import { fmt } from "@/lib/translations"
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -19,17 +21,18 @@ function Stars({ rating }: { rating: number }) {
   )
 }
 
-export function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
+export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
+  const dict = await getServerDict()
   return (
     <section id="reviews" className="bg-secondary/50 py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="mb-10 flex flex-col gap-4 md:mb-12 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
-              What travellers say
+              {dict.reviews.eyebrow}
             </p>
             <h2 className="mt-2 max-w-xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
-              Reviews from Google
+              {dict.reviews.title}
             </h2>
           </div>
           <div className="flex items-center gap-3">
@@ -48,7 +51,7 @@ export function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
                 <Stars rating={data.rating} />
               </div>
               <span className="text-sm text-muted-foreground">
-                {data.total.toLocaleString()} Google reviews
+                {fmt(dict.reviews.count, { count: data.total.toLocaleString() })}
               </span>
             </div>
           </div>

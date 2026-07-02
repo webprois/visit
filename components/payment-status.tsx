@@ -5,6 +5,8 @@ import Link from "next/link"
 import { CheckCircle2, Loader2, XCircle } from "lucide-react"
 import { getBookingStatus, type BookingSummary } from "@/app/actions/booking"
 import { Price } from "@/components/price"
+import { useDict } from "@/components/i18n-provider"
+import { fmt } from "@/lib/translations"
 
 const SETTLED = ["confirmed", "failed", "cancelled", "paid"]
 
@@ -14,6 +16,7 @@ const SETTLED = ["confirmed", "failed", "cancelled", "paid"]
  * rather than trusting the redirect.
  */
 export function PaymentStatus({ bookingId }: { bookingId: string }) {
+  const t = useDict().payment
   const [summary, setSummary] = useState<BookingSummary | null>(null)
   const [phase, setPhase] = useState<"loading" | "ready" | "error">("loading")
 
@@ -44,7 +47,7 @@ export function PaymentStatus({ bookingId }: { bookingId: string }) {
       <Shell>
         <Loader2 className="size-10 animate-spin text-primary" aria-hidden="true" />
         <h1 className="font-heading text-2xl font-extrabold text-foreground">
-          Checking your payment…
+          {t.checking}
         </h1>
       </Shell>
     )
@@ -55,11 +58,9 @@ export function PaymentStatus({ bookingId }: { bookingId: string }) {
       <Shell>
         <XCircle className="size-10 text-destructive" aria-hidden="true" />
         <h1 className="font-heading text-2xl font-extrabold text-foreground">
-          We couldn&apos;t load your booking
+          {t.loadError}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          If you were charged, contact us and we&apos;ll sort it out right away.
-        </p>
+        <p className="text-sm text-muted-foreground">{t.loadErrorText}</p>
         <ContactActions />
       </Shell>
     )
@@ -72,18 +73,17 @@ export function PaymentStatus({ bookingId }: { bookingId: string }) {
       <Shell>
         <CheckCircle2 className="size-12 text-emerald-500" aria-hidden="true" />
         <h1 className="font-heading text-2xl font-extrabold text-foreground">
-          Booking confirmed!
+          {t.confirmed}
         </h1>
         <p className="text-sm text-muted-foreground">
-          A confirmation has been sent to{" "}
-          <span className="text-foreground">{summary.email}</span>.
+          {fmt(t.confirmedSentTo, { email: summary.email })}
         </p>
         <BookingCard summary={summary} />
         <Link
           href="/tours"
           className="text-sm font-semibold text-primary hover:underline"
         >
-          Browse more tours
+          {t.browseMore}
         </Link>
       </Shell>
     )
@@ -94,11 +94,9 @@ export function PaymentStatus({ bookingId }: { bookingId: string }) {
       <Shell>
         <XCircle className="size-10 text-destructive" aria-hidden="true" />
         <h1 className="font-heading text-2xl font-extrabold text-foreground">
-          Payment didn&apos;t go through
+          {t.failed}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          You haven&apos;t been charged. You can try booking again.
-        </p>
+        <p className="text-sm text-muted-foreground">{t.failedText}</p>
         <ContactActions />
       </Shell>
     )
@@ -109,11 +107,9 @@ export function PaymentStatus({ bookingId }: { bookingId: string }) {
     <Shell>
       <Loader2 className="size-10 animate-spin text-primary" aria-hidden="true" />
       <h1 className="font-heading text-2xl font-extrabold text-foreground">
-        Payment received — confirming your booking…
+        {t.receivedConfirming}
       </h1>
-      <p className="text-sm text-muted-foreground">
-        This usually takes a few seconds. You can keep this page open.
-      </p>
+      <p className="text-sm text-muted-foreground">{t.receivedText}</p>
       <BookingCard summary={summary} />
     </Shell>
   )
@@ -128,6 +124,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function BookingCard({ summary }: { summary: BookingSummary }) {
+  const t = useDict().payment
   return (
     <div className="mt-2 w-full rounded-2xl border border-border bg-card p-5 text-left">
       <p className="font-heading text-lg font-bold text-foreground">
@@ -135,10 +132,10 @@ function BookingCard({ summary }: { summary: BookingSummary }) {
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {summary.date} · {summary.totalPax}{" "}
-        {summary.totalPax === 1 ? "traveller" : "travellers"}
+        {summary.totalPax === 1 ? t.traveller : t.travellers}
       </p>
       <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-        <span className="text-sm text-muted-foreground">Total</span>
+        <span className="text-sm text-muted-foreground">{t.total}</span>
         <span className="font-heading text-lg font-extrabold text-foreground">
           <Price isk={summary.amountIsk} />
         </span>
@@ -148,19 +145,20 @@ function BookingCard({ summary }: { summary: BookingSummary }) {
 }
 
 function ContactActions() {
+  const t = useDict().payment
   return (
     <div className="flex flex-wrap items-center justify-center gap-3">
       <Link
         href="/tours"
         className="text-sm font-semibold text-primary hover:underline"
       >
-        Browse tours
+        {t.browseTours}
       </Link>
       <a
         href="tel:+3544191600"
         className="text-sm font-semibold text-primary hover:underline"
       >
-        Call +354 419 1600
+        {fmt(t.callToBook, { phone: "+354 419 1600" })}
       </a>
     </div>
   )

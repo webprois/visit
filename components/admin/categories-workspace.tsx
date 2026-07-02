@@ -28,13 +28,19 @@ import {
   Trash2,
   Save,
   X,
+  Languages,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   createCategory,
   updateCategory,
   deleteCategory,
+  translateCategoryName,
 } from "@/app/actions/admin"
+import {
+  CATEGORY_ICON_NAMES,
+  getCategoryIcon,
+} from "@/lib/category-icons"
 import type { TourCategory } from "@/lib/db/schema"
 
 const LANGS = [
@@ -45,6 +51,10 @@ const LANGS = [
 ] as const
 
 type LangKey = (typeof LANGS)[number]["key"]
+
+// English is the source language (the main "Name" field), so it's not shown in
+// the translated-names grid — only the languages we translate into.
+const TRANSLATION_LANGS = LANGS.filter((l) => l.key !== "nameEn")
 
 function slugify(name: string): string {
   return name
@@ -274,6 +284,8 @@ function CategoryEditor({
   const [description, setDescription] = useState(category.description ?? "")
   const [sortOrder, setSortOrder] = useState<string>(String(category.sortOrder))
   const [imageUrl, setImageUrl] = useState(category.imageUrl ?? "")
+  const [icon, setIcon] = useState<string>(category.icon ?? "")
+  const [iconSearch, setIconSearch] = useState("")
   const [names, setNames] = useState<Record<LangKey, string>>({
     nameEn: category.nameEn ?? "",
     nameEs: category.nameEs ?? "",
@@ -282,6 +294,7 @@ function CategoryEditor({
   })
 
   const [uploading, setUploading] = useState(false)
+  const [translating, setTranslating] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [deleting, startDelete] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -289,6 +302,24 @@ function CategoryEditor({
   function handleNameChange(value: string) {
     setName(value)
     if (!slugEdited) setSlug(slugify(value))
+  }
+
+  async function autoTranslate() {
+    const source = name.trim()
+    if (!source) {
+      toast.error("Enter a name first")
+      return
+    }
+    setTranslating(true)
+    try {
+      const { es, pt, it } = await translateCategoryName(source)
+      setNames((prev) => ({ ...prev, nameEs: es, namePt: pt, nameIt: it }))
+      toast.success("Names translated")
+    } catch {
+      toast.error("Translation failed")
+    } finally {
+      setTranslating(false)
+    }
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -323,7 +354,10 @@ function CategoryEditor({
         description,
         sortOrder: Number(sortOrder),
         imageUrl,
+        icon,
         ...names,
+        // English is the source language: keep it in sync with the main name.
+        nameEn: name.trim(),
       })
       toast.success("Category saved")
       onSaved()
@@ -399,6 +433,60 @@ function CategoryEditor({
             </div>
           </div>
 
+          {/* Filter icon (shown next to the category in the tours filter list) */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label>Filter icon</Label>
+              {icon && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIcon("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Shown next to this category in the activities filter on the tours
+              page.
+            </p>
+            <Input
+              value={iconSearch}
+              onChange={(e) => setIconSearch(e.target.value)}
+              placeholder="Search icons…"
+              className="h-10"
+            />
+            <div className="grid grid-cols-8 gap-2 sm:grid-cols-12">
+              {CATEGORY_ICON_NAMES.filter((n) =>
+                n.toLowerCase().includes(iconSearch.trim().toLowerCase()),
+              ).map((n) => {
+                const Ico = getCategoryIcon(n)
+                if (!Ico) return null
+                const selected = icon === n
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setIcon(selected ? "" : n)}
+                    title={n}
+                    aria-label={n}
+                    aria-pressed={selected}
+                    className={
+                      "flex aspect-square items-center justify-center rounded-lg border transition-colors " +
+                      (selected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground")
+                    }
+                  >
+                    <Ico className="size-5" aria-hidden="true" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Name / Slug */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -454,9 +542,25 @@ function CategoryEditor({
 
           {/* Translated names */}
           <div className="flex flex-col gap-2">
-            <Label>Translated names</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label>Translated names</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={autoTranslate}
+                disabled={translating || !name.trim()}
+              >
+                {translating ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Languages className="size-4" />
+                )}
+                Auto-translate
+              </Button>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {LANGS.map((l) => (
+              {TRANSLATION_LANGS.map((l) => (
                 <div key={l.key} className="flex flex-col gap-1">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {l.label}

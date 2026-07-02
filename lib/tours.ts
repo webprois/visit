@@ -4,11 +4,12 @@ import {
   fetchTourTranslations,
   fetchTourDetail,
   fetchTourAvailability,
+  fetchTourAvailabilityUncached,
   type TourDetail,
   type ItineraryStep,
 } from "@/lib/bokun"
 import { db } from "@/lib/db"
-import { eq } from "drizzle-orm"
+import { eq, and, gte, lte, or, inArray, notInArray, sql } from "drizzle-orm"
 import {
   tourOverride,
   tourCategory,
@@ -16,6 +17,7 @@ import {
   startingLocation,
   tourStartingLocation,
   tourTranslation,
+  tourAvailability,
   type TourCategory,
   type StartingLocation,
 } from "@/lib/db/schema"
@@ -421,9 +423,14 @@ async function mapWithConcurrency<T, R>(
 
 /**
  * Keep only the tours that have at least one bookable departure between
- * `from` and `to` (inclusive) with room for `pax` travellers. Availability is
- * fetched from Bokun per tour, in parallel with a small concurrency cap, and
- * the underlying per-tour calls are cached so repeat searches are fast.
+ * `from` and `to` (inclusive) with room for `pax` travellers.
+ *
+ * Availability is served from the `tour_availability` table, which a cron job
+ * keeps fresh (see `refreshTourAvailability`). This turns search into a single
+ * indexed DB query instead of one Bokun call per tour. If the table has not
+ * been populated yet (e.g. right after a fresh deploy, before the first cron
+ * run) we transparently fall back to querying Bokun directly so search still
+ * works.
  */
 export async function filterToursByAvailability(
   tours: MergedTour[],
@@ -432,9 +439,55 @@ export async function filterToursByAvailability(
   pax: number,
 ): Promise<MergedTour[]> {
   const wanted = Math.max(1, pax)
-  // Fetch availability for the whole month(s) the range spans, so different
-  // searches within the same month share one cached per-tour result. We then
-  // narrow to the exact requested days in memory.
+  if (tours.length === 0) return []
+  const ids = tours.map((t) => t.bokunId)
+
+  // Ids that have at least one bookable day in the requested range, read from
+  // our server-side availability cache.
+  const rows = await db
+    .selectDistinct({ bokunId: tourAvailability.bokunId })
+    .from(tourAvailability)
+    .where(
+      and(
+        inArray(tourAvailability.bokunId, ids),
+        gte(tourAvailability.date, from),
+        lte(tourAvailability.date, to),
+        or(
+          eq(tourAvailability.unlimited, true),
+          gte(
+            tourAvailability.seats,
+            sql`GREATEST(${wanted}, ${tourAvailability.minPax})`,
+          ),
+        ),
+      ),
+    )
+
+  // If the cache is completely empty for these tours, it likely hasn't been
+  // populated yet — fall back to the live Bokun path for correctness.
+  if (rows.length === 0) {
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(tourAvailability)
+      .where(inArray(tourAvailability.bokunId, ids))
+    if (total === 0) {
+      return filterToursByAvailabilityLive(tours, from, to, wanted)
+    }
+  }
+
+  const available = new Set(rows.map((r) => r.bokunId))
+  return tours.filter((t) => available.has(t.bokunId))
+}
+
+/**
+ * Live availability filter that queries Bokun per tour (cached for 30 min).
+ * Used as a fallback when the server-side availability cache is empty.
+ */
+async function filterToursByAvailabilityLive(
+  tours: MergedTour[],
+  from: string,
+  to: string,
+  wanted: number,
+): Promise<MergedTour[]> {
   const windowStart = `${from.slice(0, 7)}-01`
   const ey = Number(to.slice(0, 4))
   const em = Number(to.slice(5, 7))
@@ -451,6 +504,106 @@ export async function filterToursByAvailability(
     )
   })
   return tours.filter((_, i) => flags[i])
+}
+
+/** How many days of availability to keep cached ahead of today. */
+const AVAILABILITY_WINDOW_DAYS = 365
+
+/**
+ * Refresh the server-side availability cache for every *published* tour.
+ * Fetches a rolling window (today → +1 year) of departures per tour and
+ * upserts them into `tour_availability`, replacing that tour's future rows.
+ *
+ * Only tours an admin has explicitly published (`tourOverride.visible`) are
+ * cached, since those are the only ones that can appear in search. Future rows
+ * for tours that are no longer published are pruned so the cache stays in sync
+ * with what the site shows. Intended to be run on a schedule by the
+ * availability cron. Returns a small summary.
+ */
+export async function refreshTourAvailability(): Promise<{
+  tours: number
+  rows: number
+}> {
+  const [allTours, visibleOverrides] = await Promise.all([
+    fetchAllTours(),
+    db
+      .select({ bokunId: tourOverride.bokunId })
+      .from(tourOverride)
+      .where(eq(tourOverride.visible, true)),
+  ])
+
+  // Only keep tours that both exist in Bokun and are published on the site.
+  const visibleIds = new Set(visibleOverrides.map((o) => o.bokunId))
+  const tours = allTours.filter((t) => visibleIds.has(String(t.id)))
+
+  const today = new Date().toISOString().slice(0, 10)
+  const end = new Date(Date.now() + AVAILABILITY_WINDOW_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
+
+  // Prune future availability for any tour that is no longer published, so the
+  // cache never serves departures for hidden tours.
+  const keepIds = tours.map((t) => String(t.id))
+  await db
+    .delete(tourAvailability)
+    .where(
+      and(
+        gte(tourAvailability.date, today),
+        keepIds.length > 0
+          ? notInArray(tourAvailability.bokunId, keepIds)
+          : sql`true`,
+      ),
+    )
+
+  let totalRows = 0
+
+  // Bounded concurrency keeps us within Bokun rate limits and the pg pool.
+  await mapWithConcurrency(tours, 8, async (tour) => {
+    const bokunId = String(tour.id)
+    const days = await fetchTourAvailabilityUncached(bokunId, today, end)
+
+    // Bokun can return several departures for the same day (different start
+    // times). We store one row per day, keeping the most bookable option:
+    // unlimited if any departure is unlimited, the largest seat count, and the
+    // smallest minimum-participant requirement.
+    const byDate = new Map<string, (typeof days)[number]>()
+    for (const d of days) {
+      const prev = byDate.get(d.date)
+      if (!prev) {
+        byDate.set(d.date, { ...d })
+      } else {
+        prev.unlimited = prev.unlimited || d.unlimited
+        prev.seats = Math.max(prev.seats, d.seats)
+        prev.minPax = Math.min(prev.minPax, d.minPax)
+      }
+    }
+    const values = Array.from(byDate.values()).map((d) => ({
+      bokunId,
+      date: d.date,
+      seats: d.seats,
+      unlimited: d.unlimited,
+      minPax: d.minPax,
+    }))
+
+    // Replace this tour's future rows atomically so search never sees a gap.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(tourAvailability)
+        .where(
+          and(
+            eq(tourAvailability.bokunId, bokunId),
+            gte(tourAvailability.date, today),
+          ),
+        )
+      if (values.length > 0) {
+        await tx.insert(tourAvailability).values(values)
+      }
+    })
+
+    totalRows += values.length
+  })
+
+  return { tours: tours.length, rows: totalRows }
 }
 
 /** A single visible tour by its Bokun id, or null if missing/hidden. */

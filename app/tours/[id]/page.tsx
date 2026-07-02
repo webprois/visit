@@ -9,6 +9,8 @@ import { TourMapSection } from "@/components/tour/tour-map-section"
 import { getFullTour, getRelatedTours } from "@/lib/tours"
 import { fetchBookableSlots, fetchTourExtras, fetchTourPickup } from "@/lib/bokun"
 import { getLocale } from "@/lib/get-locale"
+import { getDictionary, fmt } from "@/lib/translations"
+import { translateTexts } from "@/lib/translate"
 import { Price } from "@/components/price"
 import {
   Clock,
@@ -27,11 +29,6 @@ import {
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
-
-const TYPE_LABELS: Record<"day" | "multi-day", string> = {
-  day: "Day Tour",
-  "multi-day": "Multi-Day Tour",
-}
 
 export async function generateMetadata({
   params,
@@ -58,6 +55,7 @@ export default async function TourPage({
 }) {
   const { id } = await params
   const locale = await getLocale()
+  const dict = getDictionary(locale)
   const tour = await getFullTour(id, locale)
   if (!tour) notFound()
 
@@ -91,9 +89,36 @@ export default async function TourPage({
     pickup = null
   }
 
+  // Auto-translate dynamic booking content (add-on names/descriptions and
+  // participant category labels) coming straight from Bokun in English into the
+  // active language. All strings are batched into one cached call; English is a
+  // no-op. On failure the original English text is used.
+  if (locale !== "en") {
+    const extraStrings = extras.flatMap((e) => [e.title, e.information])
+    const lineTitles = slots.flatMap((s) => s.lines.map((l) => l.title))
+    const sources = [...extraStrings, ...lineTitles]
+
+    if (sources.length > 0) {
+      const translated = await translateTexts(sources, locale)
+      const map = new Map<string, string>()
+      sources.forEach((src, i) => map.set(src, translated[i] ?? src))
+      const tr = (s: string) => map.get(s) ?? s
+
+      extras = extras.map((e) => ({
+        ...e,
+        title: tr(e.title),
+        information: tr(e.information),
+      }))
+      slots = slots.map((s) => ({
+        ...s,
+        lines: s.lines.map((l) => ({ ...l, title: tr(l.title) })),
+      }))
+    }
+  }
+
   // Resolved display values (admin override → Bokun → fallback).
-  const durationText = tour.duration || detail?.durationText || "Flexible"
-  const locationText = tour.location || detail?.location || "Iceland"
+  const durationText = tour.duration || detail?.durationText || dict.detail.flexible
+  const locationText = tour.location || detail?.location || dict.detail.iceland
   const priceAmount = tour.price > 0 ? tour.price : (detail?.priceAmount ?? 0)
 
   const paragraphs = tour.fullDescription
@@ -103,14 +128,18 @@ export default async function TourPage({
 
   // Hero facts — compact, scannable tour basics, all consolidated into the
   // header (the separate quick-facts strip was dropped to avoid duplication).
+  const typeLabel =
+    tour.tourType === "multi-day" ? dict.detail.multiDayTour : dict.detail.dayTour
   const heroFacts = [
-    { icon: CalendarDays, text: TYPE_LABELS[tour.tourType] },
+    { icon: CalendarDays, text: typeLabel },
     { icon: Clock, text: durationText },
     { icon: MapPin, text: locationText },
     tour.groupSizeLabel ? { icon: Users, text: tour.groupSizeLabel } : null,
     tour.difficultyLabel ? { icon: Gauge, text: tour.difficultyLabel } : null,
-    detail?.hasPickup ? { icon: Bus, text: "Hotel pickup included" } : null,
-    detail?.minAge ? { icon: Baby, text: `Min age ${detail.minAge}` } : null,
+    detail?.hasPickup ? { icon: Bus, text: dict.detail.hotelPickup } : null,
+    detail?.minAge
+      ? { icon: Baby, text: fmt(dict.detail.minAge, { age: detail.minAge }) }
+      : null,
   ].filter((x): x is { icon: typeof Clock; text: string } => Boolean(x))
 
   // Prefer the admin-curated gallery; fall back to Bokun photos, then the hero.
@@ -136,8 +165,11 @@ export default async function TourPage({
       <SiteHeader locale={locale} />
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
-        <section className="relative">
-          <div className="relative h-[52vh] min-h-[26rem] w-full overflow-hidden md:h-[60vh]">
+        <section className="relative isolate flex min-h-[52vh] flex-col justify-between overflow-hidden md:min-h-[60vh] lg:justify-end">
+          {/* Background image + overlays fill the whole section so the content
+              can grow (e.g. long titles on mobile) without hiding behind the
+              sticky header. */}
+          <div className="absolute inset-0 -z-10">
             <Image
               src={heroImage || "/placeholder.svg"}
               alt={tour.title}
@@ -151,29 +183,57 @@ export default async function TourPage({
             <div className="absolute inset-0 bg-background/20" />
           </div>
 
-          <div className="absolute inset-x-0 bottom-0">
-            <div className="mx-auto max-w-7xl px-4 pb-8 md:px-6 md:pb-12">
-              <nav
-                aria-label="Breadcrumb"
-                className="mb-4 flex items-center gap-1 text-sm text-muted-foreground"
+          {/* Mobile only: breadcrumb pinned to the top, just under the header. */}
+          <div className="mx-auto w-full max-w-7xl px-4 pt-6 md:pt-20 lg:hidden">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1 text-sm text-muted-foreground"
+            >
+              <a href="/" className="transition-colors hover:text-foreground">
+                {dict.detail.home}
+              </a>
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              <a
+                href="/tours"
+                className="transition-colors hover:text-foreground"
               >
-                <a href="/" className="transition-colors hover:text-foreground">
-                  Home
-                </a>
-                <ChevronRight className="size-4" aria-hidden="true" />
-                <a
-                  href="/tours"
-                  className="transition-colors hover:text-foreground"
-                >
-                  Tours
-                </a>
-                <ChevronRight className="size-4" aria-hidden="true" />
-                <span className="truncate text-foreground">{tour.title}</span>
-              </nav>
+                {dict.detail.tours}
+              </a>
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate text-foreground">{tour.title}</span>
+            </nav>
+          </div>
 
+          <div className="w-full">
+            {/* pb keeps content off the section edge. */}
+            <div className="mx-auto max-w-7xl px-4 pb-4 pt-6 md:px-6 md:pb-12">
               <div className="lg:relative">
                 {/* Left: title + subtitle + facts */}
                 <div className="lg:max-w-[calc(100%-18rem)]">
+                  {/* Desktop only: breadcrumb grouped above the title. */}
+                  <nav
+                    aria-label="Breadcrumb"
+                    className="mb-4 hidden items-center gap-1 text-sm text-muted-foreground lg:flex"
+                  >
+                    <a
+                      href="/"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      {dict.detail.home}
+                    </a>
+                    <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                    <a
+                      href="/tours"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      {dict.detail.tours}
+                    </a>
+                    <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                    <span className="truncate text-foreground">
+                      {tour.title}
+                    </span>
+                  </nav>
+
                   <div className="flex flex-wrap items-center gap-2">
                     {(tour.categoryNames.length > 0
                       ? tour.categoryNames
@@ -212,20 +272,20 @@ export default async function TourPage({
                     with the facts (absolute) so the spacing below the hero stays
                     constant regardless of how tall the title is. */}
                 <div className="mt-6 rounded-2xl border border-border bg-card/80 p-5 backdrop-blur lg:absolute lg:bottom-0 lg:right-0 lg:mt-0 lg:w-64">
-                  <span className="text-xs text-muted-foreground">From</span>
+                  <span className="text-xs text-muted-foreground">{dict.detail.from}</span>
                   <p className="font-heading text-3xl font-extrabold text-foreground">
-                    <Price isk={priceAmount} fallback="Contact us" />
+                    <Price isk={priceAmount} fallback={dict.detail.contactUs} />
                   </p>
                   {priceAmount > 0 && (
                     <span className="text-xs text-muted-foreground">
-                      per person
+                      {dict.detail.perPerson}
                     </span>
                   )}
                   <a
                     href="#book"
                     className="mt-4 flex w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
-                    Book now
+                    {dict.detail.bookNow}
                   </a>
                 </div>
               </div>
@@ -234,8 +294,8 @@ export default async function TourPage({
         </section>
 
         {/* Body */}
-        <section className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
-          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-12">
+        <section className="mx-auto max-w-7xl px-4 pb-10 pt-6 md:px-6 md:py-14">
+          <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[1fr_380px]">
             {/* Left: content */}
             <div className="flex flex-col gap-12">
               {/* Gallery */}
@@ -253,7 +313,7 @@ export default async function TourPage({
                   id="about-heading"
                   className="font-heading text-2xl font-extrabold text-foreground md:text-3xl"
                 >
-                  About this tour
+                  {dict.detail.about}
                 </h2>
                 {paragraphs.length > 0 ? (
                   <div className="mt-4 flex flex-col gap-4 text-pretty text-base leading-relaxed text-muted-foreground">
@@ -263,8 +323,7 @@ export default async function TourPage({
                   </div>
                 ) : (
                   <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                    {tour.excerpt?.trim() ||
-                      "Contact us for full details about this experience."}
+                    {tour.excerpt?.trim() || dict.detail.aboutFallback}
                   </p>
                 )}
               </section>
@@ -276,13 +335,13 @@ export default async function TourPage({
                     id="included-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    What&apos;s included
+                    {dict.detail.whatsIncluded}
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {tour.includedItems.length > 0 && (
                       <div className="rounded-2xl border border-border bg-card p-5">
                         <p className="font-heading text-sm font-bold text-foreground">
-                          Included
+                          {dict.detail.included}
                         </p>
                         <ul className="mt-3 flex flex-col gap-2.5">
                           {tour.includedItems.map((item, i) => (
@@ -303,7 +362,7 @@ export default async function TourPage({
                     {tour.excludedItems.length > 0 && (
                       <div className="rounded-2xl border border-border bg-card p-5">
                         <p className="font-heading text-sm font-bold text-foreground">
-                          Not included
+                          {dict.detail.notIncluded}
                         </p>
                         <ul className="mt-3 flex flex-col gap-2.5">
                           {tour.excludedItems.map((item, i) => (
@@ -332,7 +391,7 @@ export default async function TourPage({
                     id="itinerary-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    Itinerary
+                    {dict.detail.itinerary}
                   </h2>
                   <ol className="relative mt-6 flex flex-col gap-7 border-l border-border pl-7">
                     {tour.itinerary.map((step, i) => (
@@ -364,7 +423,7 @@ export default async function TourPage({
                     id="know-heading"
                     className="font-heading text-2xl font-extrabold text-foreground"
                   >
-                    Know before you go
+                    {dict.detail.knowBefore}
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     {detail?.requirements && (
@@ -382,7 +441,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            What to bring
+                            {dict.detail.whatToBring}
                           </p>
                         </div>
                         <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
@@ -403,7 +462,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            Good to know
+                            {dict.detail.goodToKnow}
                           </p>
                         </div>
                         <ul className="mt-3 flex flex-col gap-2.5">
@@ -430,7 +489,7 @@ export default async function TourPage({
                             aria-hidden="true"
                           />
                           <p className="font-heading text-sm font-bold text-foreground">
-                            Important information
+                            {dict.detail.importantInfo}
                           </p>
                         </div>
                         <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
@@ -455,7 +514,7 @@ export default async function TourPage({
             {/* Right: booking panel */}
             <aside
               id="book"
-              className="scroll-mt-24 pb-24 lg:self-start lg:pb-0"
+              className="scroll-mt-24 lg:sticky lg:top-24 lg:self-start"
             >
               <BookingForm
                 bokunId={tour.bokunId}
@@ -474,7 +533,7 @@ export default async function TourPage({
           <section className="bg-secondary/40 py-14">
             <div className="mx-auto max-w-7xl px-4 md:px-6">
               <h2 className="font-heading text-2xl font-extrabold text-foreground md:text-3xl">
-                Explore similar adventures
+                {dict.detail.relatedTitle}
               </h2>
               <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((t) => (
@@ -510,7 +569,7 @@ export default async function TourPage({
                         </span>
                       </div>
                       <div className="mt-5 border-t border-border pt-4">
-                        <span className="text-xs text-muted-foreground">From</span>
+                        <span className="text-xs text-muted-foreground">{dict.detail.from}</span>
                         <p className="font-heading text-xl font-extrabold text-foreground">
                           <Price isk={t.price} />
                         </p>

@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { PaymentStatus } from "@/components/payment-status"
 import { getLocale } from "@/lib/get-locale"
+import { getServerDict } from "@/lib/get-dictionary"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +17,11 @@ export default async function PaymentSuccessPage({
 }: {
   searchParams: Promise<{ bookingId?: string }>
 }) {
-  const [{ bookingId }, locale] = await Promise.all([searchParams, getLocale()])
+  const [{ bookingId }, locale, dict] = await Promise.all([
+    searchParams,
+    getLocale(),
+    getServerDict(),
+  ])
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -26,7 +31,7 @@ export default async function PaymentSuccessPage({
           <PaymentStatus bookingId={bookingId} />
         ) : (
           <div className="mx-auto max-w-md px-4 py-20 text-center text-muted-foreground">
-            Missing booking reference.
+            {dict.payment.missingRef}
           </div>
         )}
       </main>

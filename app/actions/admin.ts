@@ -19,6 +19,7 @@ import {
   type TourTranslation,
 } from "@/lib/bokun"
 import { autoCategorizeTours } from "@/lib/tours"
+import { translateTexts } from "@/lib/translate"
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
 import { generateText, Output } from "ai"
 import { z } from "zod"
@@ -258,6 +259,7 @@ export type CategoryDetailsInput = {
   description?: string | null
   sortOrder?: number | null
   imageUrl?: string | null
+  icon?: string | null
   nameEn?: string | null
   nameEs?: string | null
   namePt?: string | null
@@ -273,6 +275,7 @@ export async function updateCategory(id: number, input: CategoryDetailsInput) {
   const values: Partial<typeof tourCategory.$inferInsert> = {
     description: input.description?.trim() || null,
     imageUrl: input.imageUrl?.trim() || null,
+    icon: input.icon?.trim() || null,
     nameEn: input.nameEn?.trim() || null,
     nameEs: input.nameEs?.trim() || null,
     namePt: input.namePt?.trim() || null,
@@ -393,6 +396,25 @@ export async function getTourTranslations(
 ): Promise<TourTranslation[]> {
   await requireAuth()
   return fetchTourTranslations(bokunId)
+}
+
+/**
+ * Auto-translate a category name from English into the other published
+ * languages (es/pt/it). English is the source, so it's not returned. Results
+ * are cached per language via `translateTexts`.
+ */
+export async function translateCategoryName(
+  name: string,
+): Promise<{ es: string; pt: string; it: string }> {
+  await requireAuth()
+  const source = name.trim()
+  if (!source) return { es: "", pt: "", it: "" }
+  const [es, pt, it] = await Promise.all([
+    translateTexts([source], "es"),
+    translateTexts([source], "pt"),
+    translateTexts([source], "it"),
+  ])
+  return { es: es[0] ?? "", pt: pt[0] ?? "", it: it[0] ?? "" }
 }
 
 /* ---------------- Per-language editable content ---------------- */

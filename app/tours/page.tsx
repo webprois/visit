@@ -10,6 +10,7 @@ import {
   filterToursByAvailability,
 } from "@/lib/tours"
 import { getLocale } from "@/lib/get-locale"
+import { getDictionary, fmt } from "@/lib/translations"
 import { CalendarDays, Users, X } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -20,12 +21,19 @@ export const metadata: Metadata = {
     "Browse all our tours across Iceland. Search and filter by category to find your perfect adventure.",
 }
 
+const DATE_LOCALES: Record<string, string> = {
+  en: "en-US",
+  es: "es-ES",
+  pt: "pt-PT",
+  it: "it-IT",
+}
+
 /** Format a YYYY-MM-DD string into a short readable label, e.g. "Jul 7, 2026". */
-function formatDate(ymd: string): string {
+function formatDate(ymd: string, locale: string): string {
   const [y, m, d] = ymd.split("-").map(Number)
   if (!y || !m || !d) return ymd
   const date = new Date(y, m - 1, d)
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(DATE_LOCALES[locale] ?? "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -47,6 +55,7 @@ export default async function ToursPage({
   searchParams: Promise<SearchParams>
 }) {
   const locale = await getLocale()
+  const dict = getDictionary(locale)
   const [params, allTours, categories] = await Promise.all([
     searchParams,
     getVisibleTours(locale),
@@ -70,7 +79,9 @@ export default async function ToursPage({
     activeCategories.length === 1
       ? categoryName(activeCategories[0], locale)
       : activeCategories.length > 1
-        ? `${activeCategories.length} experiences`
+        ? fmt(dict.toursPage.experiencesSelected, {
+            count: activeCategories.length,
+          })
         : null
 
   // Parse date + traveler search context.
@@ -93,12 +104,15 @@ export default async function ToursPage({
     tours = await filterToursByAvailability(tours, from, to, pax)
   }
 
-  const travelerLabel = `${pax} ${pax === 1 ? "traveler" : "travelers"}`
+  const travelerLabel = fmt(
+    pax === 1 ? dict.toursPage.traveler : dict.toursPage.travelers,
+    { count: pax },
+  )
   const dateLabel =
     from && to && from !== to
-      ? `${formatDate(from)} – ${formatDate(to)}`
+      ? `${formatDate(from, locale)} – ${formatDate(to, locale)}`
       : from
-        ? formatDate(from)
+        ? formatDate(from, locale)
         : null
 
   return (
@@ -108,10 +122,10 @@ export default async function ToursPage({
         <section className="bg-secondary/40">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
             <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
-              Tours & adventures
+              {dict.toursPage.eyebrow}
             </p>
             <h1 className="mt-2 text-balance font-heading text-3xl font-extrabold text-foreground md:text-5xl">
-              {activeName ?? "All tours"}
+              {activeName ?? dict.toursPage.allTours}
             </h1>
             {activeCategory?.description ? (
               <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
@@ -119,8 +133,7 @@ export default async function ToursPage({
               </p>
             ) : (
               <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-                {tours.length} handpicked tours across Iceland. Search or filter
-                by category to find your next experience.
+                {fmt(dict.toursPage.description, { count: tours.length })}
               </p>
             )}
 
@@ -128,7 +141,12 @@ export default async function ToursPage({
             {hasDateSearch && (
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <span className="text-sm font-medium text-foreground">
-                  {tours.length} {tours.length === 1 ? "tour" : "tours"} available
+                  {fmt(
+                    tours.length === 1
+                      ? dict.toursPage.availableOne
+                      : dict.toursPage.available,
+                    { count: tours.length },
+                  )}
                 </span>
                 {dateLabel && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm text-foreground">
@@ -145,7 +163,7 @@ export default async function ToursPage({
                   className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                 >
                   <X className="size-4" aria-hidden="true" />
-                  Clear search
+                  {dict.toursPage.clearSearch}
                 </Link>
               </div>
             )}
@@ -156,16 +174,16 @@ export default async function ToursPage({
           {hasDateSearch && tours.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-10 text-center">
               <p className="font-heading text-xl font-bold text-foreground">
-                No tours available for these dates
+                {dict.toursPage.noDatesTitle}
               </p>
               <p className="mt-2 text-muted-foreground">
-                Try different dates, fewer travelers, or browse all tours.
+                {dict.toursPage.noDatesText}
               </p>
               <Link
                 href="/tours"
                 className="mt-5 inline-flex text-sm font-semibold text-primary hover:underline"
               >
-                Browse all tours
+                {dict.toursPage.browseAll}
               </Link>
             </div>
           ) : (
