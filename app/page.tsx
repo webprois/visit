@@ -62,12 +62,17 @@ export default async function Page() {
     )
     .map((t) => {
       const cat = t.categoryId != null ? categoryById.get(t.categoryId) : undefined
+      // Prefer the curated admin gallery; fall back to the primary Bokun image.
+      const galleryUrls = t.gallery.map((g) => g.url).filter(Boolean)
+      const images =
+        galleryUrls.length > 0 ? galleryUrls : t.image ? [t.image] : []
       return {
         id: t.id as number,
         title: t.title,
         lat: t.lat as number,
         lng: t.lng as number,
-        image: t.image,
+        images,
+        excerpt: t.excerpt,
         location: t.location,
         duration: t.duration,
         price: t.price,

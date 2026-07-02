@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import L from "leaflet"
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
 import MarkerClusterGroup from "react-leaflet-cluster"
-import { Clock, MapPin } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, MapPin } from "lucide-react"
 import Link from "next/link"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { Price } from "@/components/price"
@@ -17,7 +17,10 @@ export type MapTourPoint = {
   title: string
   lat: number
   lng: number
-  image: string
+  /** Ordered images shown in the popup carousel (first is the primary photo). */
+  images: string[]
+  /** Short marketing description shown in the popup. */
+  excerpt: string | null
   location: string
   duration: string
   price: number
@@ -81,6 +84,99 @@ function FitToPoints({ points }: { points: MapTourPoint[] }) {
     return () => clearTimeout(t)
   }, [map, points])
   return null
+}
+
+/** Popup card with a swipeable image carousel, short description and CTA. */
+function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels }) {
+  const images = point.images.length > 0 ? point.images : ["/placeholder.svg"]
+  const [index, setIndex] = useState(0)
+  const hasMultiple = images.length > 1
+
+  const go = (delta: number) => (e: React.MouseEvent) => {
+    // Keep the click from bubbling to the map / closing the popup.
+    e.preventDefault()
+    e.stopPropagation()
+    setIndex((i) => (i + delta + images.length) % images.length)
+  }
+
+  return (
+    <div className="w-64">
+      <div className="group relative h-32 w-full overflow-hidden bg-muted">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={images[index] || "/placeholder.svg"}
+          alt={point.title}
+          className="h-full w-full object-cover"
+        />
+        {hasMultiple && (
+          <>
+            <button
+              type="button"
+              onClick={go(-1)}
+              aria-label="Previous photo"
+              className="absolute left-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={go(1)}
+              aria-label="Next photo"
+              className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
+            <div className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1">
+              {images.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === index ? "w-4 bg-white" : "w-1.5 bg-white/55"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="p-3">
+        <h3 className="font-heading text-sm font-bold leading-snug text-card-foreground">
+          {point.title}
+        </h3>
+        {point.excerpt && (
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            {point.excerpt}
+          </p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+            {point.location}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+            {point.duration}
+          </span>
+        </div>
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <div className="leading-tight">
+            <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+              {labels.from}
+            </span>
+            <p className="font-heading text-lg font-extrabold text-card-foreground">
+              <Price isk={point.price} />
+            </p>
+          </div>
+          <Link
+            href={`/tours/${point.id}`}
+            className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+          >
+            {labels.viewTour}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /** Interactive dark map of Iceland with a marker per tour. */
@@ -148,55 +244,7 @@ export default function HomeMap({
           {points.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={markerIcon(p)}>
             <Popup>
-              <div className="w-60">
-                <div className="relative h-28 w-full overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.image || "/placeholder.svg"}
-                    alt={p.title}
-                    className="h-full w-full object-cover"
-                  />
-                  {p.category && (
-                    <span
-                      className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm"
-                      style={{ backgroundColor: p.color }}
-                    >
-                      {p.category}
-                    </span>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="font-heading text-sm font-bold leading-snug text-card-foreground">
-                    {p.title}
-                  </h3>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
-                      {p.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="size-3.5 shrink-0" aria-hidden="true" />
-                      {p.duration}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-end justify-between gap-2">
-                    <div className="leading-tight">
-                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {labels.from}
-                      </span>
-                      <p className="font-heading text-lg font-extrabold text-card-foreground">
-                        <Price isk={p.price} />
-                      </p>
-                    </div>
-                    <Link
-                      href={`/tours/${p.id}`}
-                      className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-                    >
-                      {labels.viewTour}
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <TourPopupCard point={p} labels={labels} />
             </Popup>
           </Marker>
           ))}
