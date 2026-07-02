@@ -82,7 +82,7 @@ export default function HomeMap({
   return (
     <div className="relative h-full w-full">
       {/* Map / Satellite toggle */}
-      <div className="absolute left-3 top-3 z-[1000] flex overflow-hidden rounded-full bg-card/90 p-1 shadow-lg backdrop-blur">
+      <div className="absolute right-3 top-3 z-[1000] flex overflow-hidden rounded-full bg-card/90 p-1 shadow-lg backdrop-blur">
         {(["map", "satellite"] as const).map((v) => (
           <button
             key={v}
