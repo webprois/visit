@@ -28,12 +28,14 @@ import {
   Trash2,
   Save,
   X,
+  Languages,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   createCategory,
   updateCategory,
   deleteCategory,
+  translateCategoryName,
 } from "@/app/actions/admin"
 import type { TourCategory } from "@/lib/db/schema"
 
@@ -45,6 +47,10 @@ const LANGS = [
 ] as const
 
 type LangKey = (typeof LANGS)[number]["key"]
+
+// English is the source language (the main "Name" field), so it's not shown in
+// the translated-names grid — only the languages we translate into.
+const TRANSLATION_LANGS = LANGS.filter((l) => l.key !== "nameEn")
 
 function slugify(name: string): string {
   return name
@@ -282,6 +288,7 @@ function CategoryEditor({
   })
 
   const [uploading, setUploading] = useState(false)
+  const [translating, setTranslating] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [deleting, startDelete] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -289,6 +296,24 @@ function CategoryEditor({
   function handleNameChange(value: string) {
     setName(value)
     if (!slugEdited) setSlug(slugify(value))
+  }
+
+  async function autoTranslate() {
+    const source = name.trim()
+    if (!source) {
+      toast.error("Enter a name first")
+      return
+    }
+    setTranslating(true)
+    try {
+      const { es, pt, it } = await translateCategoryName(source)
+      setNames((prev) => ({ ...prev, nameEs: es, namePt: pt, nameIt: it }))
+      toast.success("Names translated")
+    } catch {
+      toast.error("Translation failed")
+    } finally {
+      setTranslating(false)
+    }
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -324,6 +349,8 @@ function CategoryEditor({
         sortOrder: Number(sortOrder),
         imageUrl,
         ...names,
+        // English is the source language: keep it in sync with the main name.
+        nameEn: name.trim(),
       })
       toast.success("Category saved")
       onSaved()
@@ -454,9 +481,25 @@ function CategoryEditor({
 
           {/* Translated names */}
           <div className="flex flex-col gap-2">
-            <Label>Translated names</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label>Translated names</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={autoTranslate}
+                disabled={translating || !name.trim()}
+              >
+                {translating ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Languages className="size-4" />
+                )}
+                Auto-translate
+              </Button>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {LANGS.map((l) => (
+              {TRANSLATION_LANGS.map((l) => (
                 <div key={l.key} className="flex flex-col gap-1">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {l.label}
