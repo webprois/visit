@@ -284,6 +284,23 @@ export const translationCache = pgTable(
   }),
 )
 
+/**
+ * Newsletter signups collected from the footer signup form. Guest data (like
+ * bookings), so there is no userId scoping. Email is unique so re-subscribing
+ * is idempotent.
+ */
+export const newsletterSubscriber = pgTable("newsletter_subscriber", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  locale: text("locale"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export type NewsletterSubscriber = typeof newsletterSubscriber.$inferSelect
+export type NewNewsletterSubscriber = typeof newsletterSubscriber.$inferInsert
+
 export type TranslationCache = typeof translationCache.$inferSelect
 export type NewTranslationCache = typeof translationCache.$inferInsert
 

@@ -89,10 +89,16 @@ const en = {
     readAll: "Read all reviews on Google",
   },
   footer: {
-    ctaTitle: "Start your Icelandic adventure today",
-    ctaSubtitle: "Questions? We're here to help you plan the perfect trip.",
+    ctaTitle: "Join our newsletter",
+    ctaSubtitle:
+      "Get travel tips, seasonal offers and new tours straight to your inbox.",
     browseTours: "Browse tours",
     contactUs: "Contact us",
+    newsletterPlaceholder: "Enter your email",
+    newsletterButton: "Subscribe",
+    newsletterSuccess: "Thanks for subscribing!",
+    newsletterInvalid: "Please enter a valid email address.",
+    newsletterError: "Something went wrong. Please try again.",
     tagline:
       "Your gateway to extraordinary adventures in the land of fire and ice.",
     toursTitle: "Tours",
@@ -387,11 +393,16 @@ const es: Dictionary = {
     readAll: "Leer todas las reseñas en Google",
   },
   footer: {
-    ctaTitle: "Comienza tu aventura islandesa hoy",
+    ctaTitle: "Únete a nuestro boletín",
     ctaSubtitle:
-      "¿Preguntas? Estamos aquí para ayudarte a planear el viaje perfecto.",
+      "Recibe consejos de viaje, ofertas de temporada y nuevos tours en tu correo.",
     browseTours: "Ver tours",
     contactUs: "Contáctanos",
+    newsletterPlaceholder: "Introduce tu correo",
+    newsletterButton: "Suscribirse",
+    newsletterSuccess: "¡Gracias por suscribirte!",
+    newsletterInvalid: "Introduce una dirección de correo válida.",
+    newsletterError: "Algo salió mal. Inténtalo de nuevo.",
     tagline:
       "Tu puerta de entrada a aventuras extraordinarias en la tierra del fuego y el hielo.",
     toursTitle: "Tours",
@@ -688,11 +699,16 @@ const pt: Dictionary = {
     readAll: "Ler todas as avaliações no Google",
   },
   footer: {
-    ctaTitle: "Comece a sua aventura islandesa hoje",
+    ctaTitle: "Subscreva a nossa newsletter",
     ctaSubtitle:
-      "Perguntas? Estamos aqui para o ajudar a planear a viagem perfeita.",
+      "Receba dicas de viagem, ofertas sazonais e novos tours no seu email.",
     browseTours: "Ver tours",
     contactUs: "Contacte-nos",
+    newsletterPlaceholder: "Introduza o seu email",
+    newsletterButton: "Subscrever",
+    newsletterSuccess: "Obrigado por subscrever!",
+    newsletterInvalid: "Introduza um endereço de email válido.",
+    newsletterError: "Algo correu mal. Tente novamente.",
     tagline:
       "A sua porta de entrada para aventuras extraordinárias na terra do fogo e do gelo.",
     toursTitle: "Tours",
@@ -989,11 +1005,16 @@ const it: Dictionary = {
     readAll: "Leggi tutte le recensioni su Google",
   },
   footer: {
-    ctaTitle: "Inizia oggi la tua avventura islandese",
+    ctaTitle: "Iscriviti alla nostra newsletter",
     ctaSubtitle:
-      "Domande? Siamo qui per aiutarti a pianificare il viaggio perfetto.",
+      "Ricevi consigli di viaggio, offerte stagionali e nuovi tour nella tua email.",
     browseTours: "Sfoglia i tour",
     contactUs: "Contattaci",
+    newsletterPlaceholder: "Inserisci la tua email",
+    newsletterButton: "Iscriviti",
+    newsletterSuccess: "Grazie per l'iscrizione!",
+    newsletterInvalid: "Inserisci un indirizzo email valido.",
+    newsletterError: "Qualcosa è andato storto. Riprova.",
     tagline:
       "La tua porta d'accesso ad avventure straordinarie nella terra del fuoco e del ghiaccio.",
     toursTitle: "Tour",

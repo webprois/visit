@@ -1,11 +1,12 @@
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
 import { Phone, Mail, MapPin } from "lucide-react"
 import { getServerDict } from "@/lib/get-dictionary"
-import { fmt } from "@/lib/translations"
+import { getLocale } from "@/lib/get-locale"
+import { NewsletterSignup } from "@/components/newsletter-signup"
 
 export async function SiteFooter() {
   const dict = await getServerDict()
+  const locale = await getLocale()
   return (
     <footer className="bg-background">
       {/* CTA */}
@@ -19,18 +20,16 @@ export async function SiteFooter() {
               {dict.footer.ctaSubtitle}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button size="lg" className="rounded-full">
-              {dict.footer.browseTours}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full"
-            >
-              {dict.footer.contactUs}
-            </Button>
-          </div>
+          <NewsletterSignup
+            locale={locale}
+            labels={{
+              placeholder: dict.footer.newsletterPlaceholder,
+              button: dict.footer.newsletterButton,
+              success: dict.footer.newsletterSuccess,
+              invalid: dict.footer.newsletterInvalid,
+              error: dict.footer.newsletterError,
+            }}
+          />
         </div>
       </div>
 
