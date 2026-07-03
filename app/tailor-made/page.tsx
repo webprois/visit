@@ -21,7 +21,7 @@ export default async function TailorMadePage() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1">
-        {/* Hero */}
+        {/* Hero + intro with shared background */}
         <section className="relative isolate">
           <Image
             src="/images/tailor-made-hero.png"
@@ -31,24 +31,18 @@ export default async function TailorMadePage() {
             className="-z-10 object-cover"
             sizes="100vw"
           />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/55 to-background/95" />
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
-          <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-28">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/60 to-background" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_70%_at_50%_0%,transparent_30%,var(--background)_100%)]" />
+          <div className="mx-auto max-w-7xl px-4 pb-14 pt-20 md:px-6 md:pb-20 md:pt-28">
             <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
               {t.title}
             </h1>
-            <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
-              {t.subtitle}
-            </p>
-          </div>
-        </section>
-
-        {/* Intro copy */}
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
-          <div className="flex max-w-3xl flex-col gap-5 text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-            <p>{t.intro1}</p>
-            <p>{t.intro2}</p>
-            <p>{t.intro3}</p>
+            <div className="mt-8 flex max-w-3xl flex-col gap-5 text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
+              <p>{t.subtitle}</p>
+              <p>{t.intro1}</p>
+              <p>{t.intro2}</p>
+              <p>{t.intro3}</p>
+            </div>
           </div>
         </section>
 
