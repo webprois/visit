@@ -7,6 +7,7 @@ import { contactMessage } from "@/lib/db/schema"
 export type ContactInput = {
   fullName: string
   email: string
+  phone?: string
   message: string
   locale?: string
 }
@@ -20,6 +21,7 @@ export async function submitContactMessage(
 ): Promise<ContactResult> {
   const fullName = input.fullName?.trim()
   const email = input.email?.trim().toLowerCase()
+  const phone = input.phone?.trim() || null
   const message = input.message?.trim()
 
   if (!fullName || !email || !EMAIL_RE.test(email) || !message) {
@@ -31,6 +33,7 @@ export async function submitContactMessage(
       id: randomUUID(),
       fullName,
       email,
+      phone,
       message,
       locale: input.locale,
     })

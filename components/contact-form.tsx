@@ -22,13 +22,14 @@ export function ContactForm() {
 
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [message, setMessage] = useState("")
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setStatus("idle")
     startTransition(async () => {
-      const res = await submitContactMessage({ fullName, email, message, locale })
+      const res = await submitContactMessage({ fullName, email, phone, message, locale })
       if (res.ok) {
         setStatus("success")
       } else {
@@ -86,6 +87,19 @@ export function ContactForm() {
           required
           placeholder={t.emailPlaceholder}
           autoComplete="email"
+          className={FIELD_CLASS}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="ct-phone">{t.phoneField}</Label>
+        <Input
+          id="ct-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder={t.phoneFieldPlaceholder}
+          autoComplete="tel"
           className={FIELD_CLASS}
         />
       </div>

@@ -341,6 +341,7 @@ export const contactMessage = pgTable("contact_message", {
   id: text("id").primaryKey(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   message: text("message").notNull(),
   locale: text("locale"),
   status: text("status").notNull().default("new"),
