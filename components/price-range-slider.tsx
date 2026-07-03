@@ -36,13 +36,17 @@ export function PriceRangeSlider({
 
   return (
     <div className="relative h-5 select-none">
-      {/* Base track */}
-      <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-secondary" />
-      {/* Filled range */}
-      <div
-        className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
-        style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
-      />
+      {/* Track area inset by half a thumb (10px) on each side so the rail and
+          fill line up with the native range thumbs and never overflow. */}
+      <div className="absolute inset-x-2.5 top-1/2 -translate-y-1/2">
+        {/* Base track */}
+        <div className="h-1.5 w-full rounded-full bg-secondary" />
+        {/* Filled range */}
+        <div
+          className="absolute top-0 h-1.5 rounded-full bg-primary"
+          style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
+        />
+      </div>
       {/* Low handle */}
       <input
         type="range"
