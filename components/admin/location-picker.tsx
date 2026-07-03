@@ -82,7 +82,7 @@ export function LocationPicker({
 
       <p className="text-xs text-muted-foreground">
         Click the map to add a stop, or drag a pin to move it. Add several stops
-        for multi-location tours (e.g. self-drives) — they&apos;ll be connected
+        for multi-location tours (e.g. self-drives); they&apos;ll be connected
         as a route. Leave empty to use the coordinates from Bokun.
       </p>
 

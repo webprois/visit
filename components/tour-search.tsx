@@ -146,7 +146,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
 
   const datesLabel =
     from && to
-      ? `${shortLabel(from)} – ${shortLabel(to)}`
+      ? `${shortLabel(from)} - ${shortLabel(to)}`
       : from
         ? shortLabel(from)
         : null

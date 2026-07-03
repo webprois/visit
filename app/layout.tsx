@@ -17,7 +17,7 @@ const bricolage = Bricolage_Grotesque({
 })
 
 export const metadata: Metadata = {
-  title: 'Visit Iceland — Tours & Travel Adventures',
+  title: 'Visit Iceland | Tours & Travel Adventures',
   description:
     'Discover unforgettable adventures across Iceland. Explore over 70 handpicked day tours, multi-day journeys, private tours and reliable transportation with visit.is.',
   generator: 'v0.app',

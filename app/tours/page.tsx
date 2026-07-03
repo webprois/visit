@@ -16,7 +16,7 @@ import { CalendarDays, Users, X } from "lucide-react"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "All Tours — Visit.is",
+  title: "All Tours | Visit.is",
   description:
     "Browse all our tours across Iceland. Search and filter by category to find your perfect adventure.",
 }
@@ -110,7 +110,7 @@ export default async function ToursPage({
   )
   const dateLabel =
     from && to && from !== to
-      ? `${formatDate(from, locale)} – ${formatDate(to, locale)}`
+      ? `${formatDate(from, locale)} - ${formatDate(to, locale)}`
       : from
         ? formatDate(from, locale)
         : null

@@ -22,7 +22,7 @@ export function TourGallery({
   const photos = images.filter(Boolean)
   // Resolve alt text for a photo: curated alt → a sensible generated default.
   const altFor = (i: number) =>
-    alts?.[i]?.trim() || `${title} — photo ${i + 1}`
+    alts?.[i]?.trim() || `${title} photo ${i + 1}`
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const touchStartX = useRef<number | null>(null)

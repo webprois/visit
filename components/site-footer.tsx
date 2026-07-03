@@ -92,7 +92,7 @@ export async function SiteFooter() {
 
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground md:flex-row md:px-6">
-          <p>© {new Date().getFullYear()} visit.is — {dict.footer.rights}</p>
+          <p>© {new Date().getFullYear()} visit.is · {dict.footer.rights}</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-foreground">{dict.footer.privacy}</a>
             <a href="#" className="hover:text-foreground">{dict.footer.terms}</a>

@@ -48,7 +48,7 @@ export function AdminShell({
       const result = await refreshBokun()
       if (result && result.toursUpdated > 0) {
         toast.success(
-          `Synced from Bokun — auto-categorized ${result.toursUpdated} tour${
+          `Synced from Bokun: auto-categorized ${result.toursUpdated} tour${
             result.toursUpdated === 1 ? "" : "s"
           }` +
             (result.categoriesCreated > 0

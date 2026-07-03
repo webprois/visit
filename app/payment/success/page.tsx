@@ -8,7 +8,7 @@ import { getServerDict } from "@/lib/get-dictionary"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Payment — Visit.is",
+  title: "Payment | Visit.is",
   robots: { index: false },
 }
 
