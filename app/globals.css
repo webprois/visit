@@ -199,64 +199,37 @@
   color: var(--muted-foreground);
 }
 
-/* Branded loading animation for the visit.is monogram loader. */
 /* ---------------------------------------------------------------------------
-   Branded loading animation ("GIF" loader) built from the visit.is monogram.
-   The two icon strokes draw on, fill in, then breathe back out in a seamless
-   loop — a lightweight, scalable, theme-aware alternative to a real .gif.
+   Branded loading animation built from the visit.is pin/bird mark. The eye
+   winks in a natural double-blink loop — a lightweight, scalable, theme-aware
+   indicator (no image asset needed).
 --------------------------------------------------------------------------- */
-@keyframes brand-loader-draw {
-  0% {
-    stroke-dashoffset: 1;
-    fill-opacity: 0;
-  }
-  35% {
-    stroke-dashoffset: 0;
-    fill-opacity: 0;
-  }
-  55% {
-    stroke-dashoffset: 0;
-    fill-opacity: 1;
-  }
-  80% {
-    stroke-dashoffset: 0;
-    fill-opacity: 1;
-  }
-  100% {
-    stroke-dashoffset: 1;
-    fill-opacity: 0;
-  }
-}
-@keyframes brand-loader-pulse {
+@keyframes brand-eye-blink {
   0%,
-  100% {
-    opacity: 1;
+  44% {
+    transform: scaleY(1);
+  }
+  47% {
+    transform: scaleY(0.06);
   }
   50% {
-    opacity: 0.35;
+    transform: scaleY(1);
+  }
+  53% {
+    transform: scaleY(0.06);
+  }
+  56%,
+  100% {
+    transform: scaleY(1);
   }
 }
-.brand-loader-path {
-  fill: currentColor;
-  stroke: currentColor;
-  stroke-width: 4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  fill-opacity: 0;
-  animation: brand-loader-draw 1.8s ease-in-out infinite;
-}
-/* Second stroke trails the first slightly for a livelier loop. */
-.brand-loader-path--delayed {
-  animation-delay: 0.16s;
+.brand-loader-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: brand-eye-blink 2.8s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .brand-loader-path,
-  .brand-loader-path--delayed {
-    stroke-dashoffset: 0;
-    fill-opacity: 1;
-    animation: brand-loader-pulse 1.6s ease-in-out infinite;
-    animation-delay: 0s;
+  .brand-loader-eye {
+    animation: none;
   }
 }
