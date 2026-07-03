@@ -184,7 +184,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
           </button>
 
           {openPanel === "exp" && (
-            <div className="absolute left-0 top-full z-30 mt-1 max-h-80 w-[min(92vw,26rem)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl">
+            <div className="absolute left-0 top-full z-30 mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl md:w-[min(92vw,26rem)]">
               <button
                 type="button"
                 onClick={() => setSelected([])}
@@ -250,7 +250,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
           </button>
 
           {openPanel === "dates" && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-[min(94vw,44rem)] rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:p-4">
+            <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:w-[min(94vw,44rem)] md:p-4">
               <RangeCalendar
                 from={from}
                 to={to}
@@ -287,7 +287,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
           </button>
 
           {openPanel === "pax" && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-[min(90vw,20rem)] rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl">
+            <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl md:w-[min(90vw,20rem)]">
               <Stepper
                 label={dict.search.adults}
                 value={adults}
