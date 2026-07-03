@@ -14,6 +14,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
 
   const navLinks = [
     { label: dict.nav.allTours, href: "/tours" },
+    { label: dict.nav.selfDrive, href: "/self-drive-tours" },
     { label: dict.nav.tailorMade, href: "/tailor-made" },
     { label: dict.nav.transfers, href: "/#transfers" },
     { label: dict.nav.whyUs, href: "/#why" },

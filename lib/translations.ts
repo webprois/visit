@@ -13,8 +13,81 @@ const en = {
     transfers: "Transfers",
     whyUs: "Why Us",
     tailorMade: "Tailor-Made",
+    selfDrive: "Self-Drive",
     contact: "Contact",
     menu: "Menu",
+  },
+  selfDrive: {
+    title: "Self Drive Tours",
+    subtitle:
+      "Iceland is ideal for road trips. Our self-drive packages include a digital travel guide, making exploration easy and stress-free.",
+    intro:
+      "Enjoy the flexibility to stop whenever you like — whether it's for a photo of a glacier, a soak in a hidden hot spring, or a stroll on a black sand beach. With well-maintained roads and breathtaking scenery at every turn, Iceland's self-drive tours combine adventure, comfort, and flexibility, making them one of the most popular ways to experience the Land of Fire and Ice at your own pace.",
+    includedNote: "Tours, hotels and rental car included. Flights not included.",
+    selectTitle: "Select Your Self-Drive Tour",
+    selectText:
+      "Take a look at our recommended Self-drive tours, which we specialize in, for a set number of days. For other durations please contact us via our tailor-made form. Self-Drive tours are recommended between March and November at the latest, if you plan to visit Iceland outside of this window then we recommend a group tour as to avoid difficult driving conditions.",
+    servicesLabel: "Services Includes",
+    choosePackage: "Choose Your Package: 5, 7 or 10 Days",
+    estimate: "Estimate:",
+    forTwo: "For 2 Adults",
+    dayLabel: "Day",
+    ringRoad: "Ring Road ",
+    tourName: "Self-Drive Tour of Iceland",
+    requestCta: "Request this package",
+    safetyTitle: "Safety Recommendations",
+    safetyText: "If you're planning a trip to Iceland, it's crucial to stay informed",
+    safeTravelName: "Safetravel.is",
+    safeTravelDesc: "The Icelandic Association for Search and Rescue.",
+    roadName: "Road.is",
+    roadDesc: "The Icelandic Road and Coastal Administration.",
+    tiers: {
+      basic: {
+        name: "Basic Tour",
+        description:
+          "Experience Iceland at your own pace without breaking the bank with our Basic Self-Drive Package, combining the country's natural wonders and affordability.",
+        services: [
+          "Detailed Digital Itinerary",
+          "2 extra activities",
+          "Basic Hotels or Guesthouses",
+          "Small car with full insurance",
+          "Comfort Blue Lagoon Ticket",
+          "Breakfast NOT included",
+          "Shared Bathroom Only",
+        ],
+      },
+      standard: {
+        name: "Standard Tour",
+        description:
+          "The Standard Self-drive tour is perfect for those who do not want to sacrifice comfort and want to experience Iceland in a more complete way.",
+        services: [
+          "Detailed Digital Itinerary",
+          "Minimum 3 extra activities",
+          "3 Star Hotels or Quality Guesthouse",
+          "Medium car with full insurance",
+          "Breakfast always included",
+          "Private Bathroom",
+          "Live Chat Support",
+          "Comfort Blue Lagoon Ticket",
+        ],
+      },
+      premium: {
+        name: "Premium Tour",
+        description:
+          "Our Premium Self-drive tour offers a deluxe experience that allows you to enjoy the best Iceland has to offer with extra comfort and exclusive activities.",
+        services: [
+          "Detailed Digital Itinerary",
+          "Minimum 4 extra activities",
+          "4 Star Hotels or best available",
+          "Medium or large car with full insurance",
+          "Breakfast always included",
+          "Private Bathroom",
+          "Concierge and Live Chat Support",
+          "Premium Blue Lagoon Ticket",
+          "Helicopter Tour",
+        ],
+      },
+    },
   },
   contact: {
     title: "Contact Us",
@@ -405,8 +478,82 @@ const es: Dictionary = {
     transfers: "Traslados",
     whyUs: "Por qué nosotros",
     tailorMade: "A medida",
+    selfDrive: "En coche",
     contact: "Contacto",
     menu: "Menú",
+  },
+  selfDrive: {
+    title: "Tours en coche",
+    subtitle:
+      "Islandia es ideal para viajes por carretera. Nuestros paquetes en coche incluyen una guía de viaje digital, haciendo la exploración fácil y sin estrés.",
+    intro:
+      "Disfruta de la flexibilidad de parar cuando quieras: para una foto de un glaciar, un baño en una fuente termal escondida o un paseo por una playa de arena negra. Con carreteras bien mantenidas y paisajes impresionantes a cada paso, los tours en coche por Islandia combinan aventura, comodidad y flexibilidad, siendo una de las formas más populares de vivir la Tierra de Hielo y Fuego a tu propio ritmo.",
+    includedNote:
+      "Tours, hoteles y coche de alquiler incluidos. Vuelos no incluidos.",
+    selectTitle: "Elige tu tour en coche",
+    selectText:
+      "Echa un vistazo a nuestros tours en coche recomendados, en los que estamos especializados, para un número determinado de días. Para otras duraciones, contáctanos a través de nuestro formulario a medida. Los tours en coche se recomiendan entre marzo y noviembre como muy tarde; si planeas visitar Islandia fuera de este periodo, recomendamos un tour en grupo para evitar condiciones de conducción difíciles.",
+    servicesLabel: "Servicios incluidos",
+    choosePackage: "Elige tu paquete: 5, 7 o 10 días",
+    estimate: "Estimado:",
+    forTwo: "Para 2 adultos",
+    dayLabel: "días",
+    ringRoad: "Carretera de circunvalación ",
+    tourName: "en coche por Islandia",
+    requestCta: "Solicitar este paquete",
+    safetyTitle: "Recomendaciones de seguridad",
+    safetyText: "Si planeas un viaje a Islandia, es fundamental estar informado",
+    safeTravelName: "Safetravel.is",
+    safeTravelDesc: "La Asociación Islandesa de Búsqueda y Rescate.",
+    roadName: "Road.is",
+    roadDesc: "La Administración de Carreteras y Costas de Islandia.",
+    tiers: {
+      basic: {
+        name: "Tour Básico",
+        description:
+          "Vive Islandia a tu ritmo sin gastar de más con nuestro paquete básico en coche, que combina las maravillas naturales del país y la asequibilidad.",
+        services: [
+          "Itinerario digital detallado",
+          "2 actividades extra",
+          "Hoteles básicos o casas de huéspedes",
+          "Coche pequeño con seguro completo",
+          "Entrada Comfort a Blue Lagoon",
+          "Desayuno NO incluido",
+          "Solo baño compartido",
+        ],
+      },
+      standard: {
+        name: "Tour Estándar",
+        description:
+          "El tour estándar en coche es perfecto para quienes no quieren sacrificar comodidad y desean vivir Islandia de forma más completa.",
+        services: [
+          "Itinerario digital detallado",
+          "Mínimo 3 actividades extra",
+          "Hoteles de 3 estrellas o casa de huéspedes de calidad",
+          "Coche mediano con seguro completo",
+          "Desayuno siempre incluido",
+          "Baño privado",
+          "Soporte por chat en vivo",
+          "Entrada Comfort a Blue Lagoon",
+        ],
+      },
+      premium: {
+        name: "Tour Premium",
+        description:
+          "Nuestro tour premium en coche ofrece una experiencia de lujo que te permite disfrutar de lo mejor de Islandia con comodidad extra y actividades exclusivas.",
+        services: [
+          "Itinerario digital detallado",
+          "Mínimo 4 actividades extra",
+          "Hoteles de 4 estrellas o el mejor disponible",
+          "Coche mediano o grande con seguro completo",
+          "Desayuno siempre incluido",
+          "Baño privado",
+          "Conserjería y soporte por chat en vivo",
+          "Entrada Premium a Blue Lagoon",
+          "Tour en helicóptero",
+        ],
+      },
+    },
   },
   contact: {
     title: "Contáctanos",
@@ -802,8 +949,82 @@ const pt: Dictionary = {
     transfers: "Traslados",
     whyUs: "Por que nós",
     tailorMade: "Sob medida",
+    selfDrive: "De carro",
     contact: "Contacto",
     menu: "Menu",
+  },
+  selfDrive: {
+    title: "Tours de carro",
+    subtitle:
+      "A Islândia é ideal para viagens de carro. Nossos pacotes de carro incluem um guia de viagem digital, tornando a exploração fácil e sem estresse.",
+    intro:
+      "Aproveite a flexibilidade de parar quando quiser — seja para uma foto de uma geleira, um mergulho numa fonte termal escondida ou um passeio numa praia de areia negra. Com estradas bem conservadas e paisagens de tirar o fôlego a cada curva, os tours de carro pela Islândia combinam aventura, conforto e flexibilidade, sendo uma das formas mais populares de viver a Terra do Gelo e Fogo no seu próprio ritmo.",
+    includedNote:
+      "Tours, hotéis e carro alugado incluídos. Voos não incluídos.",
+    selectTitle: "Escolha o seu tour de carro",
+    selectText:
+      "Dê uma olhada nos nossos tours de carro recomendados, nos quais somos especializados, para um número definido de dias. Para outras durações, entre em contacto pelo nosso formulário sob medida. Os tours de carro são recomendados entre março e novembro no máximo; se planeia visitar a Islândia fora deste período, recomendamos um tour em grupo para evitar condições de condução difíceis.",
+    servicesLabel: "Serviços incluídos",
+    choosePackage: "Escolha o seu pacote: 5, 7 ou 10 dias",
+    estimate: "Estimativa:",
+    forTwo: "Para 2 adultos",
+    dayLabel: "dias",
+    ringRoad: "Ring Road ",
+    tourName: "de carro pela Islândia",
+    requestCta: "Solicitar este pacote",
+    safetyTitle: "Recomendações de segurança",
+    safetyText: "Se está a planear uma viagem à Islândia, é fundamental manter-se informado",
+    safeTravelName: "Safetravel.is",
+    safeTravelDesc: "A Associação Islandesa de Busca e Salvamento.",
+    roadName: "Road.is",
+    roadDesc: "A Administração de Estradas e Costas da Islândia.",
+    tiers: {
+      basic: {
+        name: "Tour Básico",
+        description:
+          "Viva a Islândia no seu ritmo sem gastar muito com o nosso pacote básico de carro, combinando as maravilhas naturais do país e o preço acessível.",
+        services: [
+          "Itinerário digital detalhado",
+          "2 atividades extras",
+          "Hotéis básicos ou casas de hóspedes",
+          "Carro pequeno com seguro completo",
+          "Ingresso Comfort para a Blue Lagoon",
+          "Café da manhã NÃO incluído",
+          "Apenas banheiro compartilhado",
+        ],
+      },
+      standard: {
+        name: "Tour Padrão",
+        description:
+          "O tour padrão de carro é perfeito para quem não quer abrir mão do conforto e deseja viver a Islândia de forma mais completa.",
+        services: [
+          "Itinerário digital detalhado",
+          "Mínimo de 3 atividades extras",
+          "Hotéis 3 estrelas ou casa de hóspedes de qualidade",
+          "Carro médio com seguro completo",
+          "Café da manhã sempre incluído",
+          "Banheiro privativo",
+          "Suporte por chat ao vivo",
+          "Ingresso Comfort para a Blue Lagoon",
+        ],
+      },
+      premium: {
+        name: "Tour Premium",
+        description:
+          "O nosso tour premium de carro oferece uma experiência de luxo que permite aproveitar o melhor da Islândia com conforto extra e atividades exclusivas.",
+        services: [
+          "Itinerário digital detalhado",
+          "Mínimo de 4 atividades extras",
+          "Hotéis 4 estrelas ou o melhor disponível",
+          "Carro médio ou grande com seguro completo",
+          "Café da manhã sempre incluído",
+          "Banheiro privativo",
+          "Concierge e suporte por chat ao vivo",
+          "Ingresso Premium para a Blue Lagoon",
+          "Passeio de helicóptero",
+        ],
+      },
+    },
   },
   contact: {
     title: "Contacte-nos",
@@ -1199,8 +1420,82 @@ const it: Dictionary = {
     transfers: "Transfer",
     whyUs: "Perché noi",
     tailorMade: "Su misura",
+    selfDrive: "In auto",
     contact: "Contatto",
     menu: "Menu",
+  },
+  selfDrive: {
+    title: "Tour in auto",
+    subtitle:
+      "L'Islanda è ideale per i viaggi su strada. I nostri pacchetti in auto includono una guida di viaggio digitale, rendendo l'esplorazione facile e senza stress.",
+    intro:
+      "Goditi la libertà di fermarti quando vuoi — per una foto di un ghiacciaio, un bagno in una sorgente termale nascosta o una passeggiata su una spiaggia di sabbia nera. Con strade ben tenute e panorami mozzafiato a ogni curva, i tour in auto in Islanda uniscono avventura, comfort e flessibilità, ed è uno dei modi più popolari per vivere la Terra del Ghiaccio e del Fuoco al proprio ritmo.",
+    includedNote:
+      "Tour, hotel e auto a noleggio inclusi. Voli non inclusi.",
+    selectTitle: "Scegli il tuo tour in auto",
+    selectText:
+      "Dai un'occhiata ai nostri tour in auto consigliati, nei quali siamo specializzati, per un numero definito di giorni. Per altre durate contattaci tramite il nostro modulo su misura. I tour in auto sono consigliati tra marzo e novembre al più tardi; se prevedi di visitare l'Islanda al di fuori di questo periodo, consigliamo un tour di gruppo per evitare condizioni di guida difficili.",
+    servicesLabel: "Servizi inclusi",
+    choosePackage: "Scegli il tuo pacchetto: 5, 7 o 10 giorni",
+    estimate: "Stima:",
+    forTwo: "Per 2 adulti",
+    dayLabel: "giorni",
+    ringRoad: "Ring Road ",
+    tourName: "in auto dell'Islanda",
+    requestCta: "Richiedi questo pacchetto",
+    safetyTitle: "Raccomandazioni di sicurezza",
+    safetyText: "Se stai pianificando un viaggio in Islanda, è fondamentale restare informato",
+    safeTravelName: "Safetravel.is",
+    safeTravelDesc: "L'Associazione Islandese di Ricerca e Soccorso.",
+    roadName: "Road.is",
+    roadDesc: "L'Amministrazione Islandese delle Strade e delle Coste.",
+    tiers: {
+      basic: {
+        name: "Tour Base",
+        description:
+          "Vivi l'Islanda al tuo ritmo senza spendere troppo con il nostro pacchetto base in auto, che combina le meraviglie naturali del paese e la convenienza.",
+        services: [
+          "Itinerario digitale dettagliato",
+          "2 attività extra",
+          "Hotel base o pensioni",
+          "Auto piccola con assicurazione completa",
+          "Biglietto Comfort per la Blue Lagoon",
+          "Colazione NON inclusa",
+          "Solo bagno condiviso",
+        ],
+      },
+      standard: {
+        name: "Tour Standard",
+        description:
+          "Il tour standard in auto è perfetto per chi non vuole rinunciare al comfort e desidera vivere l'Islanda in modo più completo.",
+        services: [
+          "Itinerario digitale dettagliato",
+          "Minimo 3 attività extra",
+          "Hotel 3 stelle o pensione di qualità",
+          "Auto media con assicurazione completa",
+          "Colazione sempre inclusa",
+          "Bagno privato",
+          "Supporto via chat dal vivo",
+          "Biglietto Comfort per la Blue Lagoon",
+        ],
+      },
+      premium: {
+        name: "Tour Premium",
+        description:
+          "Il nostro tour premium in auto offre un'esperienza di lusso che ti permette di goderti il meglio dell'Islanda con comfort extra e attività esclusive.",
+        services: [
+          "Itinerario digitale dettagliato",
+          "Minimo 4 attività extra",
+          "Hotel 4 stelle o il migliore disponibile",
+          "Auto media o grande con assicurazione completa",
+          "Colazione sempre inclusa",
+          "Bagno privato",
+          "Concierge e supporto via chat dal vivo",
+          "Biglietto Premium per la Blue Lagoon",
+          "Tour in elicottero",
+        ],
+      },
+    },
   },
   contact: {
     title: "Contattaci",
