@@ -298,8 +298,60 @@ export const newsletterSubscriber = pgTable("newsletter_subscriber", {
     .defaultNow(),
 })
 
+/**
+ * Tailor-made / private trip requests submitted from the public /tailor-made
+ * page. Guest data (like bookings and newsletter signups), so there is no
+ * userId scoping. Reviewed by the team out-of-band via email/admin.
+ */
+export const tailorMadeRequest = pgTable("tailor_made_request", {
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  adults: integer("adults"),
+  children: integer("children"),
+  tripDuration: text("trip_duration"),
+  travelDate: text("travel_date"),
+  wantsActivities: boolean("wants_activities"),
+  wantsGuided: boolean("wants_guided"),
+  wantsRentalCar: boolean("wants_rental_car"),
+  accommodation: text("accommodation"),
+  tourType: text("tour_type"),
+  interests: text("interests"),
+  otherInfo: text("other_info"),
+  howFound: text("how_found"),
+  locale: text("locale"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export type NewsletterSubscriber = typeof newsletterSubscriber.$inferSelect
 export type NewNewsletterSubscriber = typeof newsletterSubscriber.$inferInsert
+
+export type TailorMadeRequest = typeof tailorMadeRequest.$inferSelect
+export type NewTailorMadeRequest = typeof tailorMadeRequest.$inferInsert
+
+/**
+ * Contact form messages submitted from the public /contact page. Guest data,
+ * so there is no userId scoping. Reviewed by the team out-of-band.
+ */
+export const contactMessage = pgTable("contact_message", {
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  message: text("message").notNull(),
+  locale: text("locale"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export type ContactMessage = typeof contactMessage.$inferSelect
+export type NewContactMessage = typeof contactMessage.$inferInsert
 
 export type TranslationCache = typeof translationCache.$inferSelect
 export type NewTranslationCache = typeof translationCache.$inferInsert

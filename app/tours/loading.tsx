@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { Loader2 } from "lucide-react"
+import { BrandLoader } from "@/components/brand-loader"
 import { getServerDict } from "@/lib/get-dictionary"
 
 /**
@@ -20,7 +20,7 @@ export default async function ToursLoading() {
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
+              <BrandLoader size={22} label={dict.toursLoading.checking} />
               {dict.toursLoading.checking}
             </span>
             <Skeleton className="h-8 w-40 rounded-full" />

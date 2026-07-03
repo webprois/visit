@@ -22,8 +22,12 @@ export function PriceRangeSlider({
 }) {
   const [low, high] = value
   const span = Math.max(1, max - min)
-  const lowPct = ((low - min) / span) * 100
-  const highPct = ((high - min) / span) * 100
+  // Clamp to 0-100 so that if the selected value falls outside the current
+  // min/max bounds (e.g. the available price range shrinks after picking
+  // dates), the filled track never overflows past the ends.
+  const clampPct = (v: number) => Math.min(100, Math.max(0, v))
+  const lowPct = clampPct(((low - min) / span) * 100)
+  const highPct = clampPct(((high - min) / span) * 100)
 
   const setLow = useCallback(
     (v: number) => onChange([Math.min(v, high), high]),
@@ -36,13 +40,17 @@ export function PriceRangeSlider({
 
   return (
     <div className="relative h-5 select-none">
-      {/* Base track */}
-      <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-secondary" />
-      {/* Filled range */}
-      <div
-        className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
-        style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
-      />
+      {/* Track area inset by half a thumb (10px) on each side so the rail and
+          fill line up with the native range thumbs and never overflow. */}
+      <div className="absolute inset-x-2.5 top-1/2 -translate-y-1/2">
+        {/* Base track */}
+        <div className="h-1.5 w-full rounded-full bg-secondary" />
+        {/* Filled range */}
+        <div
+          className="absolute top-0 h-1.5 rounded-full bg-primary"
+          style={{ left: `${lowPct}%`, right: `${100 - highPct}%` }}
+        />
+      </div>
       {/* Low handle */}
       <input
         type="range"

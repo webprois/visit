@@ -26,6 +26,12 @@ import {
   Info,
   Backpack,
   HeartPulse,
+  Wallet,
+  Headphones,
+  Star,
+  Compass,
+  Phone,
+  Mail,
 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -515,11 +521,8 @@ export default async function TourPage({
               )}
             </div>
 
-            {/* Right: booking panel */}
-            <aside
-              id="book"
-              className="scroll-mt-24 lg:sticky lg:top-24 lg:self-start"
-            >
+            {/* Right: booking panel + reassurance cards */}
+            <aside id="book" className="flex scroll-mt-24 flex-col gap-6">
               <BookingForm
                 bokunId={tour.bokunId}
                 slots={slots}
@@ -528,6 +531,60 @@ export default async function TourPage({
                 fallbackPhone="+354 419 1600"
                 startingPriceIsk={priceAmount}
               />
+
+              {/* Why book with us */}
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  {dict.detail.whyBookTitle}
+                </h3>
+                <ul className="mt-5 flex flex-col gap-4">
+                  {[
+                    { icon: Wallet, text: dict.detail.whyBestPrice },
+                    { icon: Headphones, text: dict.detail.whyFriendly },
+                    { icon: Star, text: dict.detail.whyHandPicked },
+                    { icon: Compass, text: dict.detail.whyFlexible },
+                  ].map((item) => (
+                    <li key={item.text} className="flex items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <item.icon className="size-[18px]" aria-hidden="true" />
+                      </span>
+                      <span className="text-sm font-medium text-foreground">
+                        {item.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Still have doubts */}
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  {dict.detail.doubtsTitle}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {dict.detail.doubtsText}
+                </p>
+                <div className="mt-5 flex flex-col gap-3">
+                  <a
+                    href="tel:+3544191600"
+                    className="flex items-center gap-3 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Phone className="size-[18px]" aria-hidden="true" />
+                    </span>
+                    +354 419 1600
+                  </a>
+                  <a
+                    href="mailto:info@visit.is"
+                    className="flex items-center gap-3 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Mail className="size-[18px]" aria-hidden="true" />
+                    </span>
+                    info@visit.is
+                  </a>
+                </div>
+              </div>
             </aside>
           </div>
         </section>

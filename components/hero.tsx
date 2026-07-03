@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import { TourSearch, type Experience } from "@/components/tour-search"
 import { getServerDict } from "@/lib/get-dictionary"
@@ -48,13 +48,19 @@ export async function Hero({ experiences }: { experiences: Experience[] }) {
           >
             {dict.hero.exploreTours}
           </Link>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="rounded-full bg-foreground/10 text-foreground backdrop-blur hover:bg-foreground/20"
+          <Link
+            href="/tailor-made"
+            className={cn(
+              buttonVariants({
+                size: "lg",
+                variant: "secondary",
+                className:
+                  "rounded-full bg-foreground/10 text-foreground backdrop-blur hover:bg-foreground/20",
+              }),
+            )}
           >
             {dict.hero.privateTrip}
-          </Button>
+          </Link>
         </div>
 
         {/* Search widget */}

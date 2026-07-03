@@ -53,19 +53,19 @@ export async function SiteFooter() {
         <FooterCol
           title={dict.footer.toursTitle}
           links={[
-            dict.footer.dayTours,
-            dict.footer.multiDayTours,
-            dict.footer.privateTours,
-            dict.footer.selfDrive,
+            { label: dict.footer.dayTours, href: "/tours" },
+            { label: dict.footer.multiDayTours, href: "/tours" },
+            { label: dict.footer.privateTours, href: "/tailor-made" },
+            { label: dict.footer.selfDrive, href: "/self-drive-tours" },
           ]}
         />
         <FooterCol
           title={dict.footer.companyTitle}
           links={[
-            dict.footer.aboutUs,
-            dict.footer.whyBook,
-            dict.footer.reviews,
-            dict.footer.contact,
+            { label: dict.footer.aboutUs },
+            { label: dict.footer.whyBook },
+            { label: dict.footer.reviews },
+            { label: dict.footer.contact, href: "/contact" },
           ]}
         />
 
@@ -103,7 +103,13 @@ export async function SiteFooter() {
   )
 }
 
-function FooterCol({ title, links }: { title: string; links: string[] }) {
+function FooterCol({
+  title,
+  links,
+}: {
+  title: string
+  links: { label: string; href?: string }[]
+}) {
   return (
     <div>
       <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-foreground">
@@ -111,9 +117,12 @@ function FooterCol({ title, links }: { title: string; links: string[] }) {
       </h3>
       <ul className="mt-4 space-y-3 text-sm">
         {links.map((l) => (
-          <li key={l}>
-            <a href="#" className="text-muted-foreground transition-colors hover:text-foreground">
-              {l}
+          <li key={l.label}>
+            <a
+              href={l.href ?? "#"}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
             </a>
           </li>
         ))}

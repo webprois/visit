@@ -94,9 +94,14 @@ export function ToursBrowser({
   const [dateOpen, setDateOpen] = useState(false)
   const dateBtnRef = useRef<HTMLButtonElement>(null)
   const datePopRef = useRef<HTMLDivElement>(null)
-  const [datePos, setDatePos] = useState<{ top: number; left: number }>({
+  const [datePos, setDatePos] = useState<{
+    top: number
+    left: number
+    width: number
+  }>({
     top: 0,
     left: 0,
+    width: 0,
   })
   // Draft range while picking. We only commit to the URL once a FULL range is
   // chosen, so the first click doesn't trigger a navigation that would close
@@ -104,15 +109,18 @@ export function ToursBrowser({
   const [draftFrom, setDraftFrom] = useState<Date | null>(fromDate)
   const [draftTo, setDraftTo] = useState<Date | null>(toDate)
 
-  function openDatePopover() {
+  // Position the calendar directly under the trigger and match its width so the
+  // popover lines up exactly with the button on every screen size.
+  function positionDatePopover() {
     const btn = dateBtnRef.current
-    if (btn) {
-      const r = btn.getBoundingClientRect()
-      const width = Math.min(window.innerWidth - 24, 640)
-      // Prefer left-aligned to the trigger, but keep fully on screen.
-      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
-      setDatePos({ top: r.bottom + 8, left })
-    }
+    if (!btn) return
+    const r = btn.getBoundingClientRect()
+    const left = Math.min(Math.max(12, r.left), window.innerWidth - r.width - 12)
+    setDatePos({ top: r.bottom + 8, left, width: r.width })
+  }
+
+  function openDatePopover() {
+    positionDatePopover()
     // Sync the draft to whatever is currently committed in the URL.
     setDraftFrom(fromDate)
     setDraftTo(toDate)
@@ -147,16 +155,20 @@ export function ToursBrowser({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setDateOpen(false)
     }
-    function onResize() {
-      setDateOpen(false)
+    // Keep the popover pinned to the trigger while the page/sidebar scrolls
+    // instead of letting it float away detached from the button.
+    function onReflow() {
+      positionDatePopover()
     }
     document.addEventListener("pointerdown", onPointer)
     document.addEventListener("keydown", onKey)
-    window.addEventListener("resize", onResize)
+    window.addEventListener("resize", onReflow)
+    window.addEventListener("scroll", onReflow, true)
     return () => {
       document.removeEventListener("pointerdown", onPointer)
       document.removeEventListener("keydown", onKey)
-      window.removeEventListener("resize", onResize)
+      window.removeEventListener("resize", onReflow)
+      window.removeEventListener("scroll", onReflow, true)
     }
   }, [dateOpen])
 
@@ -176,21 +188,28 @@ export function ToursBrowser({
   const [paxOpen, setPaxOpen] = useState(false)
   const paxBtnRef = useRef<HTMLButtonElement>(null)
   const paxPopRef = useRef<HTMLDivElement>(null)
-  const [paxPos, setPaxPos] = useState<{ top: number; left: number }>({
+  const [paxPos, setPaxPos] = useState<{
+    top: number
+    left: number
+    width: number
+  }>({
     top: 0,
     left: 0,
+    width: 0,
   })
   const [draftAdults, setDraftAdults] = useState(urlAdults)
   const [draftChildren, setDraftChildren] = useState(urlChildren)
 
-  function openPaxPopover() {
+  function positionPaxPopover() {
     const btn = paxBtnRef.current
-    if (btn) {
-      const r = btn.getBoundingClientRect()
-      const width = Math.min(window.innerWidth - 24, 320)
-      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12)
-      setPaxPos({ top: r.bottom + 8, left })
-    }
+    if (!btn) return
+    const r = btn.getBoundingClientRect()
+    const left = Math.min(Math.max(12, r.left), window.innerWidth - r.width - 12)
+    setPaxPos({ top: r.bottom + 8, left, width: r.width })
+  }
+
+  function openPaxPopover() {
+    positionPaxPopover()
     setDraftAdults(urlAdults)
     setDraftChildren(urlChildren)
     setPaxOpen((o) => !o)
@@ -223,16 +242,18 @@ export function ToursBrowser({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") closePax()
     }
-    function onResize() {
-      closePax()
+    function onReflow() {
+      positionPaxPopover()
     }
     document.addEventListener("pointerdown", onPointer)
     document.addEventListener("keydown", onKey)
-    window.addEventListener("resize", onResize)
+    window.addEventListener("resize", onReflow)
+    window.addEventListener("scroll", onReflow, true)
     return () => {
       document.removeEventListener("pointerdown", onPointer)
       document.removeEventListener("keydown", onKey)
-      window.removeEventListener("resize", onResize)
+      window.removeEventListener("resize", onReflow)
+      window.removeEventListener("scroll", onReflow, true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paxOpen, draftAdults, draftChildren])
@@ -663,7 +684,7 @@ export function ToursBrowser({
                   position: "fixed",
                   top: datePos.top,
                   left: datePos.left,
-                  width: "min(92vw, 40rem)",
+                  width: datePos.width,
                 }}
                 className="z-50 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl md:p-4"
               >
@@ -723,7 +744,7 @@ export function ToursBrowser({
                   position: "fixed",
                   top: paxPos.top,
                   left: paxPos.left,
-                  width: "min(90vw, 20rem)",
+                  width: paxPos.width,
                 }}
                 className="z-50 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
               >

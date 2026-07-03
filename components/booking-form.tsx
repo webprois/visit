@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import {
+  import {
+  ArrowLeft,
   CalendarDays,
   Check,
   ChevronDown,
@@ -246,6 +247,14 @@ const PHONE_CODES: { iso: string; dial: string; name: string }[] = [
 // (https://visit.is/terms-and-conditions/). Partner tours may differ per the
 // operator's terms shown on the ticket.
 const TERMS_URL = "https://visit.is/terms-and-conditions/"
+
+// Shared field styling so text inputs and native selects match each other and
+// the newsletter form: taller pills, soft translucent fill and a primary-tinted
+// focus ring. Passed via className so tailwind-merge overrides the base Input.
+const FIELD_CLASS =
+  "h-11 rounded-xl border-border bg-background/60 px-3.5 text-sm shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+const NATIVE_SELECT_CLASS =
+  "h-11 rounded-xl border border-border bg-background/60 px-3.5 text-sm text-foreground shadow-sm transition-all focus:border-primary/40 focus:outline-none focus:ring-[3px] focus:ring-primary/25"
 
 type StepKey = "tour" | "details" | "addons" | "confirm"
 
@@ -1064,7 +1073,7 @@ export function BookingForm({
                       setRoomNumber("")
                     }}
                     required={pickupRequired}
-                    className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={NATIVE_SELECT_CLASS}
                   >
                     <option value="">
                       {pickupRequired ? t.selectPickup : t.meetAtStart}
@@ -1085,6 +1094,7 @@ export function BookingForm({
                       value={roomNumber}
                       onChange={(e) => setRoomNumber(e.target.value)}
                       placeholder={t.roomPlaceholder}
+                      className={FIELD_CLASS}
                     />
                   </div>
                 )}
@@ -1098,7 +1108,7 @@ export function BookingForm({
                       id="booking-dropoff"
                       value={dropoffId}
                       onChange={(e) => setDropoffId(e.target.value)}
-                      className="h-11 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      className={NATIVE_SELECT_CLASS}
                     >
                       <option value="">{t.sameAsPickup}</option>
                       {dropoffOptions.map((p) => (
@@ -1137,6 +1147,7 @@ export function BookingForm({
                         autoComplete="off"
                         placeholder={t.firstName}
                         aria-label={fmt(t.guestFirstName, { label: g.label })}
+                        className={FIELD_CLASS}
                       />
                       <Input
                         id={`guest-${g.key}-last`}
@@ -1151,6 +1162,7 @@ export function BookingForm({
                         autoComplete="off"
                         placeholder={t.lastName}
                         aria-label={fmt(t.guestLastName, { label: g.label })}
+                        className={FIELD_CLASS}
                       />
                     </div>
                   </div>
@@ -1177,6 +1189,7 @@ export function BookingForm({
                     onChange={(e) => setFirstName(e.target.value)}
                     required
                     autoComplete="given-name"
+                    className={FIELD_CLASS}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -1187,6 +1200,7 @@ export function BookingForm({
                     onChange={(e) => setLastName(e.target.value)}
                     required
                     autoComplete="family-name"
+                    className={FIELD_CLASS}
                   />
                 </div>
               </div>
@@ -1199,6 +1213,7 @@ export function BookingForm({
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                  className={FIELD_CLASS}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1210,9 +1225,11 @@ export function BookingForm({
                   >
                     <SelectTrigger
                       aria-label={t.phoneCountryCode}
-                      className="h-11 w-20 shrink-0 rounded-lg border-input bg-background"
+                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
                     >
-                      <span className="text-sm font-medium">{phoneDial}</span>
+                      <span className="text-sm font-medium tabular-nums">
+                        {phoneDial}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       {PHONE_CODES.map((c) => (
@@ -1230,7 +1247,7 @@ export function BookingForm({
                     required
                     autoComplete="tel-national"
                     placeholder={t.phoneNumber}
-                    className="flex-1"
+                    className={`${FIELD_CLASS} flex-1`}
                   />
                 </div>
               </div>
@@ -1333,15 +1350,16 @@ export function BookingForm({
                 </span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {step > 1 && (
                   <Button
                     type="button"
                     size="lg"
                     variant="outline"
                     onClick={goBack}
-                    className="rounded-full"
+                    className="flex-1 gap-1.5 rounded-full"
                   >
+                    <ArrowLeft className="size-4" aria-hidden="true" />
                     {t.back}
                   </Button>
                 )}
