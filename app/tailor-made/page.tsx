@@ -37,7 +37,7 @@ export default async function TailorMadePage() {
             <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
               {t.title}
             </h1>
-            <div className="mt-8 flex max-w-3xl flex-col gap-5 text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
+            <div className="mt-8 flex flex-col gap-5 text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
               <p>{t.subtitle}</p>
               <p>{t.intro1}</p>
               <p>{t.intro2}</p>
