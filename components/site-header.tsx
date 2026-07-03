@@ -17,6 +17,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
     { label: dict.nav.tailorMade, href: "/tailor-made" },
     { label: dict.nav.transfers, href: "/#transfers" },
     { label: dict.nav.whyUs, href: "/#why" },
+    { label: dict.nav.contact, href: "/contact" },
   ]
 
   return (

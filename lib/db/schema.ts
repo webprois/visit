@@ -333,6 +333,25 @@ export type NewNewsletterSubscriber = typeof newsletterSubscriber.$inferInsert
 export type TailorMadeRequest = typeof tailorMadeRequest.$inferSelect
 export type NewTailorMadeRequest = typeof tailorMadeRequest.$inferInsert
 
+/**
+ * Contact form messages submitted from the public /contact page. Guest data,
+ * so there is no userId scoping. Reviewed by the team out-of-band.
+ */
+export const contactMessage = pgTable("contact_message", {
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  locale: text("locale"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export type ContactMessage = typeof contactMessage.$inferSelect
+export type NewContactMessage = typeof contactMessage.$inferInsert
+
 export type TranslationCache = typeof translationCache.$inferSelect
 export type NewTranslationCache = typeof translationCache.$inferInsert
 
