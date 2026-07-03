@@ -30,7 +30,7 @@ export default async function SelfDriveToursPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1">
-        {/* Hero */}
+        {/* Hero + intro with shared background */}
         <section className="relative isolate">
           <Image
             src="/images/self-drive-hero.png"
@@ -40,24 +40,20 @@ export default async function SelfDriveToursPage() {
             className="-z-10 object-cover"
             sizes="100vw"
           />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/55 to-background/95" />
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
-          <div className="mx-auto max-w-7xl px-4 pb-10 pt-20 md:px-6 md:pb-14 md:pt-28">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/60 to-background" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_70%_at_50%_0%,transparent_30%,var(--background)_100%)]" />
+          <div className="mx-auto max-w-7xl px-4 pb-14 pt-20 md:px-6 md:pb-20 md:pt-28">
             <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
               {t.heroLine1} {t.heroLine2}
             </h1>
-          </div>
-        </section>
-
-        {/* Intro: summary */}
-        <section className="mx-auto max-w-7xl px-4 pb-12 pt-4 md:px-6 md:pb-16 md:pt-6">
-          <div className="max-w-3xl">
-            <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-              {t.heroSubtitle} {t.heroBody}
-            </p>
-            <p className="mt-8 border-l-4 border-primary pl-5 font-heading text-xl font-bold text-foreground md:text-2xl">
-              {t.includedNote}
-            </p>
+            <div className="mt-8 max-w-3xl">
+              <p className="text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
+                {t.heroSubtitle} {t.heroBody}
+              </p>
+              <p className="mt-8 border-l-4 border-primary pl-5 font-heading text-xl font-bold text-foreground md:text-2xl">
+                {t.includedNote}
+              </p>
+            </div>
           </div>
         </section>
 
