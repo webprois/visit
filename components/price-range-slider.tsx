@@ -22,8 +22,12 @@ export function PriceRangeSlider({
 }) {
   const [low, high] = value
   const span = Math.max(1, max - min)
-  const lowPct = ((low - min) / span) * 100
-  const highPct = ((high - min) / span) * 100
+  // Clamp to 0-100 so that if the selected value falls outside the current
+  // min/max bounds (e.g. the available price range shrinks after picking
+  // dates), the filled track never overflows past the ends.
+  const clampPct = (v: number) => Math.min(100, Math.max(0, v))
+  const lowPct = clampPct(((low - min) / span) * 100)
+  const highPct = clampPct(((high - min) / span) * 100)
 
   const setLow = useCallback(
     (v: number) => onChange([Math.min(v, high), high]),
