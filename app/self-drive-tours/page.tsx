@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { getLocale } from "@/lib/get-locale"
 import { getServerDict } from "@/lib/get-dictionary"
 import { SELF_DRIVE_TIERS, formatEur, type SelfDriveTierKey } from "@/lib/self-drive"
-import { Check, X, ArrowUpRight, Car, Mountain, Camera } from "lucide-react"
+import { Check, X, ArrowUpRight } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Self Drive Tours | Visit Iceland",
@@ -52,29 +52,9 @@ export default async function SelfDriveToursPage() {
           </div>
         </section>
 
-        {/* Intro: features + summary */}
+        {/* Intro: summary */}
         <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              { icon: Car, label: t.feature1 },
-              { icon: Mountain, label: t.feature2 },
-              { icon: Camera, label: t.feature3 },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5"
-              >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Icon className="size-5" aria-hidden="true" />
-                </span>
-                <span className="text-sm font-medium leading-snug text-foreground">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-10 max-w-3xl">
+          <div className="max-w-3xl">
             <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
               {t.heroBody}
             </p>
