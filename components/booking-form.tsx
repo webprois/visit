@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import {
+  import {
+  ArrowLeft,
   CalendarDays,
   Check,
   ChevronDown,
@@ -1224,9 +1225,11 @@ export function BookingForm({
                   >
                     <SelectTrigger
                       aria-label={t.phoneCountryCode}
-                      className="h-11 w-20 shrink-0 rounded-xl border-border bg-background/60 shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
                     >
-                      <span className="text-sm font-medium">{phoneDial}</span>
+                      <span className="text-sm font-medium tabular-nums">
+                        {phoneDial}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       {PHONE_CODES.map((c) => (
@@ -1347,15 +1350,16 @@ export function BookingForm({
                 </span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {step > 1 && (
                   <Button
                     type="button"
                     size="lg"
                     variant="outline"
                     onClick={goBack}
-                    className="rounded-full"
+                    className="flex-1 gap-1.5 rounded-full"
                   >
+                    <ArrowLeft className="size-4" aria-hidden="true" />
                     {t.back}
                   </Button>
                 )}
