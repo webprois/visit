@@ -198,3 +198,65 @@
 .leaflet-control-attribution a {
   color: var(--muted-foreground);
 }
+
+/* Branded loading animation for the visit.is monogram loader. */
+/* ---------------------------------------------------------------------------
+   Branded loading animation ("GIF" loader) built from the visit.is monogram.
+   The two icon strokes draw on, fill in, then breathe back out in a seamless
+   loop — a lightweight, scalable, theme-aware alternative to a real .gif.
+--------------------------------------------------------------------------- */
+@keyframes brand-loader-draw {
+  0% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+  }
+  35% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  55% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+  80% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+  }
+}
+@keyframes brand-loader-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.brand-loader-path {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  fill-opacity: 0;
+  animation: brand-loader-draw 1.8s ease-in-out infinite;
+}
+/* Second stroke trails the first slightly for a livelier loop. */
+.brand-loader-path--delayed {
+  animation-delay: 0.16s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader-path,
+  .brand-loader-path--delayed {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    animation: brand-loader-pulse 1.6s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+}
