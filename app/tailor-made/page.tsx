@@ -44,8 +44,8 @@ export default async function TailorMadePage() {
         </section>
 
         {/* Intro copy */}
-        <section className="mx-auto max-w-3xl px-4 py-14 md:px-6 md:py-20">
-          <div className="flex flex-col gap-5 text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
+          <div className="flex max-w-3xl flex-col gap-5 text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
             <p>{t.intro1}</p>
             <p>{t.intro2}</p>
             <p>{t.intro3}</p>

@@ -22,7 +22,7 @@ const en = {
     subtitle:
       "Iceland is ideal for road trips. Our self-drive packages include a digital travel guide, making exploration easy and stress-free.",
     intro:
-      "Enjoy the flexibility to stop whenever you like — whether it's for a photo of a glacier, a soak in a hidden hot spring, or a stroll on a black sand beach. With well-maintained roads and breathtaking scenery at every turn, Iceland's self-drive tours combine adventure, comfort, and flexibility, making them one of the most popular ways to experience the Land of Fire and Ice at your own pace.",
+      "Enjoy the flexibility to stop whenever you like, whether it's for a photo of a glacier, a soak in a hidden hot spring, or a stroll on a black sand beach. With well-maintained roads and breathtaking scenery at every turn, Iceland's self-drive tours combine adventure, comfort, and flexibility, making them one of the most popular ways to experience the Land of Fire and Ice at your own pace.",
     includedNote: "Tours, hotels and rental car included. Flights not included.",
     selectTitle: "Select Your Self-Drive Tour",
     selectText:
@@ -125,7 +125,7 @@ const en = {
     intro1:
       "We specialize in creating tailor made packages for self-drive and guided private tours, for individuals or groups, in addition to the standard listed tours.",
     intro2:
-      "According to your needs we plan everything and assist you from the day you arrive until your departure. Iceland offers unique adventures unlikely to be experienced anywhere else. Our trips are curated by seasoned agents who attend to every request — you just have to show up and enjoy.",
+      "According to your needs we plan everything and assist you from the day you arrive until your departure. Iceland offers unique adventures unlikely to be experienced anywhere else. Our trips are curated by seasoned agents who attend to every request. You just have to show up and enjoy.",
     intro3:
       "After filling up the form below, we will reach out to you by email about your request. Please be as specific as possible and don't be afraid to ask, so we can make your dream vacation come true!",
     formTitle: "Submit a Request",
@@ -157,7 +157,7 @@ const en = {
     group: "Group",
     interests: "What are the main things you want to see in Iceland?",
     interestsPlaceholder:
-      "Specify your top interests — waterfalls, glaciers, volcanoes, specific activities, etc.",
+      "Specify your top interests: waterfalls, glaciers, volcanoes, specific activities, etc.",
     otherInfo: "Other information",
     otherInfoPlaceholder: "Enter other requirements here…",
     howFound: "How did you find us?",
@@ -962,7 +962,7 @@ const pt: Dictionary = {
     subtitle:
       "A Islândia é ideal para viagens de carro. Nossos pacotes de carro incluem um guia de viagem digital, tornando a exploração fácil e sem estresse.",
     intro:
-      "Aproveite a flexibilidade de parar quando quiser — seja para uma foto de uma geleira, um mergulho numa fonte termal escondida ou um passeio numa praia de areia negra. Com estradas bem conservadas e paisagens de tirar o fôlego a cada curva, os tours de carro pela Islândia combinam aventura, conforto e flexibilidade, sendo uma das formas mais populares de viver a Terra do Gelo e Fogo no seu próprio ritmo.",
+      "Aproveite a flexibilidade de parar quando quiser, seja para uma foto de uma geleira, um mergulho numa fonte termal escondida ou um passeio numa praia de areia negra. Com estradas bem conservadas e paisagens de tirar o fôlego a cada curva, os tours de carro pela Islândia combinam aventura, conforto e flexibilidade, sendo uma das formas mais populares de viver a Terra do Gelo e Fogo no seu próprio ritmo.",
     includedNote:
       "Tours, hotéis e carro alugado incluídos. Voos não incluídos.",
     selectTitle: "Escolha o seu tour de carro",
@@ -1066,7 +1066,7 @@ const pt: Dictionary = {
     intro1:
       "Somos especializados em criar pacotes sob medida para viagens de carro por conta própria e tours privados guiados, para indivíduos ou grupos, além dos tours padrão.",
     intro2:
-      "De acordo com as suas necessidades, planejamos tudo e ajudamos desde o dia da chegada até a partida. A Islândia oferece aventuras únicas difíceis de viver em qualquer outro lugar. Nossas viagens são elaboradas por agentes experientes que atendem a cada pedido — você só precisa aparecer e aproveitar.",
+      "De acordo com as suas necessidades, planejamos tudo e ajudamos desde o dia da chegada até a partida. A Islândia oferece aventuras únicas difíceis de viver em qualquer outro lugar. Nossas viagens são elaboradas por agentes experientes que atendem a cada pedido. Você só precisa aparecer e aproveitar.",
     intro3:
       "Depois de preencher o formulário abaixo, entraremos em contato por e-mail sobre o seu pedido. Seja o mais específico possível e não hesite em perguntar, para realizarmos as suas férias dos sonhos!",
     formTitle: "Enviar um pedido",
@@ -1435,7 +1435,7 @@ const it: Dictionary = {
     subtitle:
       "L'Islanda è ideale per i viaggi su strada. I nostri pacchetti in auto includono una guida di viaggio digitale, rendendo l'esplorazione facile e senza stress.",
     intro:
-      "Goditi la libertà di fermarti quando vuoi — per una foto di un ghiacciaio, un bagno in una sorgente termale nascosta o una passeggiata su una spiaggia di sabbia nera. Con strade ben tenute e panorami mozzafiato a ogni curva, i tour in auto in Islanda uniscono avventura, comfort e flessibilità, ed è uno dei modi più popolari per vivere la Terra del Ghiaccio e del Fuoco al proprio ritmo.",
+      "Goditi la libertà di fermarti quando vuoi, per una foto di un ghiacciaio, un bagno in una sorgente termale nascosta o una passeggiata su una spiaggia di sabbia nera. Con strade ben tenute e panorami mozzafiato a ogni curva, i tour in auto in Islanda uniscono avventura, comfort e flessibilità, ed è uno dei modi più popolari per vivere la Terra del Ghiaccio e del Fuoco al proprio ritmo.",
     includedNote:
       "Tour, hotel e auto a noleggio inclusi. Voli non inclusi.",
     selectTitle: "Scegli il tuo tour in auto",

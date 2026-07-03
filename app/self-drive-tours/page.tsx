@@ -53,13 +53,15 @@ export default async function SelfDriveToursPage() {
         </section>
 
         {/* Intro */}
-        <section className="mx-auto max-w-3xl px-4 py-14 text-center md:px-6 md:py-20">
-          <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-            {t.intro}
-          </p>
-          <p className="mt-8 border-y border-border py-6 font-heading text-xl font-bold text-foreground md:text-2xl">
-            {t.includedNote}
-          </p>
+        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
+          <div className="max-w-3xl">
+            <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+              {t.intro}
+            </p>
+            <p className="mt-8 border-l-4 border-primary pl-5 font-heading text-xl font-bold text-foreground md:text-2xl">
+              {t.includedNote}
+            </p>
+          </div>
         </section>
 
         {/* Package selection */}
