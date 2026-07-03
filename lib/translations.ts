@@ -19,6 +19,15 @@ const en = {
   },
   selfDrive: {
     title: "Self Drive Tours",
+    heroLine1: "Explore Iceland",
+    heroLine2: "on Your Terms",
+    heroSubtitle:
+      "Self-drive tours give you the freedom to explore Iceland at your own pace, with the perfect mix of adventure, comfort and unforgettable scenery.",
+    heroBody:
+      "Whether you're chasing waterfalls, relaxing in hot springs, or driving along black sand beaches, our self-drive tours make it easy to experience the best of Iceland your way.",
+    feature1: "Go where you want, when you want",
+    feature2: "Handpicked routes and local tips",
+    feature3: "Scenic stops and hidden gems along the way",
     subtitle:
       "Iceland is ideal for road trips. Our self-drive packages include a digital travel guide, making exploration easy and stress-free.",
     intro:
@@ -486,6 +495,15 @@ const es: Dictionary = {
   },
   selfDrive: {
     title: "Tours en coche",
+    heroLine1: "Explora Islandia",
+    heroLine2: "a tu manera",
+    heroSubtitle:
+      "Los tours en coche te dan la libertad de explorar Islandia a tu propio ritmo, con la combinación perfecta de aventura, comodidad y paisajes inolvidables.",
+    heroBody:
+      "Ya sea persiguiendo cascadas, relajándote en fuentes termales o conduciendo por playas de arena negra, nuestros tours en coche facilitan vivir lo mejor de Islandia a tu manera.",
+    feature1: "Ve donde quieras, cuando quieras",
+    feature2: "Rutas seleccionadas y consejos locales",
+    feature3: "Paradas escénicas y rincones secretos en el camino",
     subtitle:
       "Islandia es ideal para viajes por carretera. Nuestros paquetes en coche incluyen una guía de viaje digital, haciendo la exploración fácil y sin estrés.",
     intro:
@@ -959,6 +977,15 @@ const pt: Dictionary = {
   },
   selfDrive: {
     title: "Tours de carro",
+    heroLine1: "Explore a Islândia",
+    heroLine2: "do seu jeito",
+    heroSubtitle:
+      "Os tours de carro dão a você a liberdade de explorar a Islândia no seu próprio ritmo, com a mistura perfeita de aventura, conforto e paisagens inesquecíveis.",
+    heroBody:
+      "Seja caçando cachoeiras, relaxando em fontes termais ou dirigindo por praias de areia negra, nossos tours de carro facilitam viver o melhor da Islândia do seu jeito.",
+    feature1: "Vá aonde quiser, quando quiser",
+    feature2: "Rotas selecionadas e dicas locais",
+    feature3: "Paradas cênicas e tesouros escondidos pelo caminho",
     subtitle:
       "A Islândia é ideal para viagens de carro. Nossos pacotes de carro incluem um guia de viagem digital, tornando a exploração fácil e sem estresse.",
     intro:
@@ -1432,6 +1459,15 @@ const it: Dictionary = {
   },
   selfDrive: {
     title: "Tour in auto",
+    heroLine1: "Esplora l'Islanda",
+    heroLine2: "a modo tuo",
+    heroSubtitle:
+      "I tour in auto ti danno la libertà di esplorare l'Islanda al tuo ritmo, con il mix perfetto di avventura, comfort e paesaggi indimenticabili.",
+    heroBody:
+      "Che tu insegua cascate, ti rilassi in sorgenti termali o guidi lungo spiagge di sabbia nera, i nostri tour in auto ti fanno vivere il meglio dell'Islanda a modo tuo.",
+    feature1: "Vai dove vuoi, quando vuoi",
+    feature2: "Percorsi selezionati e consigli locali",
+    feature3: "Soste panoramiche e gemme nascoste lungo il percorso",
     subtitle:
       "L'Islanda è ideale per i viaggi su strada. I nostri pacchetti in auto includono una guida di viaggio digitale, rendendo l'esplorazione facile e senza stress.",
     intro:

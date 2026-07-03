@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { getLocale } from "@/lib/get-locale"
 import { getServerDict } from "@/lib/get-dictionary"
 import { SELF_DRIVE_TIERS, formatEur, type SelfDriveTierKey } from "@/lib/self-drive"
-import { Check, X, ArrowUpRight } from "lucide-react"
+import { Check, X, ArrowUpRight, Car, Mountain, Camera } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Self Drive Tours | Visit Iceland",
@@ -32,35 +32,56 @@ export default async function SelfDriveToursPage() {
       <main className="flex-1">
         {/* Hero */}
         <section className="relative isolate">
-          <Image
-            src="/images/self-drive-hero.png"
-            alt="A car driving along an open road through dramatic Icelandic mountain scenery"
-            fill
-            priority
-            className="-z-10 object-cover"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/55 to-background/95" />
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
-          <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-28">
-            <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
-              {t.title}
-            </h1>
-            <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
-              {t.subtitle}
-            </p>
+          <div className="absolute inset-0 -z-10 h-[62vh] min-h-[520px] overflow-hidden md:h-[72vh]">
+            <Image
+              src="/images/self-drive-hero.png"
+              alt="A car driving along an open road through dramatic Icelandic mountain scenery"
+              fill
+              priority
+              className="object-cover"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/25 to-transparent" />
           </div>
-        </section>
 
-        {/* Intro */}
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
-          <div className="max-w-3xl">
-            <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-              {t.intro}
-            </p>
-            <p className="mt-8 border-l-4 border-primary pl-5 font-heading text-xl font-bold text-foreground md:text-2xl">
-              {t.includedNote}
-            </p>
+          <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-28">
+            <div className="max-w-2xl">
+              <h1 className="text-balance font-heading text-5xl font-extrabold leading-[1.05] text-foreground drop-shadow-lg md:text-7xl">
+                {t.heroLine1}
+                <span className="mt-1 block italic text-primary">{t.heroLine2}</span>
+              </h1>
+              <p className="mt-6 max-w-lg text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
+                {t.heroSubtitle}
+              </p>
+
+              <div className="mt-8 h-1 w-16 rounded-full bg-primary" />
+
+              <ul className="mt-8 grid gap-6 sm:grid-cols-3">
+                {[
+                  { icon: Car, label: t.feature1 },
+                  { icon: Mountain, label: t.feature2 },
+                  { icon: Camera, label: t.feature3 },
+                ].map(({ icon: Icon, label }) => (
+                  <li key={label} className="flex items-center gap-3">
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-background/40 text-primary">
+                      <Icon className="size-5" aria-hidden="true" />
+                    </span>
+                    <span className="text-sm font-medium leading-snug text-foreground/90">
+                      {label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="mt-10 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+                {t.heroBody}
+              </p>
+
+              <p className="mt-8 border-l-4 border-primary pl-5 font-heading text-lg font-bold text-foreground md:text-xl">
+                {t.includedNote}
+              </p>
+            </div>
           </div>
         </section>
 
