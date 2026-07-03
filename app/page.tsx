@@ -4,7 +4,6 @@ import { TourCategories } from "@/components/tour-categories"
 import { FeaturedTours } from "@/components/featured-tours"
 import { ToursMap } from "@/components/home/tours-map"
 import type { MapTourPoint } from "@/components/home/home-map"
-import { Transportation } from "@/components/transportation"
 import { WhyBook } from "@/components/why-book"
 import { GoogleReviews } from "@/components/google-reviews"
 import { SiteFooter } from "@/components/site-footer"
@@ -108,7 +107,6 @@ export default async function Page() {
             satelliteView: dict.map.satelliteView,
           }}
         />
-        <Transportation />
         <WhyBook />
         {googleReviews ? <GoogleReviews data={googleReviews} /> : null}
       </main>
