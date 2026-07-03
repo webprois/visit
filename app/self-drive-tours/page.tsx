@@ -42,7 +42,7 @@ export default async function SelfDriveToursPage() {
           />
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/55 to-background/95" />
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
-          <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-28">
+          <div className="mx-auto max-w-7xl px-4 pb-10 pt-20 md:px-6 md:pb-14 md:pt-28">
             <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
               {t.heroLine1} {t.heroLine2}
             </h1>
@@ -53,7 +53,7 @@ export default async function SelfDriveToursPage() {
         </section>
 
         {/* Intro: summary */}
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
+        <section className="mx-auto max-w-7xl px-4 pb-12 pt-4 md:px-6 md:pb-16 md:pt-6">
           <div className="max-w-3xl">
             <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
               {t.heroBody}
