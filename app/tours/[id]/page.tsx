@@ -38,9 +38,9 @@ export async function generateMetadata({
   const { id } = await params
   const locale = await getLocale()
   const tour = await getFullTour(id, locale)
-  if (!tour) return { title: "Tour not found — Visit.is" }
+  if (!tour) return { title: "Tour not found | Visit.is" }
   return {
-    title: `${tour.title} — Visit.is`,
+    title: `${tour.title} | Visit.is`,
     description:
       tour.excerpt?.trim() ||
       tour.fullDescription.slice(0, 155) ||

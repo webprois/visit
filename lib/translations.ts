@@ -18,7 +18,7 @@ const en = {
     badge: "Trusted by 500+ travellers",
     title: "Ready for adventure in the land of fire and ice?",
     subtitle:
-      "Explore over 70 handpicked tours across Iceland — from glacier hikes and northern lights to the Golden Circle. Let's create unforgettable memories together.",
+      "Explore over 70 handpicked tours across Iceland, from glacier hikes and northern lights to the Golden Circle. Let's create unforgettable memories together.",
     exploreTours: "Explore Tours",
     privateTrip: "Plan a Private Trip",
   },
@@ -28,7 +28,7 @@ const en = {
     anyExperience: "Any experience",
     experiencesSelected: "{count} experiences",
     datesLabel: "Select dates",
-    datesPlaceholder: "Starting date — Final date",
+    datesPlaceholder: "Starting date - Final date",
     travelersLabel: "Add travelers",
     traveler: "{count} traveler",
     travelers: "{count} travelers",
@@ -55,7 +55,7 @@ const en = {
     eyebrow: "Explore the map",
     title: "Find your adventure across Iceland",
     subtitle:
-      "Browse every tour by location — from the Reykjanes peninsula to the far eastern fjords. Tap a marker to see the tour.",
+      "Browse every tour by location, from the Reykjanes peninsula to the far eastern fjords. Tap a marker to see the tour.",
     mapView: "Map",
     satelliteView: "Satellite",
     toursOnMap: "{count} tours on the map",
@@ -64,7 +64,7 @@ const en = {
   why: {
     title: "Why book with us?",
     subtitle:
-      "We organise private tours that aren't available as standard options — tailor-made to the needs and wishes of every client.",
+      "We organise private tours that aren't available as standard options, tailor-made to the needs and wishes of every client.",
     pickedTitle: "Carefully picked",
     pickedText: "Every tour and activity is handpicked by our travel professionals.",
     valueTitle: "Great value",
@@ -89,10 +89,16 @@ const en = {
     readAll: "Read all reviews on Google",
   },
   footer: {
-    ctaTitle: "Start your Icelandic adventure today",
-    ctaSubtitle: "Questions? We're here to help you plan the perfect trip.",
+    ctaTitle: "Join our newsletter",
+    ctaSubtitle:
+      "Get travel tips, seasonal offers and new tours straight to your inbox.",
     browseTours: "Browse tours",
     contactUs: "Contact us",
+    newsletterPlaceholder: "Enter your email",
+    newsletterButton: "Subscribe",
+    newsletterSuccess: "Thanks for subscribing!",
+    newsletterInvalid: "Please enter a valid email address.",
+    newsletterError: "Something went wrong. Please try again.",
     tagline:
       "Your gateway to extraordinary adventures in the land of fire and ice.",
     toursTitle: "Tours",
@@ -117,7 +123,7 @@ const en = {
     clearAll: "Clear all",
     clearAllFilters: "Clear all filters",
     travelDates: "Travel dates",
-    datesPlaceholder: "Starting date — Final date",
+    datesPlaceholder: "Starting date - Final date",
     clearDates: "Clear dates",
     travelers: "Travelers",
     duration: "Duration",
@@ -198,7 +204,7 @@ const en = {
     secureBooking: "Secure booking",
     noOnlineTitle: "Online booking isn't available",
     noOnlineText: "Contact us and we'll arrange your booking directly.",
-    callToBook: "Call to book — {phone}",
+    callToBook: "Call to book: {phone}",
     date: "Date",
     departure: "Departure",
     flexible: "Flexible",
@@ -239,7 +245,7 @@ const en = {
     phoneNumber: "Phone number",
     orderSummary: "Order summary",
     cancellationPolicy:
-      "Free cancellation up to 72 hours before departure. 20% fee within 48–72 hours; no refund within 48 hours.",
+      "Free cancellation up to 72 hours before departure. 20% fee within 48 to 72 hours; no refund within 48 hours.",
     seeFullTerms: "See full cancellation terms",
     total: "Total",
     from: "From",
@@ -273,7 +279,7 @@ const en = {
     browseMore: "Browse more tours",
     failed: "Payment didn't go through",
     failedText: "You haven't been charged. You can try booking again.",
-    receivedConfirming: "Payment received — confirming your booking…",
+    receivedConfirming: "Payment received, confirming your booking…",
     receivedText:
       "This usually takes a few seconds. You can keep this page open.",
     traveller: "traveller",
@@ -292,7 +298,7 @@ const en = {
     returnFailedText:
       "Your payment didn't go through and you have not been charged. Please try again or contact us to book.",
     returnPendingText:
-      "We're confirming your payment. This can take a moment — refresh this page shortly.",
+      "We're confirming your payment. This can take a moment, refresh this page shortly.",
     participant: "participant",
     participants: "participants",
     tryAgain: "Try again",
@@ -323,7 +329,7 @@ const es: Dictionary = {
     anyExperience: "Cualquier experiencia",
     experiencesSelected: "{count} experiencias",
     datesLabel: "Selecciona fechas",
-    datesPlaceholder: "Fecha de inicio — Fecha final",
+    datesPlaceholder: "Fecha de inicio - Fecha final",
     travelersLabel: "Añadir viajeros",
     traveler: "{count} viajero",
     travelers: "{count} viajeros",
@@ -387,11 +393,16 @@ const es: Dictionary = {
     readAll: "Leer todas las reseñas en Google",
   },
   footer: {
-    ctaTitle: "Comienza tu aventura islandesa hoy",
+    ctaTitle: "Únete a nuestro boletín",
     ctaSubtitle:
-      "¿Preguntas? Estamos aquí para ayudarte a planear el viaje perfecto.",
+      "Recibe consejos de viaje, ofertas de temporada y nuevos tours en tu correo.",
     browseTours: "Ver tours",
     contactUs: "Contáctanos",
+    newsletterPlaceholder: "Introduce tu correo",
+    newsletterButton: "Suscribirse",
+    newsletterSuccess: "¡Gracias por suscribirte!",
+    newsletterInvalid: "Introduce una dirección de correo válida.",
+    newsletterError: "Algo salió mal. Inténtalo de nuevo.",
     tagline:
       "Tu puerta de entrada a aventuras extraordinarias en la tierra del fuego y el hielo.",
     toursTitle: "Tours",
@@ -416,7 +427,7 @@ const es: Dictionary = {
     clearAll: "Borrar todo",
     clearAllFilters: "Borrar todos los filtros",
     travelDates: "Fechas de viaje",
-    datesPlaceholder: "Fecha de inicio — Fecha final",
+    datesPlaceholder: "Fecha de inicio - Fecha final",
     clearDates: "Borrar fechas",
     travelers: "Viajeros",
     duration: "Duración",
@@ -499,7 +510,7 @@ const es: Dictionary = {
     secureBooking: "Reserva segura",
     noOnlineTitle: "La reserva en línea no está disponible",
     noOnlineText: "Contáctanos y organizaremos tu reserva directamente.",
-    callToBook: "Llama para reservar — {phone}",
+    callToBook: "Llama para reservar: {phone}",
     date: "Fecha",
     departure: "Salida",
     flexible: "Flexible",
@@ -576,7 +587,7 @@ const es: Dictionary = {
     browseMore: "Ver más tours",
     failed: "El pago no se completó",
     failedText: "No se te ha cobrado. Puedes intentar reservar de nuevo.",
-    receivedConfirming: "Pago recibido — confirmando tu reserva…",
+    receivedConfirming: "Pago recibido, confirmando tu reserva…",
     receivedText:
       "Esto suele tardar unos segundos. Puedes mantener esta página abierta.",
     traveller: "viajero",
@@ -595,7 +606,7 @@ const es: Dictionary = {
     returnFailedText:
       "Tu pago no se completó y no se te ha cobrado. Inténtalo de nuevo o contáctanos para reservar.",
     returnPendingText:
-      "Estamos confirmando tu pago. Puede tardar un momento — actualiza esta página en breve.",
+      "Estamos confirmando tu pago. Puede tardar un momento, actualiza esta página en breve.",
     participant: "participante",
     participants: "participantes",
     tryAgain: "Intentar de nuevo",
@@ -614,7 +625,7 @@ const pt: Dictionary = {
     badge: "Com a confiança de mais de 500 viajantes",
     title: "Pronto para a aventura na terra do fogo e do gelo?",
     subtitle:
-      "Explore mais de 70 tours selecionados por toda a Islândia — de caminhadas em geleiras e auroras boreais ao Círculo Dourado. Vamos criar memórias inesquecíveis juntos.",
+      "Explore mais de 70 tours selecionados por toda a Islândia, de caminhadas em geleiras e auroras boreais ao Círculo Dourado. Vamos criar memórias inesquecíveis juntos.",
     exploreTours: "Explorar tours",
     privateTrip: "Planear uma viagem privada",
   },
@@ -624,7 +635,7 @@ const pt: Dictionary = {
     anyExperience: "Qualquer experiência",
     experiencesSelected: "{count} experiências",
     datesLabel: "Selecione as datas",
-    datesPlaceholder: "Data de início — Data final",
+    datesPlaceholder: "Data de início - Data final",
     travelersLabel: "Adicionar viajantes",
     traveler: "{count} viajante",
     travelers: "{count} viajantes",
@@ -660,7 +671,7 @@ const pt: Dictionary = {
   why: {
     title: "Porquê reservar connosco?",
     subtitle:
-      "Organizamos tours privados que não estão disponíveis como opções padrão — feitos à medida das necessidades e desejos de cada cliente.",
+      "Organizamos tours privados que não estão disponíveis como opções padrão, feitos à medida das necessidades e desejos de cada cliente.",
     pickedTitle: "Cuidadosamente selecionados",
     pickedText:
       "Cada tour e atividade é escolhido pelos nossos profissionais de viagens.",
@@ -688,11 +699,16 @@ const pt: Dictionary = {
     readAll: "Ler todas as avaliações no Google",
   },
   footer: {
-    ctaTitle: "Comece a sua aventura islandesa hoje",
+    ctaTitle: "Subscreva a nossa newsletter",
     ctaSubtitle:
-      "Perguntas? Estamos aqui para o ajudar a planear a viagem perfeita.",
+      "Receba dicas de viagem, ofertas sazonais e novos tours no seu email.",
     browseTours: "Ver tours",
     contactUs: "Contacte-nos",
+    newsletterPlaceholder: "Introduza o seu email",
+    newsletterButton: "Subscrever",
+    newsletterSuccess: "Obrigado por subscrever!",
+    newsletterInvalid: "Introduza um endereço de email válido.",
+    newsletterError: "Algo correu mal. Tente novamente.",
     tagline:
       "A sua porta de entrada para aventuras extraordinárias na terra do fogo e do gelo.",
     toursTitle: "Tours",
@@ -717,7 +733,7 @@ const pt: Dictionary = {
     clearAll: "Limpar tudo",
     clearAllFilters: "Limpar todos os filtros",
     travelDates: "Datas de viagem",
-    datesPlaceholder: "Data de início — Data final",
+    datesPlaceholder: "Data de início - Data final",
     clearDates: "Limpar datas",
     travelers: "Viajantes",
     duration: "Duração",
@@ -800,7 +816,7 @@ const pt: Dictionary = {
     secureBooking: "Reserva segura",
     noOnlineTitle: "A reserva online não está disponível",
     noOnlineText: "Contacte-nos e organizaremos a sua reserva diretamente.",
-    callToBook: "Ligue para reservar — {phone}",
+    callToBook: "Ligue para reservar: {phone}",
     date: "Data",
     departure: "Partida",
     flexible: "Flexível",
@@ -877,7 +893,7 @@ const pt: Dictionary = {
     browseMore: "Ver mais tours",
     failed: "O pagamento não foi concluído",
     failedText: "Não foi cobrado. Pode tentar reservar novamente.",
-    receivedConfirming: "Pagamento recebido — a confirmar a sua reserva…",
+    receivedConfirming: "Pagamento recebido, a confirmar a sua reserva…",
     receivedText:
       "Isto costuma demorar alguns segundos. Pode manter esta página aberta.",
     traveller: "viajante",
@@ -896,7 +912,7 @@ const pt: Dictionary = {
     returnFailedText:
       "O seu pagamento não foi concluído e não foi cobrado. Tente novamente ou contacte-nos para reservar.",
     returnPendingText:
-      "Estamos a confirmar o seu pagamento. Pode demorar um momento — atualize esta página em breve.",
+      "Estamos a confirmar o seu pagamento. Pode demorar um momento, atualize esta página em breve.",
     participant: "participante",
     participants: "participantes",
     tryAgain: "Tentar novamente",
@@ -915,7 +931,7 @@ const it: Dictionary = {
     badge: "Scelto da oltre 500 viaggiatori",
     title: "Pronto per l'avventura nella terra del fuoco e del ghiaccio?",
     subtitle:
-      "Esplora oltre 70 tour selezionati in tutta l'Islanda — dalle escursioni sui ghiacciai e l'aurora boreale al Circolo d'Oro. Creiamo insieme ricordi indimenticabili.",
+      "Esplora oltre 70 tour selezionati in tutta l'Islanda, dalle escursioni sui ghiacciai e l'aurora boreale al Circolo d'Oro. Creiamo insieme ricordi indimenticabili.",
     exploreTours: "Esplora i tour",
     privateTrip: "Pianifica un viaggio privato",
   },
@@ -925,7 +941,7 @@ const it: Dictionary = {
     anyExperience: "Qualsiasi esperienza",
     experiencesSelected: "{count} esperienze",
     datesLabel: "Seleziona le date",
-    datesPlaceholder: "Data di inizio — Data finale",
+    datesPlaceholder: "Data di inizio - Data finale",
     travelersLabel: "Aggiungi viaggiatori",
     traveler: "{count} viaggiatore",
     travelers: "{count} viaggiatori",
@@ -961,7 +977,7 @@ const it: Dictionary = {
   why: {
     title: "Perché prenotare con noi?",
     subtitle:
-      "Organizziamo tour privati che non sono disponibili come opzioni standard — su misura per le esigenze e i desideri di ogni cliente.",
+      "Organizziamo tour privati che non sono disponibili come opzioni standard, su misura per le esigenze e i desideri di ogni cliente.",
     pickedTitle: "Selezionati con cura",
     pickedText:
       "Ogni tour e attività è scelto dai nostri professionisti dei viaggi.",
@@ -989,11 +1005,16 @@ const it: Dictionary = {
     readAll: "Leggi tutte le recensioni su Google",
   },
   footer: {
-    ctaTitle: "Inizia oggi la tua avventura islandese",
+    ctaTitle: "Iscriviti alla nostra newsletter",
     ctaSubtitle:
-      "Domande? Siamo qui per aiutarti a pianificare il viaggio perfetto.",
+      "Ricevi consigli di viaggio, offerte stagionali e nuovi tour nella tua email.",
     browseTours: "Sfoglia i tour",
     contactUs: "Contattaci",
+    newsletterPlaceholder: "Inserisci la tua email",
+    newsletterButton: "Iscriviti",
+    newsletterSuccess: "Grazie per l'iscrizione!",
+    newsletterInvalid: "Inserisci un indirizzo email valido.",
+    newsletterError: "Qualcosa è andato storto. Riprova.",
     tagline:
       "La tua porta d'accesso ad avventure straordinarie nella terra del fuoco e del ghiaccio.",
     toursTitle: "Tour",
@@ -1018,7 +1039,7 @@ const it: Dictionary = {
     clearAll: "Cancella tutto",
     clearAllFilters: "Cancella tutti i filtri",
     travelDates: "Date di viaggio",
-    datesPlaceholder: "Data di inizio — Data finale",
+    datesPlaceholder: "Data di inizio - Data finale",
     clearDates: "Cancella date",
     travelers: "Viaggiatori",
     duration: "Durata",
@@ -1101,7 +1122,7 @@ const it: Dictionary = {
     secureBooking: "Prenotazione sicura",
     noOnlineTitle: "La prenotazione online non è disponibile",
     noOnlineText: "Contattaci e organizzeremo la tua prenotazione direttamente.",
-    callToBook: "Chiama per prenotare — {phone}",
+    callToBook: "Chiama per prenotare: {phone}",
     date: "Data",
     departure: "Partenza",
     flexible: "Flessibile",
@@ -1176,7 +1197,7 @@ const it: Dictionary = {
     browseMore: "Scopri altri tour",
     failed: "Il pagamento non è andato a buon fine",
     failedText: "Non ti è stato addebitato nulla. Puoi riprovare a prenotare.",
-    receivedConfirming: "Pagamento ricevuto — conferma della prenotazione…",
+    receivedConfirming: "Pagamento ricevuto, conferma della prenotazione…",
     receivedText:
       "Di solito richiede qualche secondo. Puoi lasciare aperta questa pagina.",
     traveller: "viaggiatore",
@@ -1195,7 +1216,7 @@ const it: Dictionary = {
     returnFailedText:
       "Il tuo pagamento non è andato a buon fine e non ti è stato addebitato nulla. Riprova o contattaci per prenotare.",
     returnPendingText:
-      "Stiamo confermando il tuo pagamento. Può richiedere un momento — aggiorna questa pagina a breve.",
+      "Stiamo confermando il tuo pagamento. Può richiedere un momento, aggiorna questa pagina a breve.",
     participant: "partecipante",
     participants: "partecipanti",
     tryAgain: "Riprova",

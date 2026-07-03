@@ -83,7 +83,7 @@ export function ToursBrowser({
   const toDate = fromYmd(dateTo)
   const datesLabel =
     fromDate && toDate
-      ? `${shortLabel(fromDate)} – ${shortLabel(toDate)}`
+      ? `${shortLabel(fromDate)} - ${shortLabel(toDate)}`
       : fromDate
         ? shortLabel(fromDate)
         : null

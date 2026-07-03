@@ -258,7 +258,7 @@ export async function startBooking(
       amountIsk,
       currency: "ISK",
       buyerEmail: customerEmail,
-      itemDescription: `${tourTitle} — ${date}`,
+      itemDescription: `${tourTitle} - ${date}`,
       returnUrlSuccess: returnBase,
       returnUrlSuccessServer: `${origin}/api/teya/webhook`,
       returnUrlCancel: `${returnBase}&status=cancelled`,

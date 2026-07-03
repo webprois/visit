@@ -12,7 +12,7 @@ export async function TourCategories({
   const dict = await getServerDict()
 
   return (
-    <section id="categories" className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+    <section id="categories" className="mx-auto max-w-7xl px-4 pb-16 pt-4 md:px-6 md:pb-24 md:pt-6">
       <div className="mb-10 flex flex-col gap-3 md:mb-12 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">

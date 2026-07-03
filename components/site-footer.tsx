@@ -1,11 +1,12 @@
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
 import { Phone, Mail, MapPin } from "lucide-react"
 import { getServerDict } from "@/lib/get-dictionary"
-import { fmt } from "@/lib/translations"
+import { getLocale } from "@/lib/get-locale"
+import { NewsletterSignup } from "@/components/newsletter-signup"
 
 export async function SiteFooter() {
   const dict = await getServerDict()
+  const locale = await getLocale()
   return (
     <footer className="bg-background">
       {/* CTA */}
@@ -19,18 +20,16 @@ export async function SiteFooter() {
               {dict.footer.ctaSubtitle}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button size="lg" className="rounded-full">
-              {dict.footer.browseTours}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full"
-            >
-              {dict.footer.contactUs}
-            </Button>
-          </div>
+          <NewsletterSignup
+            locale={locale}
+            labels={{
+              placeholder: dict.footer.newsletterPlaceholder,
+              button: dict.footer.newsletterButton,
+              success: dict.footer.newsletterSuccess,
+              invalid: dict.footer.newsletterInvalid,
+              error: dict.footer.newsletterError,
+            }}
+          />
         </div>
       </div>
 
@@ -93,7 +92,7 @@ export async function SiteFooter() {
 
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground md:flex-row md:px-6">
-          <p>© {new Date().getFullYear()} visit.is — {dict.footer.rights}</p>
+          <p>© {new Date().getFullYear()} visit.is · {dict.footer.rights}</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-foreground">{dict.footer.privacy}</a>
             <a href="#" className="hover:text-foreground">{dict.footer.terms}</a>

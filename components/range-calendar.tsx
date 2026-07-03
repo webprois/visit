@@ -128,12 +128,12 @@ export function RangeCalendar({
         <p className="text-sm text-muted-foreground">
           {from && to ? (
             <span className="text-foreground">
-              {shortLabel(from)} – {shortLabel(to)}
+              {shortLabel(from)} - {shortLabel(to)}
             </span>
           ) : from ? (
             <>
               <span className="text-foreground">{shortLabel(from)}</span>
-              {" — select an end date"}
+              {", select an end date"}
             </>
           ) : (
             "Select your travel dates"

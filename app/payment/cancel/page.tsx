@@ -11,7 +11,7 @@ import { markBookingCancelled } from "@/app/actions/booking"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Payment cancelled — Visit.is",
+  title: "Payment cancelled | Visit.is",
   robots: { index: false },
 }
 
