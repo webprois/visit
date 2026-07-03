@@ -46,7 +46,7 @@ export default async function SelfDriveToursPage() {
             <h1 className="max-w-3xl text-balance font-heading text-4xl font-extrabold leading-tight text-foreground drop-shadow-lg md:text-6xl">
               {t.heroLine1} {t.heroLine2}
             </h1>
-            <div className="mt-8 max-w-3xl">
+            <div className="mt-8">
               <p className="text-pretty text-base leading-relaxed text-foreground/85 md:text-lg">
                 {t.heroSubtitle} {t.heroBody}
               </p>
