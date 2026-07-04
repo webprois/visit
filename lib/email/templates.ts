@@ -22,6 +22,14 @@ const COLORS = {
   accentText: "#ffffff",
 }
 
+// Emails are opened in Gmail/Outlook/Apple Mail long after they're sent, so the
+// logo must live on a permanent, publicly reachable CDN URL — not the app's
+// deploy URL (preview/sandbox URLs are gated and change over time, which is why
+// the logo showed as broken). Hosted on public Vercel Blob; overridable via env.
+const EMAIL_LOGO_URL =
+  process.env.EMAIL_LOGO_URL ??
+  "https://gxtv1oie0bfehm60.public.blob.vercel-storage.com/email/visit-iceland-logo.png"
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -44,7 +52,7 @@ function layout(opts: {
   const { s, heading, bodyHtml } = opts
   const year = opts.year ?? new Date().getFullYear()
   const baseUrl = getAppUrl()
-  const logoUrl = `${baseUrl}/email-logo.png`
+  const logoUrl = EMAIL_LOGO_URL
   const accountUrl = `${baseUrl}/account`
   return `<!doctype html>
 <html>
