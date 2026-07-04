@@ -5,6 +5,7 @@ import {
   Compass,
   Tag,
   MapPin,
+  CalendarCheck,
   Inbox,
   Settings,
   LogOut,
@@ -14,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-export type AdminSection = "tours" | "categories" | "locations"
+export type AdminSection = "tours" | "categories" | "locations" | "bookings"
 
 type NavItem = {
   key: AdminSection
@@ -26,6 +27,7 @@ const NAV: NavItem[] = [
   { key: "tours", label: "Tours", icon: Compass },
   { key: "categories", label: "Categories", icon: Tag },
   { key: "locations", label: "Starting Locations", icon: MapPin },
+  { key: "bookings", label: "Bookings", icon: CalendarCheck },
 ]
 
 const COMING_SOON: { label: string; icon: LucideIcon }[] = [

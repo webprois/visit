@@ -17,15 +17,26 @@ export function AdminShell({
   categories,
   locations,
   userName,
+  initialSection = "tours",
 }: {
   tours: MergedTour[]
   categories: TourCategory[]
   locations: StartingLocation[]
   userName: string
+  initialSection?: AdminSection
 }) {
   const router = useRouter()
-  const [section, setSection] = useState<AdminSection>("tours")
+  const [section, setSection] = useState<AdminSection>(initialSection)
   const [refreshing, startRefresh] = useTransition()
+
+  // Bookings live on their own route; every other section is an in-page switch.
+  function handleNavigate(next: AdminSection) {
+    if (next === "bookings") {
+      router.push("/admin/bookings")
+      return
+    }
+    setSection(next)
+  }
 
   // The admin shell owns its own height (h-svh) and scrolls internally per
   // column. Lock the document scrollport while it is mounted so the whole
@@ -82,7 +93,7 @@ export function AdminShell({
     <div className="admin-surface flex h-svh overflow-hidden bg-background">
       <AdminSidebar
         active={section}
-        onNavigate={setSection}
+        onNavigate={handleNavigate}
         userName={userName}
         onRefresh={handleRefresh}
         onSignOut={handleSignOut}
