@@ -289,6 +289,14 @@ export type BookingExtra = {
   limitByPax: boolean
 }
 
+/** Mirror of the server's TourFee (mandatory, auto-applied fee). */
+export type BookingFee = {
+  id: number
+  title: string
+  pricedPerPerson: boolean
+  unitIsk: number
+}
+
 /** Clamp an add-on quantity given the current participant count. */
 function clampAddon(extra: BookingExtra, totalPax: number): number {
   const caps = [99]
@@ -366,6 +374,7 @@ export function BookingForm({
   bokunId,
   slots,
   extras = [],
+  fees = [],
   pickup = null,
   fallbackPhone,
   startingPriceIsk = 0,
@@ -373,6 +382,8 @@ export function BookingForm({
   bokunId: string
   slots: BookingSlot[]
   extras?: BookingExtra[]
+  /** Mandatory fees auto-applied by Bokun (e.g. national park fee). */
+  fees?: BookingFee[]
   pickup?: BookingPickup | null
   fallbackPhone: string
   /** "From" price shown before any participants are selected. */
@@ -455,6 +466,22 @@ export function BookingForm({
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
+  // Inline, per-field errors for the confirm-step contact inputs. Shown right
+  // under each field (instead of the shared banner near the total) so the guest
+  // sees exactly which field needs attention.
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string
+    lastName?: string
+    email?: string
+    phone?: string
+  }>({})
+  const clearFieldError = (field: keyof typeof fieldErrors) =>
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   const [step, setStep] = useState(1)
   // Wizard steps. The add-ons step only appears when the tour has extras, so a
   // tour without add-ons collapses to a 3-step flow.
@@ -472,7 +499,16 @@ export function BookingForm({
     (n, e) => n + (qtyByAddon[e.id] ?? 0) * e.unitIsk,
     0,
   )
-  const total = baseTotal + addonsTotal
+  // Mandatory fees are always charged: per-person fees scale with participants,
+  // flat fees are added once. Included only once at least one guest is selected.
+  const feesTotal =
+    totalPax > 0
+      ? fees.reduce(
+          (n, f) => n + (f.pricedPerPerson ? f.unitIsk * totalPax : f.unitIsk),
+          0,
+        )
+      : 0
+  const total = baseTotal + feesTotal + addonsTotal
 
   // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
   const guestSlots = useMemo(() => {
@@ -590,16 +626,28 @@ export function BookingForm({
       setError(t.errGuestNames)
       return
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setError(t.errYourName)
-      return
-    }
-    if (!email.trim()) {
-      setError(t.errEmail)
-      return
-    }
-    if (!phone.trim()) {
-      setError(t.errPhone)
+    const contactErrors: typeof fieldErrors = {}
+    if (!firstName.trim()) contactErrors.firstName = t.errYourName
+    if (!lastName.trim()) contactErrors.lastName = t.errYourName
+    if (!email.trim()) contactErrors.email = t.errEmail
+    if (!phone.trim()) contactErrors.phone = t.errPhone
+    if (Object.keys(contactErrors).length > 0) {
+      setFieldErrors(contactErrors)
+      // Focus + scroll the first invalid field into view so the inline message
+      // is visible (the fields sit at the top of this step, the button at the
+      // bottom).
+      const firstInvalidId = contactErrors.firstName
+        ? "booking-first-name"
+        : contactErrors.lastName
+          ? "booking-last-name"
+          : contactErrors.email
+            ? "booking-email"
+            : "booking-phone"
+      requestAnimationFrame(() => {
+        const el = document.getElementById(firstInvalidId)
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        el?.focus({ preventScroll: true })
+      })
       return
     }
     const wantsAccount = !session && createAccount
@@ -713,6 +761,7 @@ export function BookingForm({
 
   function goBack() {
     setError(null)
+    setFieldErrors({})
     setStep((s) => Math.max(1, s - 1))
   }
 
@@ -1162,12 +1211,13 @@ export function BookingForm({
                       <Input
                         id={`guest-${g.key}-first`}
                         value={firstByGuest[g.key] ?? ""}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setError(null)
                           setFirstByGuest((prev) => ({
                             ...prev,
                             [g.key]: e.target.value,
                           }))
-                        }
+                        }}
                         required
                         autoComplete="off"
                         placeholder={t.firstName}
@@ -1177,12 +1227,13 @@ export function BookingForm({
                       <Input
                         id={`guest-${g.key}-last`}
                         value={lastByGuest[g.key] ?? ""}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setError(null)
                           setLastByGuest((prev) => ({
                             ...prev,
                             [g.key]: e.target.value,
                           }))
-                        }
+                        }}
                         required
                         autoComplete="off"
                         placeholder={t.lastName}
@@ -1211,22 +1262,40 @@ export function BookingForm({
                   <Input
                     id="booking-first-name"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                      clearFieldError("firstName")
+                      setFirstName(e.target.value)
+                    }}
                     required
                     autoComplete="given-name"
+                    aria-invalid={!!fieldErrors.firstName}
                     className={FIELD_CLASS}
                   />
+                  {fieldErrors.firstName && (
+                    <p className="text-xs text-destructive">
+                      {fieldErrors.firstName}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="booking-last-name">{t.lastName}</Label>
                   <Input
                     id="booking-last-name"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => {
+                      clearFieldError("lastName")
+                      setLastName(e.target.value)
+                    }}
                     required
                     autoComplete="family-name"
+                    aria-invalid={!!fieldErrors.lastName}
                     className={FIELD_CLASS}
                   />
+                  {fieldErrors.lastName && (
+                    <p className="text-xs text-destructive">
+                      {fieldErrors.lastName}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1235,13 +1304,20 @@ export function BookingForm({
                   id="booking-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    clearFieldError("email")
+                    setEmail(e.target.value)
+                  }}
                   required
                   autoComplete="email"
                   readOnly={!!lockedEmail}
+                  aria-invalid={!!fieldErrors.email}
                   aria-describedby={lockedEmail ? "booking-email-hint" : undefined}
                   className={FIELD_CLASS}
                 />
+                {fieldErrors.email && (
+                  <p className="text-xs text-destructive">{fieldErrors.email}</p>
+                )}
                 {lockedEmail && (
                   <p
                     id="booking-email-hint"
@@ -1278,13 +1354,20 @@ export function BookingForm({
                     id="booking-phone"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      clearFieldError("phone")
+                      setPhone(e.target.value)
+                    }}
                     required
                     autoComplete="tel-national"
                     placeholder={t.phoneNumber}
+                    aria-invalid={!!fieldErrors.phone}
                     className={`${FIELD_CLASS} flex-1`}
                   />
                 </div>
+                {fieldErrors.phone && (
+                  <p className="text-xs text-destructive">{fieldErrors.phone}</p>
+                )}
               </div>
             </div>
 
@@ -1373,6 +1456,24 @@ export function BookingForm({
                       </div>
                     )
                   })}
+                  {fees.map((fee) => {
+                    const qty = fee.pricedPerPerson ? totalPax : 1
+                    const feeTotal = fee.unitIsk * qty
+                    return (
+                      <div
+                        key={fee.id}
+                        className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                      >
+                        <span>
+                          {fee.title}
+                          {fee.pricedPerPerson && ` × ${qty}`}
+                        </span>
+                        <span className="text-foreground">
+                          <Price isk={feeTotal} />
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -1405,7 +1506,7 @@ export function BookingForm({
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   {totalPax > 0 ? (
-                    <Price isk={total} />
+                    <Price isk={total} showIskBelow={step === totalSteps} />
                   ) : startingPriceIsk > 0 ? (
                     <>
                       <Price isk={startingPriceIsk} />

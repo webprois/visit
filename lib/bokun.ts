@@ -828,43 +828,117 @@ function moneyToIsk(value: unknown): number {
   return 0
 }
 
-async function fetchTourExtrasUncached(bokunId: string): Promise<TourExtra[]> {
-  const activity = await bokunRequest<{ bookableExtras?: BokunExtra[] }>(
-    "GET",
-    `/activity.json/${bokunId}?lang=EN&currency=ISK`,
-  )
-  const raw = activity?.bookableExtras
-  if (!Array.isArray(raw) || raw.length === 0) return []
+/**
+ * A mandatory, preselected paid extra that Bokun auto-adds to every booking
+ * (e.g. a national park fee). It is always charged, so it must be shown in the
+ * price and order summary — never offered as an optional toggle.
+ */
+export type TourFee = {
+  id: number
+  title: string
+  /** When true, charged once per participant; otherwise a flat per-booking fee. */
+  pricedPerPerson: boolean
+  unitIsk: number
+}
 
-  const extras: TourExtra[] = []
+type ExtrasBundle = { addons: TourExtra[]; fees: TourFee[] }
+
+/**
+ * Number of nights a tour spans, derived from its Bokun duration. Day tours
+ * (measured in hours/minutes) count as a single unit so that "per night" fees
+ * are charged exactly once — matching how Bokun bills a 0-night activity.
+ *
+ * For multi-day tours we count nights as (total days − 1), e.g. a 3-day tour is
+ * 2 nights and a 1-week tour is 6 nights. This is an estimate used only for the
+ * displayed price; the amount actually charged always comes from Bokun's
+ * authoritative reserved total.
+ */
+function nightsFromDuration(a: {
+  durationType?: string
+  durationDays?: number
+  durationWeeks?: number
+}): number {
+  const totalDays = (a.durationWeeks ?? 0) * 7 + (a.durationDays ?? 0)
+  return Math.max(1, totalDays - 1)
+}
+
+async function fetchExtrasBundleUncached(bokunId: string): Promise<ExtrasBundle> {
+  const activity = await bokunRequest<{
+    bookableExtras?: BokunExtra[]
+    durationType?: string
+    durationDays?: number
+    durationWeeks?: number
+  }>("GET", `/activity.json/${bokunId}?lang=EN&currency=ISK`)
+  const raw = activity?.bookableExtras
+  if (!Array.isArray(raw) || raw.length === 0) return { addons: [], fees: [] }
+
+  const nights = nightsFromDuration(activity ?? {})
+
+  const addons: TourExtra[] = []
+  const fees: TourFee[] = []
   for (const e of raw) {
-    if (e.included || e.free) continue
-    const unitIsk = moneyToIsk(e.price)
-    if (unitIsk <= 0) continue // skip "ask"/priceless extras
-    extras.push({
+    if (e.free) continue // genuinely free inclusions never affect price
+    const rawUnitIsk = moneyToIsk(e.price)
+    if (rawUnitIsk <= 0) continue // skip "ask"/priceless extras
+    const pricingType = e.pricingType ?? ""
+    const pricedPerPerson = /PERSON|PARTICIPANT|PAX/i.test(pricingType)
+    // "Per night" pricing (e.g. PER_PERSON_PER_NIGHT) multiplies by the number
+    // of nights. Baked into the unit price here so all downstream pricing and
+    // line-item rendering stay night-agnostic. Day tours have nights = 1.
+    const perNight = /NIGHT/i.test(pricingType)
+    const unitIsk = perNight ? rawUnitIsk * nights : rawUnitIsk
+    if (e.included) {
+      // Mandatory preselected paid extra (e.g. Vatnajökull National Park Fee):
+      // Bokun applies it to every booking automatically, so we surface it as a
+      // fee rather than an optional add-on.
+      fees.push({ id: e.id, title: e.title ?? "Fee", pricedPerPerson, unitIsk })
+      continue
+    }
+    addons.push({
       id: e.id,
       title: e.title ?? "Add-on",
       information: e.information ?? "",
-      pricedPerPerson: /PERSON|PARTICIPANT|PAX/i.test(e.pricingType ?? ""),
+      pricedPerPerson,
       unitIsk,
       maxPerBooking: e.maxPerBooking && e.maxPerBooking > 0 ? e.maxPerBooking : 0,
       limitByPax: Boolean(e.limitByPax),
     })
   }
-  return extras
+  return { addons, fees }
+}
+
+function fetchExtrasBundle(bokunId: string): Promise<ExtrasBundle> {
+  return unstable_cache(
+    () => fetchExtrasBundleUncached(bokunId),
+    ["bokun-extras-bundle-v2", bokunId],
+    { revalidate: 900, tags: ["bokun-tours"] },
+  )()
 }
 
 /**
- * Paid, bookable add-ons for one tour (in ISK). Cached 15 minutes; returns an
- * empty array when none exist or the extras list fails to load (caller hides
- * the section). Booking participants still works without it.
+ * Paid, optional bookable add-ons for one tour (in ISK). Cached 15 minutes;
+ * returns an empty array when none exist or the extras list fails to load
+ * (caller hides the section). Booking participants still works without it.
  */
-export function fetchTourExtras(bokunId: string): Promise<TourExtra[]> {
-  return unstable_cache(
-    () => fetchTourExtrasUncached(bokunId),
-    ["bokun-extras-v2", bokunId],
-    { revalidate: 900, tags: ["bokun-tours"] },
-  )()
+export async function fetchTourExtras(bokunId: string): Promise<TourExtra[]> {
+  return (await fetchExtrasBundle(bokunId)).addons
+}
+
+/**
+ * Mandatory, auto-applied fees for one tour (in ISK), e.g. a national park fee.
+ * These are always charged by Bokun and must be included in the displayed total.
+ */
+export async function fetchTourFees(bokunId: string): Promise<TourFee[]> {
+  return (await fetchExtrasBundle(bokunId)).fees
+}
+
+/** Total of all mandatory fees (ISK) for a given participant count. */
+export function priceMandatoryFeesIsk(fees: TourFee[], totalPax: number): number {
+  let total = 0
+  for (const f of fees) {
+    total += f.pricedPerPerson ? f.unitIsk * Math.max(0, totalPax) : f.unitIsk
+  }
+  return Math.round(total)
 }
 
 /** Selected quantity per add-on. */
@@ -1488,11 +1562,42 @@ export type ReserveBookingInput = {
 }
 
 export type ReserveBookingResult =
-  | { ok: true; confirmationCode: string; bookingId: number | null }
+  | {
+      ok: true
+      confirmationCode: string
+      bookingId: number | null
+      /**
+       * Bokun's authoritative activity total in ISK for the reserved booking.
+       * This is what the customer must pay for the activity (excludes any local
+       * add-ons); charge exactly this so no balance is left on the booking.
+       * Null if it couldn't be read — callers fall back to the computed total.
+       */
+      activityTotalIsk: number | null
+    }
   | { ok: false; error: string }
 
 type CheckoutSubmitResponse = {
   booking?: { bookingId?: number; confirmationCode?: string; status?: string }
+}
+
+/**
+ * Read the authoritative activity total (in ISK) for a just-reserved booking.
+ * Bokun re-computes the real total during checkout, which can differ from the
+ * availability unit prices (e.g. booking fees, rounding), so we charge exactly
+ * this to avoid leaving a remaining balance. Returns null if it can't be read.
+ */
+async function fetchReservedTotalIsk(bookingId: number): Promise<number | null> {
+  try {
+    const data = await bokunRequest<{ totalPrice?: number; currency?: string }>(
+      "GET",
+      `/booking.json/booking/${bookingId}`,
+    )
+    const total = data?.totalPrice
+    if (typeof total === "number" && total > 0) return Math.round(total)
+  } catch (err) {
+    console.log("[v0] fetchReservedTotalIsk failed:", (err as Error).message)
+  }
+  return null
 }
 
 /**
@@ -1571,10 +1676,13 @@ export async function reserveBokunBooking(
     console.log("[v0] Bokun reserve failed:", res.status, res.error)
     return { ok: false, error: res.error ?? "Could not reserve the booking in Bokun." }
   }
+  const bookingId = res.data?.booking?.bookingId ?? null
   console.log(
-    `[v0] Bokun RESERVED ${code} (bookingId=${res.data?.booking?.bookingId ?? "?"}) for ${input.contact.email}`,
+    `[v0] Bokun RESERVED ${code} (bookingId=${bookingId ?? "?"}) for ${input.contact.email}`,
   )
-  return { ok: true, confirmationCode: code, bookingId: res.data?.booking?.bookingId ?? null }
+  // Read Bokun's authoritative ISK total so we charge the exact amount owed.
+  const activityTotalIsk = bookingId ? await fetchReservedTotalIsk(bookingId) : null
+  return { ok: true, confirmationCode: code, bookingId, activityTotalIsk }
 }
 
 export type ConfirmBokunResult = { ok: true } | { ok: false; error: string }

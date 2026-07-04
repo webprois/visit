@@ -8,9 +8,11 @@ import { booking } from "@/lib/db/schema"
 import {
   fetchBookableSlots,
   fetchTourExtras,
+  fetchTourFees,
   fetchTourPickup,
   priceSlotIsk,
   priceExtrasIsk,
+  priceMandatoryFeesIsk,
   reserveBokunBooking,
   confirmBokunBooking,
   type SlotSelection,
@@ -207,7 +209,11 @@ async function persistBooking(
       .filter((x): x is NonNullable<typeof x> => x !== null)
   }
 
-  const amountIsk = baseIsk + addonsIsk
+  // Mandatory fees Bokun auto-applies (e.g. national park fee). Used only as a
+  // fallback total when Bokun's authoritative total can't be read (below), since
+  // Bokun's reserved total already includes these fees.
+  const mandatoryFees = await fetchTourFees(input.bokunId).catch(() => [])
+  const feesIsk = priceMandatoryFeesIsk(mandatoryFees, totalPax)
 
   // --- Resolve pickup/drop-off against live Bokun data ---
   let storedPickup: {
@@ -279,6 +285,23 @@ async function persistBooking(
   if (!reservation.ok) {
     return { ok: false, error: friendlyReserveError(reservation.error) }
   }
+
+  // Charge Bokun's authoritative activity total (in ISK) rather than our
+  // availability-derived estimate, so the payment always matches the booking
+  // total and never leaves a remaining balance. Add-ons aren't part of the
+  // Bokun reservation, so they're added on top of the activity total.
+  // Bokun's reserved total already includes mandatory fees; when we can't read
+  // it, fall back to our computed activity price plus those fees.
+  const bokunActivityIsk = reservation.activityTotalIsk
+  const computedActivityIsk = baseIsk + feesIsk
+  const activityIsk =
+    bokunActivityIsk && bokunActivityIsk > 0 ? bokunActivityIsk : computedActivityIsk
+  if (bokunActivityIsk && Math.abs(bokunActivityIsk - computedActivityIsk) > 1) {
+    console.log(
+      `[v0] price reconcile ${reservation.confirmationCode}: computed=${computedActivityIsk} ISK (base=${baseIsk}, fees=${feesIsk}), Bokun=${bokunActivityIsk} ISK — charging Bokun total`,
+    )
+  }
+  const amountIsk = activityIsk + addonsIsk
 
   // --- Persist a pending booking (internal reconciliation record) ---
   const id = randomUUID()
