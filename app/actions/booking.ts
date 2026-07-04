@@ -127,7 +127,19 @@ async function persistBooking(
   if (!input.customerName.trim()) {
     return { ok: false, error: "Please enter your name." }
   }
-  if (!isEmail(input.customerEmail)) {
+
+  // Link the booking to the signed-in customer (never an admin) so it reliably
+  // shows in My Trips regardless of the contact email typed. When signed in we
+  // also lock the contact email to the account email, so Bokun and our records
+  // store a consistent, matchable address.
+  const session = await auth.api.getSession({ headers: await headers() })
+  const accountUser =
+    session?.user && !isAdminEmail(session.user.email) ? session.user : null
+  const contactEmail = (
+    accountUser ? accountUser.email : input.customerEmail
+  ).trim()
+
+  if (!isEmail(contactEmail)) {
     return { ok: false, error: "Please enter a valid email address." }
   }
 
@@ -260,7 +272,7 @@ async function persistBooking(
     contact: {
       firstName,
       lastName,
-      email: input.customerEmail.trim(),
+      email: contactEmail,
       phone: input.customerPhone?.trim() || null,
     },
   })
@@ -272,6 +284,7 @@ async function persistBooking(
   const id = randomUUID()
   await db.insert(booking).values({
     id,
+    userId: accountUser?.id ?? null,
     bokunId: input.bokunId,
     tourTitle,
     tourDate: input.date,
@@ -285,7 +298,7 @@ async function persistBooking(
     currency: "ISK",
     amountMinor: amountIsk, // ISK has no minor units
     customerName: input.customerName.trim(),
-    customerEmail: input.customerEmail.trim(),
+    customerEmail: contactEmail,
     customerPhone: input.customerPhone?.trim() || null,
     notes: input.notes?.trim() || null,
     status,
@@ -300,7 +313,7 @@ async function persistBooking(
       amountIsk,
       tourTitle,
       date: input.date,
-      customerEmail: input.customerEmail.trim(),
+      customerEmail: contactEmail,
     },
   }
 }

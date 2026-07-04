@@ -202,10 +202,14 @@ export const tourStartingLocation = pgTable(
  * pricing come from Bokun, the booking is reserved in Bokun, payment is taken
  * via Teya, and the reserved Bokun booking is then confirmed. This row is an
  * internal reconciliation record; the customer-facing source of truth is Bokun.
- * These are guest bookings, so there is no userId scoping.
+ * When the booking is made by a signed-in customer, `userId` links it to their
+ * account so it reliably appears in "My Trips" regardless of the contact email
+ * used. Guest bookings leave `userId` null and are matched by email instead.
  */
 export const booking = pgTable("booking", {
   id: text("id").primaryKey(),
+  // Account that made the booking, when signed in. Null for guest bookings.
+  userId: text("user_id"),
   bokunId: text("bokun_id").notNull(),
   tourTitle: text("tour_title").notNull(),
   tourDate: text("tour_date").notNull(),

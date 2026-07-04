@@ -36,7 +36,7 @@ export default async function AccountPage() {
             email={session.user.email}
           />
           <Suspense fallback={<TripsSkeleton />}>
-            <TripsSection email={session.user.email} />
+            <TripsSection userId={session.user.id} email={session.user.email} />
           </Suspense>
         </section>
       </main>
