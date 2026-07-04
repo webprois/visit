@@ -40,7 +40,7 @@ export default async function AccountPage() {
           </Suspense>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter hideNewsletter />
     </div>
   )
 }

@@ -4,34 +4,40 @@ import { getServerDict } from "@/lib/get-dictionary"
 import { getLocale } from "@/lib/get-locale"
 import { NewsletterSignup } from "@/components/newsletter-signup"
 
-export async function SiteFooter() {
+export async function SiteFooter({
+  hideNewsletter = false,
+}: {
+  hideNewsletter?: boolean
+}) {
   const dict = await getServerDict()
   const locale = await getLocale()
   return (
     <footer className="bg-background">
       {/* CTA */}
-      <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground md:flex-row md:items-center md:justify-between md:p-12">
-          <div>
-            <h2 className="text-balance font-heading text-2xl font-extrabold md:text-3xl">
-              {dict.footer.ctaTitle}
-            </h2>
-            <p className="mt-2 max-w-md text-pretty leading-relaxed text-muted-foreground">
-              {dict.footer.ctaSubtitle}
-            </p>
+      {!hideNewsletter && (
+        <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
+          <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground md:flex-row md:items-center md:justify-between md:p-12">
+            <div>
+              <h2 className="text-balance font-heading text-2xl font-extrabold md:text-3xl">
+                {dict.footer.ctaTitle}
+              </h2>
+              <p className="mt-2 max-w-md text-pretty leading-relaxed text-muted-foreground">
+                {dict.footer.ctaSubtitle}
+              </p>
+            </div>
+            <NewsletterSignup
+              locale={locale}
+              labels={{
+                placeholder: dict.footer.newsletterPlaceholder,
+                button: dict.footer.newsletterButton,
+                success: dict.footer.newsletterSuccess,
+                invalid: dict.footer.newsletterInvalid,
+                error: dict.footer.newsletterError,
+              }}
+            />
           </div>
-          <NewsletterSignup
-            locale={locale}
-            labels={{
-              placeholder: dict.footer.newsletterPlaceholder,
-              button: dict.footer.newsletterButton,
-              success: dict.footer.newsletterSuccess,
-              invalid: dict.footer.newsletterInvalid,
-              error: dict.footer.newsletterError,
-            }}
-          />
         </div>
-      </div>
+      )}
 
       {/* Links */}
       <div className="mx-auto grid max-w-7xl gap-10 px-4 pb-12 md:grid-cols-4 md:px-6">
