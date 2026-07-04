@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
+import { getPostLoginPath } from "@/app/actions/session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,7 +35,8 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         const { error } = await authClient.signIn.email({ email, password })
         if (error) throw new Error(error.message || "Sign in failed")
       }
-      router.push("/admin")
+      const dest = await getPostLoginPath()
+      router.push(dest)
       router.refresh()
     } catch (err) {
       setError((err as Error).message)
@@ -56,7 +58,9 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
           <h1 className="font-heading text-xl font-bold text-foreground">
             {isSignUp ? "Create account" : "Sign in"}
           </h1>
-          <p className="text-sm text-muted-foreground">Tour management</p>
+          <p className="text-sm text-muted-foreground">
+            {isSignUp ? "Track your bookings" : "Welcome back"}
+          </p>
         </div>
       </div>
 
