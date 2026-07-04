@@ -69,10 +69,14 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
   if (row.status === "cancelled" || row.cancelledAt) {
     return { ok: false, error: "This booking is already cancelled." }
   }
-  if (row.status !== "paid" && row.status !== "confirmed") {
+
+  const isPaid = row.status === "paid" || row.status === "confirmed"
+  const isUnpaid =
+    row.status === "pending" || row.status === "pending_payment"
+  if (!isPaid && !isUnpaid) {
     return {
       ok: false,
-      error: "Only confirmed bookings can be cancelled.",
+      error: "This booking can't be cancelled.",
     }
   }
 
@@ -80,6 +84,43 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
   if (depMs !== null && depMs <= Date.now()) {
     return { ok: false, error: "This tour has already departed." }
   }
+
+  // --- Unpaid booking: cancel immediately. No payment was taken, so there's no
+  // fee and nothing to refund. Release the Bokun reservation if one exists. ---
+  if (isUnpaid) {
+    if (row.bokunConfirmationCode) {
+      const res = await cancelBokunBooking(row.bokunConfirmationCode, {
+        note: "Cancelled by customer (unpaid booking, no refund due)",
+        notify: false,
+        refund: false,
+      })
+      if (!res.ok) {
+        console.error(
+          `[v0] customer cancel: Bokun cancel failed for unpaid booking (${row.id}): ${res.error}`,
+        )
+        return {
+          ok: false,
+          error:
+            "We couldn't cancel your booking just now. Please try again or contact us.",
+        }
+      }
+    }
+
+    await db
+      .update(booking)
+      .set({
+        status: "cancelled",
+        cancelledAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(booking.id, row.id))
+
+    // No email here: the standard cancellation email promises a refund, which
+    // doesn't apply to an unpaid booking. The toast confirms the outcome.
+    revalidatePath("/account")
+    return { ok: true, outcome: "cancelled" }
+  }
+
   const hoursUntilTour =
     depMs === null ? Number.POSITIVE_INFINITY : (depMs - Date.now()) / 3_600_000
 
