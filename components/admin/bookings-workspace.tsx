@@ -1,8 +1,12 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -23,6 +27,8 @@ import {
   Ticket,
   CalendarDays,
   Tag,
+  Ban,
+  AlertTriangle,
 } from "lucide-react"
 import type { BokunBooking, BokunBookingResult } from "@/lib/bokun"
 import type { BookingFiltersState } from "./bookings-shell"
@@ -80,6 +86,7 @@ export function BookingsWorkspace({
   filters,
   onFiltersChange,
   pageSize,
+  onCancelled,
 }: {
   result: BokunBookingResult
   loading: boolean
@@ -87,6 +94,7 @@ export function BookingsWorkspace({
   filters: BookingFiltersState
   onFiltersChange: (next: BookingFiltersState) => void
   pageSize: number
+  onCancelled: () => void
 }) {
   // Free-text filter runs on the client over the current page (Bokun's search
   // has no fuzzy name/product search — only exact confirmation code).
@@ -312,7 +320,14 @@ export function BookingsWorkspace({
 
       {/* Detail drawer */}
       {selected && (
-        <BookingDetail booking={selected} onClose={() => setSelected(null)} />
+        <BookingDetail
+          booking={selected}
+          onClose={() => setSelected(null)}
+          onCancelled={() => {
+            onCancelled()
+            setSelected(null)
+          }}
+        />
       )}
     </div>
   )
@@ -345,10 +360,15 @@ function SummaryChip({
 function BookingDetail({
   booking: b,
   onClose,
+  onCancelled,
 }: {
   booking: BokunBooking
   onClose: () => void
+  onCancelled: () => void
 }) {
+  const isCancelled = b.status === "CANCELLED" || b.status === "REJECTED"
+  const [confirming, setConfirming] = useState(false)
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
       <button
@@ -495,6 +515,147 @@ function BookingDetail({
               )}
             </Section>
           )}
+
+          {/* Cancel action */}
+          {!isCancelled && (
+            <div className="border-t border-border pt-4">
+              <Button
+                variant="outline"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirming(true)}
+              >
+                <Ban className="mr-2 size-4" /> Cancel booking
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {confirming && (
+        <CancelDialog
+          booking={b}
+          onDismiss={() => setConfirming(false)}
+          onCancelled={onCancelled}
+        />
+      )}
+    </div>
+  )
+}
+
+function CancelDialog({
+  booking: b,
+  onDismiss,
+  onCancelled,
+}: {
+  booking: BokunBooking
+  onDismiss: () => void
+  onCancelled: () => void
+}) {
+  const [note, setNote] = useState("")
+  const [notify, setNotify] = useState(false)
+  const [refund, setRefund] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function submit() {
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/admin/bookings/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmationCode: b.confirmationCode,
+          note: note.trim() || undefined,
+          notify,
+          refund,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || "Could not cancel this booking.")
+        return
+      }
+      toast.success(`Booking ${b.confirmationCode} cancelled.`)
+      onCancelled()
+    } catch {
+      toast.error("Something went wrong. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={onDismiss}
+        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+      />
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-xl">
+        <div className="flex items-start gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+            <AlertTriangle className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-heading text-base font-bold text-foreground">Cancel booking?</h3>
+            <p className="text-sm text-muted-foreground">
+              This cancels{" "}
+              <span className="font-mono text-foreground">{b.confirmationCode}</span> in Bokun.
+              This cannot be undone here.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cancel-note" className="text-xs text-muted-foreground">
+              Reason (optional)
+            </Label>
+            <Textarea
+              id="cancel-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Shown in Bokun's cancellation record"
+              rows={2}
+            />
+          </div>
+
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+            <span className="flex flex-col">
+              <span className="text-sm text-foreground">Notify customer</span>
+              <span className="text-xs text-muted-foreground">Email the traveller about the cancellation</span>
+            </span>
+            <Switch checked={notify} onCheckedChange={setNotify} />
+          </label>
+
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+            <span className="flex flex-col">
+              <span className="text-sm text-foreground">Refund payment</span>
+              <span className="text-xs text-muted-foreground">Attempt an automatic refund in Bokun</span>
+            </span>
+            <Switch checked={refund} onCheckedChange={setRefund} />
+          </label>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" onClick={onDismiss} disabled={submitting}>
+            Keep booking
+          </Button>
+          <Button
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={submit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> Cancelling...
+              </>
+            ) : (
+              <>
+                <Ban className="mr-2 size-4" /> Cancel booking
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

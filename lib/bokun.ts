@@ -1240,3 +1240,74 @@ export async function fetchBokunBookings(
     pageSize,
   }
 }
+
+export type CancelBookingOptions = {
+  /** Reason shown in Bokun's cancellation record. */
+  note?: string
+  /** Email the customer (and supplier) about the cancellation. Default false. */
+  notify?: boolean
+  /** Attempt an automatic refund of any prepaid amount. Default false. */
+  refund?: boolean
+}
+
+export type CancelBookingResult = { ok: true } | { ok: false; error: string }
+
+/**
+ * Cancel a reservation in Bokun by its confirmation code. This is a live,
+ * destructive write against Bokun — unlike the read helpers it does its own
+ * fetch so it can surface Bokun's exact error message on failure. Defaults are
+ * intentionally conservative: no customer notification and no auto-refund.
+ */
+export async function cancelBokunBooking(
+  confirmationCode: string,
+  options: CancelBookingOptions = {},
+): Promise<CancelBookingResult> {
+  const accessKey = process.env.BOKUN_ACCESS_KEY
+  const secret = process.env.BOKUN_SECRET_KEY
+  if (!accessKey || !secret) return { ok: false, error: "Bokun API keys are not configured." }
+
+  const code = confirmationCode.trim()
+  if (!code) return { ok: false, error: "Missing confirmation code." }
+
+  const method = "POST"
+  const path = `/booking.json/cancel-booking/${encodeURIComponent(code)}?lang=EN`
+  const date = bokunDate()
+  const signature = sign(date, accessKey, secret, method, path)
+
+  try {
+    const res = await fetch(`https://${DOMAIN}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        "X-Bokun-Date": date,
+        "X-Bokun-AccessKey": accessKey,
+        "X-Bokun-Signature": signature,
+      },
+      body: JSON.stringify({
+        note: options.note?.trim() || "Cancelled from admin",
+        notify: Boolean(options.notify),
+        refund: Boolean(options.refund),
+      }),
+      cache: "no-store",
+    })
+
+    const text = await res.text()
+    if (!res.ok) {
+      let message = `Bokun returned ${res.status}`
+      try {
+        const parsed = JSON.parse(text) as { message?: string; error?: string }
+        message = parsed.message || parsed.error || message
+      } catch {
+        if (text) message = text.slice(0, 200)
+      }
+      console.log("[v0] Bokun cancel failed:", res.status, message)
+      return { ok: false, error: message }
+    }
+
+    return { ok: true }
+  } catch (err) {
+    const message = (err as Error).message
+    console.log("[v0] Bokun cancel error:", message)
+    return { ok: false, error: message }
+  }
+}

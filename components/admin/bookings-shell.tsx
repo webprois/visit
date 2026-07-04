@@ -114,6 +114,7 @@ export function BookingsShell({
           filters={filters}
           onFiltersChange={setFilters}
           pageSize={PAGE_SIZE}
+          onCancelled={() => mutate()}
         />
       </main>
     </div>
