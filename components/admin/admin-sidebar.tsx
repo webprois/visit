@@ -21,12 +21,19 @@ type NavItem = {
   key: AdminSection
   label: string
   icon: LucideIcon
+  children?: { key: AdminSection; label: string; icon: LucideIcon }[]
 }
 
 const NAV: NavItem[] = [
-  { key: "tours", label: "Tours", icon: Compass },
-  { key: "categories", label: "Categories", icon: Tag },
-  { key: "locations", label: "Starting Locations", icon: MapPin },
+  {
+    key: "tours",
+    label: "Tours",
+    icon: Compass,
+    children: [
+      { key: "categories", label: "Categories", icon: Tag },
+      { key: "locations", label: "Starting Locations", icon: MapPin },
+    ],
+  },
   { key: "bookings", label: "Bookings", icon: CalendarCheck },
 ]
 
@@ -74,22 +81,52 @@ export function AdminSidebar({
         </p>
         {NAV.map((item) => {
           const isActive = active === item.key
+          // Children only show when the parent or one of its children is active.
+          const childActive = item.children?.some((c) => c.key === active) ?? false
+          const showChildren = Boolean(item.children) && (isActive || childActive)
           return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => onNavigate(item.key)}
-              aria-current={isActive ? "page" : undefined}
-              className={
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-                (isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground")
-              }
-            >
-              <item.icon className="size-5 shrink-0" aria-hidden="true" />
-              {item.label}
-            </button>
+            <div key={item.key} className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => onNavigate(item.key)}
+                aria-current={isActive ? "page" : undefined}
+                aria-expanded={item.children ? showChildren : undefined}
+                className={
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+                  (isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+                }
+              >
+                <item.icon className="size-5 shrink-0" aria-hidden="true" />
+                {item.label}
+              </button>
+
+              {showChildren && (
+                <div className="ml-4 flex flex-col gap-1 border-l border-border pl-2">
+                  {item.children!.map((child) => {
+                    const childIsActive = active === child.key
+                    return (
+                      <button
+                        key={child.key}
+                        type="button"
+                        onClick={() => onNavigate(child.key)}
+                        aria-current={childIsActive ? "page" : undefined}
+                        className={
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors " +
+                          (childIsActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground")
+                        }
+                      >
+                        <child.icon className="size-4 shrink-0" aria-hidden="true" />
+                        {child.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )
         })}
 
