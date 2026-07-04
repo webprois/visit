@@ -1242,6 +1242,51 @@ export async function fetchBokunBookings(
   }
 }
 
+/**
+ * Fetch every matching booking by walking Bokun's paged search (200 per page).
+ * Used by the dashboard to aggregate revenue, channels and departures across
+ * the whole book of business. Capped so a runaway account can't fetch forever.
+ * The mapped result is cached briefly to keep the dashboard snappy.
+ */
+async function fetchAllBokunBookingsUncached(
+  statuses: BokunBookingStatus[],
+  maxBookings = 4000,
+): Promise<BokunBooking[]> {
+  const pageSize = 200
+  const all: BokunBooking[] = []
+
+  for (let page = 1; ; page++) {
+    const body: Record<string, unknown> = {
+      page,
+      pageSize,
+      excludeComboBookings: false,
+    }
+    if (statuses.length) body.bookingStatuses = statuses
+
+    const data = await bokunRequest<RawBookingSearch>(
+      "POST",
+      "/booking.json/product-booking-search?lang=EN",
+      body,
+    )
+
+    const results = data?.results ?? []
+    for (const r of results) all.push(mapBooking(r))
+
+    const totalHits = data?.totalHits ?? all.length
+    if (results.length < pageSize || all.length >= totalHits || all.length >= maxBookings) {
+      break
+    }
+  }
+
+  return all
+}
+
+export const fetchAllBokunBookings = unstable_cache(
+  fetchAllBokunBookingsUncached,
+  ["bokun-all-bookings"],
+  { revalidate: 600, tags: ["bokun-bookings"] },
+)
+
 export type CancelBookingOptions = {
   /** Reason shown in Bokun's cancellation record. */
   note?: string

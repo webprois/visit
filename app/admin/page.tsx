@@ -20,11 +20,11 @@ export default async function AdminPage({
   if (!session?.user) redirect("/sign-in")
 
   const { section } = await searchParams
-  const initialSection: AdminSection = (
-    ["tours", "categories", "locations"].includes(section ?? "")
-      ? section
-      : "tours"
-  ) as AdminSection
+  // The overview dashboard is the landing page; bare /admin sends you there.
+  if (!["tours", "categories", "locations"].includes(section ?? "")) {
+    redirect("/admin/dashboard")
+  }
+  const initialSection = section as AdminSection
 
   const [tours, categories, locations] = await Promise.all([
     getMergedTours(),

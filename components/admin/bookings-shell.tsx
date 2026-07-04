@@ -86,6 +86,10 @@ export function BookingsShell({
 
   function handleNavigate(next: AdminSection) {
     if (next === "bookings") return
+    if (next === "overview") {
+      router.push("/admin/dashboard")
+      return
+    }
     router.push(`/admin?section=${next}`)
   }
 

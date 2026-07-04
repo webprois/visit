@@ -29,10 +29,15 @@ export function AdminShell({
   const [section, setSection] = useState<AdminSection>(initialSection)
   const [refreshing, startRefresh] = useTransition()
 
-  // Bookings live on their own route; every other section is an in-page switch.
+  // Bookings and the overview dashboard live on their own routes; every other
+  // section is an in-page switch.
   function handleNavigate(next: AdminSection) {
     if (next === "bookings") {
       router.push("/admin/bookings")
+      return
+    }
+    if (next === "overview") {
+      router.push("/admin/dashboard")
       return
     }
     setSection(next)

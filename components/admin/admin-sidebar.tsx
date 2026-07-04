@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import {
+  LayoutDashboard,
   Compass,
   Tag,
   MapPin,
@@ -15,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-export type AdminSection = "tours" | "categories" | "locations" | "bookings"
+export type AdminSection = "overview" | "tours" | "categories" | "locations" | "bookings"
 
 type NavItem = {
   key: AdminSection
@@ -25,6 +26,7 @@ type NavItem = {
 }
 
 const NAV: NavItem[] = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard },
   {
     key: "tours",
     label: "Tours",
