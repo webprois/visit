@@ -1405,7 +1405,7 @@ export function BookingForm({
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   {totalPax > 0 ? (
-                    <Price isk={total} />
+                    <Price isk={total} showIskBelow={step === totalSteps} />
                   ) : startingPriceIsk > 0 ? (
                     <>
                       <Price isk={startingPriceIsk} />
