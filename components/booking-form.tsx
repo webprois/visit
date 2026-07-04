@@ -645,6 +645,11 @@ export function BookingForm({
         setError(res.error)
         return
       }
+      // TEST bypass: server confirmed without payment — go to confirmation.
+      if ("redirectUrl" in res) {
+        window.location.href = res.redirectUrl
+        return
+      }
       // 2. Auto-submit the signed form to Teya's hosted SecurePay page.
       submitSecurePayForm(res.form)
     })

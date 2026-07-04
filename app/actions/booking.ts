@@ -49,6 +49,7 @@ export type BookingInput = {
 
 export type StartBookingResult =
   | { ok: true; form: SecurePayForm }
+  | { ok: true; redirectUrl: string }
   | { ok: false; error: string }
 
 /** Build an absolute origin for redirect URLs from the incoming request. */
@@ -331,6 +332,44 @@ export async function startBooking(
   await maybeCreateCustomerAccount(input)
 
   const origin = await getOrigin()
+
+  // --- TEST ONLY: skip Teya and push the booking straight through ---
+  // Enabled with BOOKING_TEST_BYPASS_PAYMENT=1. Marks the booking paid and
+  // confirms the Bokun reservation directly, then sends the user to the normal
+  // confirmation page. Remove the env var to restore real payments.
+  if (process.env.BOOKING_TEST_BYPASS_PAYMENT === "1") {
+    console.log(`[v0] TEST BYPASS: confirming booking ${id} without payment`)
+    const claimed = await db
+      .update(booking)
+      .set({
+        status: "paid",
+        teyaReference: "TEST-BYPASS",
+        updatedAt: new Date(),
+      })
+      .where(and(eq(booking.id, id), eq(booking.status, "pending")))
+      .returning({
+        code: booking.bokunConfirmationCode,
+        amount: booking.amountMinor,
+        currency: booking.currency,
+      })
+    if (claimed.length > 0 && claimed[0].code) {
+      const confirmed = await confirmBokunBooking(claimed[0].code, {
+        amount: claimed[0].amount,
+        currency: claimed[0].currency,
+        transactionId: "TEST-BYPASS",
+      })
+      if (!confirmed.ok) {
+        console.error(
+          `[v0] TEST BYPASS: Bokun confirm FAILED (${claimed[0].code}): ${confirmed.error}`,
+        )
+      }
+    }
+    return {
+      ok: true,
+      redirectUrl: `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`,
+    }
+  }
+
   const returnBase = `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`
   try {
     const form = buildSecurePayForm({
