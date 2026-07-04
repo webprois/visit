@@ -611,9 +611,6 @@ export default async function TourPage({
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
-                      <span className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground">
-                        {t.categoryName ?? t.tag}
-                      </span>
                     </div>
                     <div className="flex flex-1 flex-col p-5">
                       <h3 className="text-balance font-heading text-lg font-bold leading-snug text-foreground">

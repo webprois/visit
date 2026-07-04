@@ -106,7 +106,7 @@ export function TourGallery({
                     sizes="(max-width: 640px) 50vw, 33vw"
                   />
                   {isLast && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-base font-bold text-foreground backdrop-blur-sm">
+                    <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/75 text-base font-bold text-foreground backdrop-blur-sm [transform:translateZ(0)]">
                       +{remaining} more
                     </span>
                   )}
