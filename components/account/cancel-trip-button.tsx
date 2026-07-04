@@ -30,6 +30,8 @@ type Copy = {
   bodyFree: string
   /** Shown when the tour is under 72h away (request needed). */
   bodyRequest: string
+  /** Shown when the booking is unpaid (free, instant, no fee). */
+  bodyUnpaid: string
   keep: string
   confirm: string
   cancelled: string
@@ -45,6 +47,8 @@ const COPY: Record<Locale, Copy> = {
       "You're more than 72 hours before departure, so this cancellation is free and will be processed right away. You'll get a confirmation email.",
     bodyRequest:
       "You're within 72 hours of departure. Per our policy a fee may apply, so this will be sent to our team as a cancellation request. We'll email you once it's reviewed.",
+    bodyUnpaid:
+      "This booking hasn't been paid yet, so you can cancel it right away at no charge.",
     keep: "Keep booking",
     confirm: "Cancel booking",
     cancelled: "Your booking has been cancelled. Check your email for details.",
@@ -58,6 +62,8 @@ const COPY: Record<Locale, Copy> = {
       "Faltan más de 72 horas para la salida, así que esta cancelación es gratuita y se procesará de inmediato. Recibirás un correo de confirmación.",
     bodyRequest:
       "Faltan menos de 72 horas para la salida. Según nuestra política puede aplicarse un cargo, por lo que esto se enviará a nuestro equipo como solicitud de cancelación. Te avisaremos por correo cuando se revise.",
+    bodyUnpaid:
+      "Esta reserva aún no se ha pagado, así que puedes cancelarla de inmediato sin ningún cargo.",
     keep: "Mantener reserva",
     confirm: "Cancelar reserva",
     cancelled:
@@ -73,6 +79,8 @@ const COPY: Record<Locale, Copy> = {
       "Faltam mais de 72 horas para a partida, por isso este cancelamento é gratuito e será processado de imediato. Receberás um e-mail de confirmação.",
     bodyRequest:
       "Faltam menos de 72 horas para a partida. De acordo com a nossa política, pode aplicar-se uma taxa, por isso isto será enviado à nossa equipa como pedido de cancelamento. Avisamos-te por e-mail assim que for analisado.",
+    bodyUnpaid:
+      "Esta reserva ainda não foi paga, por isso podes cancelá-la de imediato sem qualquer custo.",
     keep: "Manter reserva",
     confirm: "Cancelar reserva",
     cancelled:
@@ -88,6 +96,8 @@ const COPY: Record<Locale, Copy> = {
       "Mancano più di 72 ore alla partenza, quindi questo annullamento è gratuito e verrà elaborato subito. Riceverai un'email di conferma.",
     bodyRequest:
       "Mancano meno di 72 ore alla partenza. Secondo la nostra politica potrebbe essere applicata una penale, quindi questa verrà inviata al nostro team come richiesta di annullamento. Ti avviseremo via email una volta esaminata.",
+    bodyUnpaid:
+      "Questa prenotazione non è ancora stata pagata, quindi puoi annullarla subito senza alcun costo.",
     keep: "Mantieni prenotazione",
     confirm: "Annulla prenotazione",
     cancelled:
@@ -101,11 +111,14 @@ const COPY: Record<Locale, Copy> = {
 export function CancelTripButton({
   bookingId,
   travelDate,
+  unpaid = false,
   locale,
 }: {
   bookingId: string
   /** Departure time in ms since epoch, or null when unknown. */
   travelDate: number | null
+  /** True for bookings that haven't been paid yet (free, instant cancel). */
+  unpaid?: boolean
   locale: Locale
 }) {
   const t = COPY[locale] ?? COPY.en
@@ -113,9 +126,14 @@ export function CancelTripButton({
   const [pending, startTransition] = useTransition()
 
   // Best-effort client-side hint for which message to show. The real decision
-  // is made server-side.
+  // is made server-side. Unpaid bookings are always free/instant regardless of
+  // the 72h window since no payment (and therefore no fee) is involved.
   const within72h =
-    travelDate !== null && travelDate - Date.now() < 72 * 3_600_000
+    !unpaid &&
+    travelDate !== null &&
+    travelDate - Date.now() < 72 * 3_600_000
+
+  const body = unpaid ? t.bodyUnpaid : within72h ? t.bodyRequest : t.bodyFree
 
   function onConfirm() {
     startTransition(async () => {
@@ -143,9 +161,7 @@ export function CancelTripButton({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t.title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {within72h ? t.bodyRequest : t.bodyFree}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{body}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{t.keep}</AlertDialogCancel>

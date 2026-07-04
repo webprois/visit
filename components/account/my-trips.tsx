@@ -32,8 +32,9 @@ function formatDate(ms: number | null): string {
 }
 
 function TripCard({ trip, locale }: { trip: MyTrip; locale: Locale }) {
-  // Only upcoming, paid trips can be cancelled by the customer.
-  const canCancel = trip.status === "upcoming"
+  // Upcoming (paid) trips and pending (unpaid) bookings can both be cancelled
+  // by the customer. Completed and already-cancelled trips cannot.
+  const canCancel = trip.status === "upcoming" || trip.status === "pending"
   return (
     <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -98,6 +99,7 @@ function TripCard({ trip, locale }: { trip: MyTrip; locale: Locale }) {
             <CancelTripButton
               bookingId={trip.bookingId}
               travelDate={trip.travelDate}
+              unpaid={trip.status === "pending"}
               locale={locale}
             />
           )}
