@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
   import {
   ArrowLeft,
   CalendarDays,
@@ -446,6 +446,12 @@ export function BookingForm({
   const [phone, setPhone] = useState("")
   // Opt-in account creation at checkout. Hidden when already signed in.
   const { data: session } = authClient.useSession()
+  // When signed in, the booking is linked to the account and the contact email
+  // is locked to the account email so it reliably appears in "My Trips".
+  const lockedEmail = session?.user?.email ?? null
+  useEffect(() => {
+    if (lockedEmail) setEmail(lockedEmail)
+  }, [lockedEmail])
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -1232,8 +1238,18 @@ export function BookingForm({
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                  readOnly={!!lockedEmail}
+                  aria-describedby={lockedEmail ? "booking-email-hint" : undefined}
                   className={FIELD_CLASS}
                 />
+                {lockedEmail && (
+                  <p
+                    id="booking-email-hint"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t.emailLockedHint}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="booking-phone">{t.phone}</Label>

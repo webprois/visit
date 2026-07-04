@@ -6,8 +6,14 @@ import { MyTrips } from "@/components/account/my-trips"
  * Suspense boundary so the account page shell paints immediately while the
  * (potentially slow) Bokun lookup streams in.
  */
-export async function TripsSection({ email }: { email: string }) {
-  const trips = await getMyTrips(email)
+export async function TripsSection({
+  userId,
+  email,
+}: {
+  userId: string
+  email: string
+}) {
+  const trips = await getMyTrips({ userId, email })
   return <MyTrips trips={trips} />
 }
 

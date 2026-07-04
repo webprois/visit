@@ -610,6 +610,8 @@ type BokunPricingCategory = {
   title?: string
   fullTitle?: string
   minAge?: number
+  ticketCategory?: string
+  defaultCategory?: boolean
 }
 
 /** Summarise a cancellation policy into one short sentence. */
@@ -680,13 +682,18 @@ async function fetchBookableSlotsUncached(
       // Group tiered per-category unit prices by pricing category id.
       const byCat = new Map<number, SlotPriceLine>()
       for (const u of priceRow?.pricePerCategoryUnit ?? []) {
+        // Skip orphaned pricing categories: entries that appear in the price
+        // matrix but are no longer real bookable categories on the activity
+        // (Bokun sometimes leaves stale, often 0-priced, ids behind). Booking
+        // them makes Bokun reject the whole reservation.
         const cat = catById.get(u.id)
+        if (!cat) continue
         let line = byCat.get(u.id)
         if (!line) {
           line = {
             id: u.id,
-            title: cat?.title ?? cat?.fullTitle ?? "Participant",
-            minAge: cat?.minAge ?? 0,
+            title: cat.title ?? cat.fullTitle ?? "Participant",
+            minAge: cat.minAge ?? 0,
             tiers: [],
           }
           byCat.set(u.id, line)
@@ -697,7 +704,19 @@ async function fetchBookableSlotsUncached(
           maxPax: u.maxParticipantsRequired ?? 9999,
         })
       }
-      lines.push(...byCat.values())
+      // Order categories so the primary "Adult"/default line comes first. Bokun
+      // rejects bookings that include e.g. a Child without an Adult, so the
+      // default category must be the natural first choice in the UI.
+      const orderedLines = [...byCat.values()].sort((a, b) => {
+        const ca = catById.get(a.id)
+        const cb = catById.get(b.id)
+        const adultA = ca?.defaultCategory || ca?.ticketCategory === "ADULT" ? 1 : 0
+        const adultB = cb?.defaultCategory || cb?.ticketCategory === "ADULT" ? 1 : 0
+        if (adultA !== adultB) return adultB - adultA
+        // Then oldest age band first (Adult 16+ before Child 8+).
+        return (cb?.minAge ?? 0) - (ca?.minAge ?? 0)
+      })
+      lines.push(...orderedLines)
       // Tours with no per-category prices fall back to a flat booking price.
       if (lines.length === 0) {
         flatPriceIsk = Math.round(priceRow?.pricePerBooking?.amount ?? 0)
@@ -1538,13 +1557,14 @@ export async function reserveBokunBooking(
     mainContactDetails.push({ questionId: "phoneNumber", values: [input.contact.phone] })
   }
 
-  const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", {
+  const submitBody = {
     source: "DIRECT_REQUEST",
     checkoutOption: "CUSTOMER_FULL_PAYMENT",
     paymentMethod: "RESERVE_FOR_EXTERNAL_PAYMENT",
     sendNotificationToMainContact: false,
     directBooking: { mainContactDetails, activityBookings: [activityBooking] },
-  })
+  }
+  const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", submitBody)
 
   const code = res.data?.booking?.confirmationCode
   if (!res.ok || !code) {

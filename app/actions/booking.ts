@@ -127,7 +127,19 @@ async function persistBooking(
   if (!input.customerName.trim()) {
     return { ok: false, error: "Please enter your name." }
   }
-  if (!isEmail(input.customerEmail)) {
+
+  // Link the booking to the signed-in customer (never an admin) so it reliably
+  // shows in My Trips regardless of the contact email typed. When signed in we
+  // also lock the contact email to the account email, so Bokun and our records
+  // store a consistent, matchable address.
+  const session = await auth.api.getSession({ headers: await headers() })
+  const accountUser =
+    session?.user && !isAdminEmail(session.user.email) ? session.user : null
+  const contactEmail = (
+    accountUser ? accountUser.email : input.customerEmail
+  ).trim()
+
+  if (!isEmail(contactEmail)) {
     return { ok: false, error: "Please enter a valid email address." }
   }
 
@@ -260,22 +272,19 @@ async function persistBooking(
     contact: {
       firstName,
       lastName,
-      email: input.customerEmail.trim(),
+      email: contactEmail,
       phone: input.customerPhone?.trim() || null,
     },
   })
   if (!reservation.ok) {
-    return {
-      ok: false,
-      error:
-        "That departure could not be reserved (it may have just sold out). Please pick another date or contact us.",
-    }
+    return { ok: false, error: friendlyReserveError(reservation.error) }
   }
 
   // --- Persist a pending booking (internal reconciliation record) ---
   const id = randomUUID()
   await db.insert(booking).values({
     id,
+    userId: accountUser?.id ?? null,
     bokunId: input.bokunId,
     tourTitle,
     tourDate: input.date,
@@ -289,7 +298,7 @@ async function persistBooking(
     currency: "ISK",
     amountMinor: amountIsk, // ISK has no minor units
     customerName: input.customerName.trim(),
-    customerEmail: input.customerEmail.trim(),
+    customerEmail: contactEmail,
     customerPhone: input.customerPhone?.trim() || null,
     notes: input.notes?.trim() || null,
     status,
@@ -304,7 +313,7 @@ async function persistBooking(
       amountIsk,
       tourTitle,
       date: input.date,
-      customerEmail: input.customerEmail.trim(),
+      customerEmail: contactEmail,
     },
   }
 }
@@ -315,6 +324,41 @@ function splitName(full: string): { firstName: string; lastName: string } {
   if (parts.length === 0) return { firstName: "Guest", lastName: "Guest" }
   if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] }
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
+}
+
+const SOLD_OUT_FALLBACK =
+  "That departure could not be reserved (it may have just sold out). Please pick another date or contact us."
+
+/**
+ * Turn Bokun's raw reserve error into something a customer can act on. Bokun
+ * validation messages (e.g. "Cannot book 'Child' without booking at least one
+ * 'Adult'") are genuinely useful, so we surface a cleaned-up version instead of
+ * always blaming availability. Anything unrecognised falls back to sold-out.
+ */
+function friendlyReserveError(raw: string | null): string {
+  if (!raw) return SOLD_OUT_FALLBACK
+  // Strip Bokun's internal prefixes/suffixes: "Error occurred:
+  // logic.InvalidDataException - <message> (Field: ...)".
+  let msg = raw
+    .replace(/^error occurred:\s*/i, "")
+    .replace(/^[\w.]+Exception\s*-\s*/i, "")
+    .replace(/\s*\(ID:\s*\d+\)/gi, "")
+    .replace(/\s*\(Field:[^)]*\)\s*$/i, "")
+    .trim()
+  const lower = msg.toLowerCase()
+  // Recognisable, actionable validation problems — show them.
+  const actionable =
+    lower.includes("cannot book") ||
+    lower.includes("at least") ||
+    lower.includes("minimum") ||
+    lower.includes("maximum") ||
+    lower.includes("required") ||
+    lower.includes("age")
+  if (actionable && msg.length <= 200) {
+    if (!/[.!?]$/.test(msg)) msg += "."
+    return msg
+  }
+  return SOLD_OUT_FALLBACK
 }
 
 /**
