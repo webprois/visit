@@ -82,11 +82,27 @@ export async function getMyTrips(owner: MyTripsOwner): Promise<MyTrip[]> {
       return [] as Booking[]
     })
 
+  // An unpaid booking is only a Bokun *reservation* (RESERVE_FOR_EXTERNAL_PAYMENT)
+  // whose inventory hold expires on its own after ~30 min. Customers routinely
+  // abandon these and just book again, so once the hold has lapsed the pending
+  // row is dead weight — hide it automatically instead of showing a stale,
+  // uncancellable trip.
+  const HOLD_WINDOW_MS = 30 * 60 * 1000
+  const isExpiredPending = (r: Booking): boolean => {
+    const unpaid = r.status === "pending" || r.status === "pending_payment"
+    if (!unpaid) return false
+    const createdMs = r.createdAt ? new Date(r.createdAt).getTime() : 0
+    return Date.now() - createdMs > HOLD_WINDOW_MS
+  }
+
   // Only surface bookings that actually reached Bokun (reserved/confirmed) or
-  // are still awaiting payment. Failed/legacy rows without a Bokun booking are
-  // internal noise and never shown.
+  // are still awaiting payment within the hold window. Failed/legacy rows
+  // without a Bokun booking, and expired reservations, are internal noise and
+  // never shown.
   const visible = rows.filter(
-    (r) => r.bokunConfirmationCode || r.status === "confirmed",
+    (r) =>
+      (r.bokunConfirmationCode || r.status === "confirmed") &&
+      !isExpiredPending(r),
   )
 
   // Enrich each booking with its live Bokun status, best-effort and in
