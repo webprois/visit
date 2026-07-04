@@ -466,6 +466,22 @@ export function BookingForm({
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
+  // Inline, per-field errors for the confirm-step contact inputs. Shown right
+  // under each field (instead of the shared banner near the total) so the guest
+  // sees exactly which field needs attention.
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string
+    lastName?: string
+    email?: string
+    phone?: string
+  }>({})
+  const clearFieldError = (field: keyof typeof fieldErrors) =>
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   const [step, setStep] = useState(1)
   // Wizard steps. The add-ons step only appears when the tour has extras, so a
   // tour without add-ons collapses to a 3-step flow.
@@ -610,16 +626,28 @@ export function BookingForm({
       setError(t.errGuestNames)
       return
     }
-    if (!firstName.trim() || !lastName.trim()) {
-      setError(t.errYourName)
-      return
-    }
-    if (!email.trim()) {
-      setError(t.errEmail)
-      return
-    }
-    if (!phone.trim()) {
-      setError(t.errPhone)
+    const contactErrors: typeof fieldErrors = {}
+    if (!firstName.trim()) contactErrors.firstName = t.errYourName
+    if (!lastName.trim()) contactErrors.lastName = t.errYourName
+    if (!email.trim()) contactErrors.email = t.errEmail
+    if (!phone.trim()) contactErrors.phone = t.errPhone
+    if (Object.keys(contactErrors).length > 0) {
+      setFieldErrors(contactErrors)
+      // Focus + scroll the first invalid field into view so the inline message
+      // is visible (the fields sit at the top of this step, the button at the
+      // bottom).
+      const firstInvalidId = contactErrors.firstName
+        ? "booking-first-name"
+        : contactErrors.lastName
+          ? "booking-last-name"
+          : contactErrors.email
+            ? "booking-email"
+            : "booking-phone"
+      requestAnimationFrame(() => {
+        const el = document.getElementById(firstInvalidId)
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        el?.focus({ preventScroll: true })
+      })
       return
     }
     const wantsAccount = !session && createAccount
@@ -733,6 +761,7 @@ export function BookingForm({
 
   function goBack() {
     setError(null)
+    setFieldErrors({})
     setStep((s) => Math.max(1, s - 1))
   }
 
@@ -1234,13 +1263,19 @@ export function BookingForm({
                     id="booking-first-name"
                     value={firstName}
                     onChange={(e) => {
-                  setError(null)
-                  setFirstName(e.target.value)
-                }}
+                      clearFieldError("firstName")
+                      setFirstName(e.target.value)
+                    }}
                     required
                     autoComplete="given-name"
+                    aria-invalid={!!fieldErrors.firstName}
                     className={FIELD_CLASS}
                   />
+                  {fieldErrors.firstName && (
+                    <p className="text-xs text-destructive">
+                      {fieldErrors.firstName}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="booking-last-name">{t.lastName}</Label>
@@ -1248,13 +1283,19 @@ export function BookingForm({
                     id="booking-last-name"
                     value={lastName}
                     onChange={(e) => {
-                  setError(null)
-                  setLastName(e.target.value)
-                }}
+                      clearFieldError("lastName")
+                      setLastName(e.target.value)
+                    }}
                     required
                     autoComplete="family-name"
+                    aria-invalid={!!fieldErrors.lastName}
                     className={FIELD_CLASS}
                   />
+                  {fieldErrors.lastName && (
+                    <p className="text-xs text-destructive">
+                      {fieldErrors.lastName}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1264,15 +1305,19 @@ export function BookingForm({
                   type="email"
                   value={email}
                   onChange={(e) => {
-                  setError(null)
-                  setEmail(e.target.value)
-                }}
+                    clearFieldError("email")
+                    setEmail(e.target.value)
+                  }}
                   required
                   autoComplete="email"
                   readOnly={!!lockedEmail}
+                  aria-invalid={!!fieldErrors.email}
                   aria-describedby={lockedEmail ? "booking-email-hint" : undefined}
                   className={FIELD_CLASS}
                 />
+                {fieldErrors.email && (
+                  <p className="text-xs text-destructive">{fieldErrors.email}</p>
+                )}
                 {lockedEmail && (
                   <p
                     id="booking-email-hint"
@@ -1310,15 +1355,19 @@ export function BookingForm({
                     type="tel"
                     value={phone}
                     onChange={(e) => {
-                  setError(null)
-                  setPhone(e.target.value)
-                }}
+                      clearFieldError("phone")
+                      setPhone(e.target.value)
+                    }}
                     required
                     autoComplete="tel-national"
                     placeholder={t.phoneNumber}
+                    aria-invalid={!!fieldErrors.phone}
                     className={`${FIELD_CLASS} flex-1`}
                   />
                 </div>
+                {fieldErrors.phone && (
+                  <p className="text-xs text-destructive">{fieldErrors.phone}</p>
+                )}
               </div>
             </div>
 
