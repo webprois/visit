@@ -65,7 +65,8 @@ export async function sendEmail(
       subject: input.subject,
       html: input.html,
       text: input.text,
-      replyTo: input.replyTo,
+      // Replies always go to the shared support inbox unless a caller overrides.
+      replyTo: input.replyTo ?? process.env.EMAIL_REPLY_TO ?? "Info@visit.is",
     })
     if (error) {
       console.log("[v0] Email send error:", error.message)
