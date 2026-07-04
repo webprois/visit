@@ -139,7 +139,7 @@ export function TourGallery({
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Close gallery"
-            className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary"
+            className="absolute right-4 top-4 z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary"
           >
             <X className="size-5" aria-hidden="true" />
           </button>
