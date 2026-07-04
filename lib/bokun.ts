@@ -579,6 +579,11 @@ type BokunRate = {
   minPerBooking?: number
   maxPerBooking?: number
   cancellationPolicy?: BokunCancellationPolicy
+  /** Pricing categories bookable on this rate (used to reserve flat-priced tours). */
+  pricingCategoryIds?: number[]
+  /** "UNAVAILABLE" | "PRESELECTED" | "OPTIONAL" | ... — governs pickup fields. */
+  pickupSelectionType?: string
+  dropoffSelectionType?: string
 }
 type BokunCategoryUnitPrice = {
   id: number
@@ -1388,4 +1393,199 @@ export async function cancelBokunBooking(
     console.log("[v0] Bokun cancel error:", message)
     return { ok: false, error: message }
   }
+}
+
+/* ---------- Creating bookings (reserve → external payment → confirm) ---------- */
+
+/**
+ * Low-level authenticated Bokun write that surfaces the HTTP status and Bokun's
+ * exact error text (the shared `bokunRequest` helper swallows both). Used only
+ * for the booking-creation writes, where we must react to the precise failure.
+ */
+async function bokunWrite<T>(
+  path: string,
+  body?: unknown,
+): Promise<{ ok: boolean; status: number; data: T | null; error: string | null }> {
+  const accessKey = process.env.BOKUN_ACCESS_KEY
+  const secret = process.env.BOKUN_SECRET_KEY
+  if (!accessKey || !secret) {
+    return { ok: false, status: 0, data: null, error: "Bokun API keys are not configured." }
+  }
+  const date = bokunDate()
+  const signature = sign(date, accessKey, secret, "POST", path)
+  try {
+    const res = await fetch(`https://${DOMAIN}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        "X-Bokun-Date": date,
+        "X-Bokun-AccessKey": accessKey,
+        "X-Bokun-Signature": signature,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    })
+    const text = await res.text()
+    let data: T | null = null
+    try {
+      data = text ? (JSON.parse(text) as T) : null
+    } catch {
+      // Non-JSON body; leave data null and fall back to raw text for errors.
+    }
+    if (!res.ok) {
+      let message = `Bokun returned ${res.status}`
+      const parsed = data as { message?: string; error?: string } | null
+      if (parsed?.message || parsed?.error) message = parsed.message || parsed.error || message
+      else if (text) message = text.slice(0, 200)
+      return { ok: false, status: res.status, data, error: message }
+    }
+    return { ok: true, status: res.status, data, error: null }
+  } catch (err) {
+    return { ok: false, status: 0, data: null, error: (err as Error).message }
+  }
+}
+
+export type ReserveContact = {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string | null
+}
+
+export type ReserveBookingInput = {
+  bokunId: string
+  /** Availability id, e.g. "182076_20260628", to match the exact departure. */
+  slotId: string
+  /** YYYY-MM-DD. */
+  date: string
+  startTimeId: number
+  pricedPerPerson: boolean
+  totalPax: number
+  /** Per-person tours: lineId is the pricingCategoryId. */
+  selections: SlotSelection[]
+  pickupId?: number | null
+  dropoffId?: number | null
+  contact: ReserveContact
+}
+
+export type ReserveBookingResult =
+  | { ok: true; confirmationCode: string; bookingId: number | null }
+  | { ok: false; error: string }
+
+type CheckoutSubmitResponse = {
+  booking?: { bookingId?: number; confirmationCode?: string; status?: string }
+}
+
+/**
+ * Reserve a booking in Bokun (holds inventory for ~30 min) using the
+ * RESERVE_FOR_EXTERNAL_PAYMENT flow, so payment can be taken via Teya and the
+ * booking confirmed afterwards. Re-reads live availability to resolve the exact
+ * rate, pricing categories and pickup/drop-off configuration.
+ */
+export async function reserveBokunBooking(
+  input: ReserveBookingInput,
+): Promise<ReserveBookingResult> {
+  const rows = await bokunRequest<BokunRichAvailability[]>(
+    "GET",
+    `/activity.json/${input.bokunId}/availabilities` +
+      `?start=${input.date}&end=${input.date}&lang=EN&currency=ISK&includeSoldOut=false`,
+  )
+  const row =
+    (rows ?? []).find((a) => a.id === input.slotId) ??
+    (rows ?? []).find((a) => a.startTimeId === input.startTimeId)
+  if (!row) return { ok: false, error: "Selected departure is no longer available." }
+  const rate = row.rates?.find((r) => r.id === row.defaultRateId) ?? row.rates?.[0]
+  if (!rate) return { ok: false, error: "No rate available for this departure." }
+
+  // One passenger per head, each tagged with its pricing category.
+  const passengers: { pricingCategoryId: number }[] = []
+  if (input.pricedPerPerson) {
+    for (const sel of input.selections) {
+      const qty = Math.max(0, Math.floor(sel.qty))
+      for (let i = 0; i < qty; i++) passengers.push({ pricingCategoryId: sel.lineId })
+    }
+  } else {
+    const pcid = rate.pricingCategoryIds?.[0]
+    if (!pcid) return { ok: false, error: "No pricing category configured for this tour." }
+    for (let i = 0; i < input.totalPax; i++) passengers.push({ pricingCategoryId: pcid })
+  }
+  if (passengers.length === 0) return { ok: false, error: "No participants to reserve." }
+
+  const activityBooking: Record<string, unknown> = {
+    activityId: Number(input.bokunId),
+    rateId: rate.id,
+    date: input.date,
+    startTimeId: input.startTimeId,
+    passengers,
+  }
+  const pickupOff = !rate.pickupSelectionType || rate.pickupSelectionType === "UNAVAILABLE"
+  if (!pickupOff && input.pickupId) {
+    activityBooking.pickup = true
+    activityBooking.pickupPlaceId = input.pickupId
+  }
+  const dropoffOff = !rate.dropoffSelectionType || rate.dropoffSelectionType === "UNAVAILABLE"
+  if (!dropoffOff && input.dropoffId) {
+    activityBooking.dropoff = true
+    activityBooking.dropoffPlaceId = input.dropoffId
+  }
+
+  const mainContactDetails: { questionId: string; values: string[] }[] = [
+    { questionId: "firstName", values: [input.contact.firstName] },
+    { questionId: "lastName", values: [input.contact.lastName] },
+    { questionId: "email", values: [input.contact.email] },
+  ]
+  if (input.contact.phone) {
+    mainContactDetails.push({ questionId: "phoneNumber", values: [input.contact.phone] })
+  }
+
+  const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", {
+    source: "DIRECT_REQUEST",
+    checkoutOption: "CUSTOMER_FULL_PAYMENT",
+    paymentMethod: "RESERVE_FOR_EXTERNAL_PAYMENT",
+    sendNotificationToMainContact: false,
+    directBooking: { mainContactDetails, activityBookings: [activityBooking] },
+  })
+
+  const code = res.data?.booking?.confirmationCode
+  if (!res.ok || !code) {
+    console.log("[v0] Bokun reserve failed:", res.status, res.error)
+    return { ok: false, error: res.error ?? "Could not reserve the booking in Bokun." }
+  }
+  console.log(
+    `[v0] Bokun RESERVED ${code} (bookingId=${res.data?.booking?.bookingId ?? "?"}) for ${input.contact.email}`,
+  )
+  return { ok: true, confirmationCode: code, bookingId: res.data?.booking?.bookingId ?? null }
+}
+
+export type ConfirmBokunResult = { ok: true } | { ok: false; error: string }
+
+/**
+ * Confirm a previously reserved booking after external (Teya) payment has
+ * succeeded. Idempotency is handled by the caller (only confirms once).
+ */
+export async function confirmBokunBooking(
+  confirmationCode: string,
+  paid: { amount: number; currency: string; transactionId?: string | null },
+): Promise<ConfirmBokunResult> {
+  const code = confirmationCode.trim()
+  if (!code) return { ok: false, error: "Missing confirmation code." }
+
+  const body: Record<string, unknown> = { amount: paid.amount, currency: paid.currency }
+  if (paid.transactionId) {
+    body.transactionDetails = {
+      transactionId: paid.transactionId,
+      transactionDate: bokunDate(),
+    }
+  }
+
+  const res = await bokunWrite<CheckoutSubmitResponse>(
+    `/checkout.json/confirm-reserved/${encodeURIComponent(code)}`,
+    body,
+  )
+  if (!res.ok) {
+    console.log("[v0] Bokun confirm failed:", res.status, res.error)
+    return { ok: false, error: res.error ?? "Could not confirm the reserved booking." }
+  }
+  console.log(`[v0] Bokun CONFIRMED ${code}`)
+  return { ok: true }
 }

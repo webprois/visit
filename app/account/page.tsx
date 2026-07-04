@@ -1,14 +1,14 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { isAdminEmail } from "@/lib/roles"
-import { getMyTrips } from "@/lib/my-trips"
 import { getLocale } from "@/lib/get-locale"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { MyTrips } from "@/components/account/my-trips"
 import { AccountHeader } from "@/components/account/account-header"
+import { TripsSection, TripsSkeleton } from "@/components/account/trips-section"
 
 export const dynamic = "force-dynamic"
 
@@ -25,7 +25,6 @@ export default async function AccountPage() {
   if (isAdminEmail(session.user.email)) redirect("/admin/dashboard")
 
   const locale = await getLocale()
-  const trips = await getMyTrips(session.user.email)
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -36,10 +35,12 @@ export default async function AccountPage() {
             name={session.user.name || session.user.email}
             email={session.user.email}
           />
-          <MyTrips trips={trips} />
+          <Suspense fallback={<TripsSkeleton />}>
+            <TripsSection email={session.user.email} />
+          </Suspense>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter hideNewsletter />
     </div>
   )
 }

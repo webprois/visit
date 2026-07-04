@@ -199,8 +199,9 @@ export const tourStartingLocation = pgTable(
 
 /**
  * Guest tour bookings created through our own booking form. Availability and
- * pricing come from Bokun, payment is taken via Teya, and the confirmed
- * booking is recorded here (Bokun booking-write is not available on this key).
+ * pricing come from Bokun, the booking is reserved in Bokun, payment is taken
+ * via Teya, and the reserved Bokun booking is then confirmed. This row is an
+ * internal reconciliation record; the customer-facing source of truth is Bokun.
  * These are guest bookings, so there is no userId scoping.
  */
 export const booking = pgTable("booking", {
@@ -231,6 +232,10 @@ export const booking = pgTable("booking", {
   status: text("status").notNull().default("pending"),
   teyaSessionId: text("teya_session_id"),
   teyaReference: text("teya_reference"),
+  // Bokun reservation created before payment (RESERVE_FOR_EXTERNAL_PAYMENT).
+  // Confirmed after Teya payment succeeds. This is the customer-facing booking.
+  bokunConfirmationCode: text("bokun_confirmation_code"),
+  bokunBookingId: integer("bokun_booking_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

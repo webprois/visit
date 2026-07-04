@@ -31,7 +31,8 @@ function formatDate(ms: number | null): string {
 
 function TripCard({ trip }: { trip: MyTrip }) {
   return (
-    <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-heading text-lg font-bold text-foreground">
@@ -77,6 +78,7 @@ function TripCard({ trip }: { trip: MyTrip }) {
             View tour
           </Link>
         )}
+      </div>
       </div>
     </li>
   )
