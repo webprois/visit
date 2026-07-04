@@ -207,8 +207,6 @@ async function persistBooking(
       .filter((x): x is NonNullable<typeof x> => x !== null)
   }
 
-  const amountIsk = baseIsk + addonsIsk
-
   // --- Resolve pickup/drop-off against live Bokun data ---
   let storedPickup: {
     pickupId: number | null
@@ -279,6 +277,20 @@ async function persistBooking(
   if (!reservation.ok) {
     return { ok: false, error: friendlyReserveError(reservation.error) }
   }
+
+  // Charge Bokun's authoritative activity total (in ISK) rather than our
+  // availability-derived estimate, so the payment always matches the booking
+  // total and never leaves a remaining balance. Add-ons aren't part of the
+  // Bokun reservation, so they're added on top of the activity total.
+  const bokunActivityIsk = reservation.activityTotalIsk
+  const activityIsk =
+    bokunActivityIsk && bokunActivityIsk > 0 ? bokunActivityIsk : baseIsk
+  if (bokunActivityIsk && Math.abs(bokunActivityIsk - baseIsk) > 1) {
+    console.log(
+      `[v0] price reconcile ${reservation.confirmationCode}: computed=${baseIsk} ISK, Bokun=${bokunActivityIsk} ISK — charging Bokun total`,
+    )
+  }
+  const amountIsk = activityIsk + addonsIsk
 
   // --- Persist a pending booking (internal reconciliation record) ---
   const id = randomUUID()

@@ -1488,11 +1488,42 @@ export type ReserveBookingInput = {
 }
 
 export type ReserveBookingResult =
-  | { ok: true; confirmationCode: string; bookingId: number | null }
+  | {
+      ok: true
+      confirmationCode: string
+      bookingId: number | null
+      /**
+       * Bokun's authoritative activity total in ISK for the reserved booking.
+       * This is what the customer must pay for the activity (excludes any local
+       * add-ons); charge exactly this so no balance is left on the booking.
+       * Null if it couldn't be read — callers fall back to the computed total.
+       */
+      activityTotalIsk: number | null
+    }
   | { ok: false; error: string }
 
 type CheckoutSubmitResponse = {
   booking?: { bookingId?: number; confirmationCode?: string; status?: string }
+}
+
+/**
+ * Read the authoritative activity total (in ISK) for a just-reserved booking.
+ * Bokun re-computes the real total during checkout, which can differ from the
+ * availability unit prices (e.g. booking fees, rounding), so we charge exactly
+ * this to avoid leaving a remaining balance. Returns null if it can't be read.
+ */
+async function fetchReservedTotalIsk(bookingId: number): Promise<number | null> {
+  try {
+    const data = await bokunRequest<{ totalPrice?: number; currency?: string }>(
+      "GET",
+      `/booking.json/booking/${bookingId}`,
+    )
+    const total = data?.totalPrice
+    if (typeof total === "number" && total > 0) return Math.round(total)
+  } catch (err) {
+    console.log("[v0] fetchReservedTotalIsk failed:", (err as Error).message)
+  }
+  return null
 }
 
 /**
@@ -1571,10 +1602,13 @@ export async function reserveBokunBooking(
     console.log("[v0] Bokun reserve failed:", res.status, res.error)
     return { ok: false, error: res.error ?? "Could not reserve the booking in Bokun." }
   }
+  const bookingId = res.data?.booking?.bookingId ?? null
   console.log(
-    `[v0] Bokun RESERVED ${code} (bookingId=${res.data?.booking?.bookingId ?? "?"}) for ${input.contact.email}`,
+    `[v0] Bokun RESERVED ${code} (bookingId=${bookingId ?? "?"}) for ${input.contact.email}`,
   )
-  return { ok: true, confirmationCode: code, bookingId: res.data?.booking?.bookingId ?? null }
+  // Read Bokun's authoritative ISK total so we charge the exact amount owed.
+  const activityTotalIsk = bookingId ? await fetchReservedTotalIsk(bookingId) : null
+  return { ok: true, confirmationCode: code, bookingId, activityTotalIsk }
 }
 
 export type ConfirmBokunResult = { ok: true } | { ok: false; error: string }
