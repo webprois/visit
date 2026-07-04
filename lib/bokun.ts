@@ -843,21 +843,50 @@ export type TourFee = {
 
 type ExtrasBundle = { addons: TourExtra[]; fees: TourFee[] }
 
+/**
+ * Number of nights a tour spans, derived from its Bokun duration. Day tours
+ * (measured in hours/minutes) count as a single unit so that "per night" fees
+ * are charged exactly once — matching how Bokun bills a 0-night activity.
+ *
+ * For multi-day tours we count nights as (total days − 1), e.g. a 3-day tour is
+ * 2 nights and a 1-week tour is 6 nights. This is an estimate used only for the
+ * displayed price; the amount actually charged always comes from Bokun's
+ * authoritative reserved total.
+ */
+function nightsFromDuration(a: {
+  durationType?: string
+  durationDays?: number
+  durationWeeks?: number
+}): number {
+  const totalDays = (a.durationWeeks ?? 0) * 7 + (a.durationDays ?? 0)
+  return Math.max(1, totalDays - 1)
+}
+
 async function fetchExtrasBundleUncached(bokunId: string): Promise<ExtrasBundle> {
-  const activity = await bokunRequest<{ bookableExtras?: BokunExtra[] }>(
-    "GET",
-    `/activity.json/${bokunId}?lang=EN&currency=ISK`,
-  )
+  const activity = await bokunRequest<{
+    bookableExtras?: BokunExtra[]
+    durationType?: string
+    durationDays?: number
+    durationWeeks?: number
+  }>("GET", `/activity.json/${bokunId}?lang=EN&currency=ISK`)
   const raw = activity?.bookableExtras
   if (!Array.isArray(raw) || raw.length === 0) return { addons: [], fees: [] }
+
+  const nights = nightsFromDuration(activity ?? {})
 
   const addons: TourExtra[] = []
   const fees: TourFee[] = []
   for (const e of raw) {
     if (e.free) continue // genuinely free inclusions never affect price
-    const unitIsk = moneyToIsk(e.price)
-    if (unitIsk <= 0) continue // skip "ask"/priceless extras
-    const pricedPerPerson = /PERSON|PARTICIPANT|PAX/i.test(e.pricingType ?? "")
+    const rawUnitIsk = moneyToIsk(e.price)
+    if (rawUnitIsk <= 0) continue // skip "ask"/priceless extras
+    const pricingType = e.pricingType ?? ""
+    const pricedPerPerson = /PERSON|PARTICIPANT|PAX/i.test(pricingType)
+    // "Per night" pricing (e.g. PER_PERSON_PER_NIGHT) multiplies by the number
+    // of nights. Baked into the unit price here so all downstream pricing and
+    // line-item rendering stay night-agnostic. Day tours have nights = 1.
+    const perNight = /NIGHT/i.test(pricingType)
+    const unitIsk = perNight ? rawUnitIsk * nights : rawUnitIsk
     if (e.included) {
       // Mandatory preselected paid extra (e.g. Vatnajökull National Park Fee):
       // Bokun applies it to every booking automatically, so we surface it as a
@@ -881,7 +910,7 @@ async function fetchExtrasBundleUncached(bokunId: string): Promise<ExtrasBundle>
 function fetchExtrasBundle(bokunId: string): Promise<ExtrasBundle> {
   return unstable_cache(
     () => fetchExtrasBundleUncached(bokunId),
-    ["bokun-extras-bundle-v1", bokunId],
+    ["bokun-extras-bundle-v2", bokunId],
     { revalidate: 900, tags: ["bokun-tours"] },
   )()
 }
