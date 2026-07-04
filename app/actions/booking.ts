@@ -22,6 +22,9 @@ import { getTourById } from "@/lib/tours"
 import { buildSecurePayForm, verifyReturnHash, type SecurePayForm } from "@/lib/teya"
 import { auth } from "@/lib/auth"
 import { isAdminEmail } from "@/lib/roles"
+import { asLocale } from "@/lib/i18n"
+import { getLocale } from "@/lib/get-locale"
+import { sendConfirmationEmail } from "@/lib/email/service"
 
 export type BookingInput = {
   bokunId: string
@@ -42,6 +45,8 @@ export type BookingInput = {
   customerName: string
   customerEmail: string
   customerPhone?: string
+  /** Language the customer is booking in; drives confirmation/reminder emails. */
+  locale?: string
   notes?: string
   /** Opt-in: create a customer account so they can track this booking. */
   createAccount?: boolean
@@ -323,6 +328,9 @@ async function persistBooking(
     customerName: input.customerName.trim(),
     customerEmail: contactEmail,
     customerPhone: input.customerPhone?.trim() || null,
+    // Prefer the explicit locale from the form, else the request cookie, so the
+    // confirmation/reminder emails go out in the language the customer booked in.
+    locale: asLocale(input.locale ?? (await getLocale())),
     notes: input.notes?.trim() || null,
     status,
     bokunConfirmationCode: reservation.confirmationCode,
@@ -542,6 +550,12 @@ export async function markBookingConfirmed(
           `[v0] ALERT: Booking ${bookingId} PAID but Bokun confirm FAILED ` +
             `(${row.code}): ${ok.error}`,
         )
+      } else {
+        // Voucher is now available in Bokun — send the confirmation email with
+        // the download link. Best-effort and idempotent; never blocks the flow.
+        await sendConfirmationEmail(bookingId).catch((err) =>
+          console.error(`[v0] confirmation email failed (${bookingId}):`, err),
+        )
       }
     } else {
       console.error(
@@ -681,6 +695,15 @@ export async function confirmBookingFromReturn(
             console.error(
               `[v0] ALERT: Booking ${bookingId} PAID but Bokun confirm FAILED ` +
                 `(${row.bokunConfirmationCode}): ${confirmed.error}`,
+            )
+          } else {
+            // Voucher is now available — send the localized confirmation email.
+            // Best-effort and idempotent (safe for webhook + browser return).
+            await sendConfirmationEmail(bookingId).catch((err) =>
+              console.error(
+                `[v0] confirmation email failed (${bookingId}):`,
+                err,
+              ),
             )
           }
         } else {

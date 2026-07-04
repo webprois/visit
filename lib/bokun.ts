@@ -1767,3 +1767,38 @@ export async function fetchBokunVoucherPdf(
     return null
   }
 }
+
+/**
+ * Cancel a confirmed Bokun booking by its numeric booking id. Used by the
+ * customer self-cancellation flow (72h+ before departure) and by staff when
+ * approving a cancellation request.
+ *
+ * - `notify`: whether Bokun emails the customer its own cancellation notice.
+ *   We send our own localized email, so this defaults to false.
+ * - `refund`: whether Bokun marks the booking as refunded.
+ */
+export async function cancelBokunBooking(
+  bokunBookingId: number,
+  opts: { notify?: boolean; refund?: boolean } = {},
+): Promise<ConfirmBokunResult> {
+  if (!Number.isFinite(bokunBookingId) || bokunBookingId <= 0) {
+    return { ok: false, error: "Missing Bokun booking id." }
+  }
+  const notify = opts.notify ?? false
+  const refund = opts.refund ?? true
+  // Query params must be part of the signed path.
+  const path =
+    `/booking.json/cancel-booking/${bokunBookingId}` +
+    `?notify=${notify}&refund=${refund}`
+
+  const res = await bokunWrite<{ id?: number }>(path)
+  if (!res.ok) {
+    console.log("[v0] Bokun cancel failed:", res.status, res.error)
+    return {
+      ok: false,
+      error: res.error ?? "Could not cancel the booking.",
+    }
+  }
+  console.log(`[v0] Bokun CANCELLED ${bokunBookingId}`)
+  return { ok: true }
+}
