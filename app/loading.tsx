@@ -7,7 +7,7 @@ import { BrandLoader } from "@/components/brand-loader"
 export default function RootLoading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <BrandLoader size={72} caption="Loading" label="Loading" />
+      <BrandLoader size={72} label="Loading" />
     </div>
   )
 }
