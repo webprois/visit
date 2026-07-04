@@ -362,3 +362,56 @@ export function buildCancellationDeclinedEmail(
     text,
   }
 }
+
+export type AuthEmailData = {
+  locale: string
+  /** Optional display name; falls back to a generic greeting when empty. */
+  name?: string | null
+  /** Absolute action URL (verification or reset link). */
+  url: string
+}
+
+function greeting(s: EmailStrings, name?: string | null): string {
+  const trimmed = name?.trim()
+  return trimmed ? fmtEmail(s.hi, { name: trimmed }) : s.hiNoName
+}
+
+/** Email address verification link sent on sign-up (and on unverified sign-in). */
+export function buildVerificationEmail(data: AuthEmailData): BuiltEmail {
+  const s = getEmailStrings(data.locale)
+  const hi = greeting(s, data.name)
+  const bodyHtml = [
+    paragraph(hi),
+    paragraph(s.verifyIntro),
+    button(data.url, s.verifyButton),
+    mutedParagraph(s.verifyOutro),
+  ].join("\n")
+
+  const text = [hi, "", s.verifyIntro, "", data.url, "", s.verifyOutro].join("\n")
+
+  return {
+    subject: s.verifySubject,
+    html: layout({ s, heading: s.verifyHeading, bodyHtml }),
+    text,
+  }
+}
+
+/** Password reset link sent from the "forgot password" flow. */
+export function buildPasswordResetEmail(data: AuthEmailData): BuiltEmail {
+  const s = getEmailStrings(data.locale)
+  const hi = greeting(s, data.name)
+  const bodyHtml = [
+    paragraph(hi),
+    paragraph(s.resetIntro),
+    button(data.url, s.resetButton),
+    mutedParagraph(s.resetOutro),
+  ].join("\n")
+
+  const text = [hi, "", s.resetIntro, "", data.url, "", s.resetOutro].join("\n")
+
+  return {
+    subject: s.resetSubject,
+    html: layout({ s, heading: s.resetHeading, bodyHtml }),
+    text,
+  }
+}

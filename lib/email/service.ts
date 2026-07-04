@@ -12,6 +12,8 @@ import {
   buildCancellationRequestEmail,
   buildCancellationApprovedEmail,
   buildCancellationDeclinedEmail,
+  buildVerificationEmail,
+  buildPasswordResetEmail,
   type BookingEmailData,
   type CancellationEmailData,
 } from "@/lib/email/templates"
@@ -215,6 +217,52 @@ export async function sendCancellationDeclinedEmail(
   })
   const result = await sendEmail({
     to: row.customerEmail,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  })
+  return result.ok
+}
+
+/**
+ * Send the account email-verification link (Better Auth sign-up / unverified
+ * sign-in). `locale` comes from the visitor's language cookie so the email
+ * matches the site language they used.
+ */
+export async function sendAccountVerificationEmail(input: {
+  to: string
+  name?: string | null
+  url: string
+  locale: string
+}): Promise<boolean> {
+  const email = buildVerificationEmail({
+    locale: input.locale,
+    name: input.name,
+    url: input.url,
+  })
+  const result = await sendEmail({
+    to: input.to,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  })
+  return result.ok
+}
+
+/** Send the password-reset link (Better Auth "forgot password" flow). */
+export async function sendPasswordResetEmail(input: {
+  to: string
+  name?: string | null
+  url: string
+  locale: string
+}): Promise<boolean> {
+  const email = buildPasswordResetEmail({
+    locale: input.locale,
+    name: input.name,
+    url: input.url,
+  })
+  const result = await sendEmail({
+    to: input.to,
     subject: email.subject,
     html: email.html,
     text: email.text,

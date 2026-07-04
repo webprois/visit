@@ -6,11 +6,11 @@ import Link from "next/link"
 import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
 import { getPostLoginPath } from "@/app/actions/session"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+import { Loader2, MailCheck } from "lucide-react"
 
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const router = useRouter()
@@ -21,6 +21,8 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // When true, we've sent a verification email and are waiting on the user.
+  const [verificationSent, setVerificationSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,11 +31,35 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
 
     try {
       if (isSignUp) {
-        const { error } = await authClient.signUp.email({ email, password, name })
+        const { error } = await authClient.signUp.email({
+          email,
+          password,
+          name,
+          callbackURL: "/account",
+        })
         if (error) throw new Error(error.message || "Sign up failed")
-      } else {
-        const { error } = await authClient.signIn.email({ email, password })
-        if (error) throw new Error(error.message || "Sign in failed")
+        // Email verification is required, so no session is created yet.
+        setVerificationSent(true)
+        setLoading(false)
+        return
+      }
+
+      const { error } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/account",
+      })
+      if (error) {
+        // Unverified accounts get a fresh verification email automatically.
+        if (
+          error.code === "EMAIL_NOT_VERIFIED" ||
+          error.status === 403
+        ) {
+          setVerificationSent(true)
+          setLoading(false)
+          return
+        }
+        throw new Error(error.message || "Sign in failed")
       }
       const dest = await getPostLoginPath()
       router.push(dest)
@@ -42,6 +68,48 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
       setError((err as Error).message)
       setLoading(false)
     }
+  }
+
+  if (verificationSent) {
+    return (
+      <Card className="w-full max-w-sm p-6">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Image
+            src="/images/visit-logo.webp"
+            alt="Visit.is"
+            width={120}
+            height={32}
+            className="h-8 w-auto"
+          />
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <MailCheck className="size-6 text-primary" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <h1 className="font-heading text-xl font-bold text-foreground">
+              Check your email
+            </h1>
+            <p className="text-sm text-muted-foreground text-pretty">
+              We sent a confirmation link to{" "}
+              <span className="font-medium text-foreground">{email}</span>.
+              Click it to activate your account, then sign in.
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Didn&apos;t get it? Check your spam folder, or try signing in again
+            to resend the link.
+          </p>
+          <Link
+            href="/sign-in"
+            className={buttonVariants({
+              variant: "outline",
+              className: "mt-2 w-full",
+            })}
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </Card>
+    )
   }
 
   return (
@@ -89,7 +157,17 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            {!isSignUp && (
+              <Link
+                href="/forgot-password"
+                className="text-xs text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <Input
             id="password"
             type="password"

@@ -11,6 +11,7 @@ export type EmailStrings = {
   brand: string
   // Shared
   hi: string // "Hi {name},"
+  hiNoName: string // greeting when we have no name
   tourLabel: string
   dateLabel: string
   guestsLabel: string
@@ -60,11 +61,24 @@ export type EmailStrings = {
   cancelDeclinedOutro: string
   // Optional staff note shown in resolution emails
   adminNoteLabel: string
+  // Account email verification
+  verifySubject: string
+  verifyHeading: string
+  verifyIntro: string
+  verifyButton: string
+  verifyOutro: string
+  // Password reset
+  resetSubject: string
+  resetHeading: string
+  resetIntro: string
+  resetButton: string
+  resetOutro: string
 }
 
 const en: EmailStrings = {
   brand: "Visit Iceland",
   hi: "Hi {name},",
+  hiNoName: "Hi there,",
   tourLabel: "Tour",
   dateLabel: "Date",
   guestsLabel: "Guests",
@@ -125,11 +139,26 @@ const en: EmailStrings = {
   cancelDeclinedOutro:
     "If you have any questions, just reply to this email and our team will be happy to help.",
   adminNoteLabel: "Note from our team",
+  verifySubject: "Confirm your email address",
+  verifyHeading: "Confirm your email",
+  verifyIntro:
+    "Thanks for creating an account with Visit Iceland. Please confirm your email address to activate your account and start booking tours.",
+  verifyButton: "Confirm email",
+  verifyOutro:
+    "If you didn't create an account, you can safely ignore this email.",
+  resetSubject: "Reset your password",
+  resetHeading: "Reset your password",
+  resetIntro:
+    "We received a request to reset the password for your Visit Iceland account. Click the button below to choose a new password. This link expires in 1 hour.",
+  resetButton: "Reset password",
+  resetOutro:
+    "If you didn't request a password reset, you can safely ignore this email and your password will stay the same.",
 }
 
 const es: EmailStrings = {
   brand: "Visit Iceland",
   hi: "Hola {name}:",
+  hiNoName: "Hola:",
   tourLabel: "Tour",
   dateLabel: "Fecha",
   guestsLabel: "Viajeros",
@@ -189,11 +218,26 @@ const es: EmailStrings = {
   cancelDeclinedOutro:
     "Si tienes alguna pregunta, responde a este correo y nuestro equipo estará encantado de ayudarte.",
   adminNoteLabel: "Nota de nuestro equipo",
+  verifySubject: "Confirma tu dirección de correo",
+  verifyHeading: "Confirma tu correo",
+  verifyIntro:
+    "Gracias por crear una cuenta en Visit Iceland. Confirma tu dirección de correo para activar tu cuenta y empezar a reservar tours.",
+  verifyButton: "Confirmar correo",
+  verifyOutro:
+    "Si no creaste una cuenta, puedes ignorar este correo con seguridad.",
+  resetSubject: "Restablece tu contraseña",
+  resetHeading: "Restablece tu contraseña",
+  resetIntro:
+    "Recibimos una solicitud para restablecer la contraseña de tu cuenta de Visit Iceland. Haz clic en el botón para elegir una nueva contraseña. Este enlace caduca en 1 hora.",
+  resetButton: "Restablecer contraseña",
+  resetOutro:
+    "Si no solicitaste restablecer la contraseña, puedes ignorar este correo y tu contraseña seguirá siendo la misma.",
 }
 
 const pt: EmailStrings = {
   brand: "Visit Iceland",
   hi: "Olá {name},",
+  hiNoName: "Olá,",
   tourLabel: "Tour",
   dateLabel: "Data",
   guestsLabel: "Viajantes",
@@ -253,11 +297,26 @@ const pt: EmailStrings = {
   cancelDeclinedOutro:
     "Se tiver alguma dúvida, basta responder a este e-mail e a nossa equipa terá todo o gosto em ajudar.",
   adminNoteLabel: "Nota da nossa equipa",
+  verifySubject: "Confirme o seu endereço de e-mail",
+  verifyHeading: "Confirme o seu e-mail",
+  verifyIntro:
+    "Obrigado por criar uma conta na Visit Iceland. Confirme o seu endereço de e-mail para ativar a sua conta e começar a reservar tours.",
+  verifyButton: "Confirmar e-mail",
+  verifyOutro:
+    "Se não criou uma conta, pode ignorar este e-mail em segurança.",
+  resetSubject: "Redefina a sua palavra-passe",
+  resetHeading: "Redefina a sua palavra-passe",
+  resetIntro:
+    "Recebemos um pedido para redefinir a palavra-passe da sua conta Visit Iceland. Clique no botão abaixo para escolher uma nova palavra-passe. Este link expira em 1 hora.",
+  resetButton: "Redefinir palavra-passe",
+  resetOutro:
+    "Se não solicitou a redefinição da palavra-passe, pode ignorar este e-mail e a sua palavra-passe permanecerá a mesma.",
 }
 
 const it: EmailStrings = {
   brand: "Visit Iceland",
   hi: "Ciao {name},",
+  hiNoName: "Ciao,",
   tourLabel: "Tour",
   dateLabel: "Data",
   guestsLabel: "Viaggiatori",
@@ -317,6 +376,20 @@ const it: EmailStrings = {
   cancelDeclinedOutro:
     "Se hai domande, rispondi a questa email e il nostro team sarà lieto di aiutarti.",
   adminNoteLabel: "Nota del nostro team",
+  verifySubject: "Conferma il tuo indirizzo email",
+  verifyHeading: "Conferma la tua email",
+  verifyIntro:
+    "Grazie per aver creato un account su Visit Iceland. Conferma il tuo indirizzo email per attivare l'account e iniziare a prenotare i tour.",
+  verifyButton: "Conferma email",
+  verifyOutro:
+    "Se non hai creato un account, puoi ignorare questa email in tutta sicurezza.",
+  resetSubject: "Reimposta la tua password",
+  resetHeading: "Reimposta la tua password",
+  resetIntro:
+    "Abbiamo ricevuto una richiesta di reimpostazione della password del tuo account Visit Iceland. Clicca sul pulsante qui sotto per scegliere una nuova password. Questo link scade tra 1 ora.",
+  resetButton: "Reimposta password",
+  resetOutro:
+    "Se non hai richiesto la reimpostazione della password, puoi ignorare questa email e la tua password rimarrà invariata.",
 }
 
 const EMAIL_STRINGS: Record<Locale, EmailStrings> = { en, es, pt, it }
