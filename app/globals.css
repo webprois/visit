@@ -99,11 +99,20 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Subtle ambient glow so large dark surfaces read with depth instead of flat black. */
+  }
+  /* Subtle ambient glow so large dark surfaces read with depth instead of flat
+     black. Rendered as a fixed, non-scrolling decorative layer instead of
+     `background-attachment: fixed`, which iOS Safari mis-handles and which
+     caused a phantom blank region to appear below the footer. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
       radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%),
       radial-gradient(50rem 50rem at 100% 0%, color-mix(in oklch, var(--chart-2) 8%, transparent), transparent 70%);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -197,39 +206,4 @@
 }
 .leaflet-control-attribution a {
   color: var(--muted-foreground);
-}
-
-/* ---------------------------------------------------------------------------
-   Branded loading animation built from the visit.is pin/bird mark. The eye
-   winks in a natural double-blink loop — a lightweight, scalable, theme-aware
-   indicator (no image asset needed).
---------------------------------------------------------------------------- */
-@keyframes brand-eye-blink {
-  0%,
-  44% {
-    transform: scaleY(1);
-  }
-  47% {
-    transform: scaleY(0.06);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-  53% {
-    transform: scaleY(0.06);
-  }
-  56%,
-  100% {
-    transform: scaleY(1);
-  }
-}
-.brand-loader-eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: brand-eye-blink 2.8s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .brand-loader-eye {
-    animation: none;
-  }
 }

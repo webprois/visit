@@ -16,6 +16,8 @@ const en = {
     selfDrive: "Self-Drive",
     contact: "Contact",
     menu: "Menu",
+    myTrips: "My Trips",
+    signIn: "Sign in",
   },
   selfDrive: {
     title: "Self Drive Tours",
@@ -442,6 +444,11 @@ const en = {
     errYourName: "Please enter your name.",
     errEmail: "Please enter your email.",
     errPhone: "Please enter your phone number.",
+    createAccountLabel: "Create an account to track this booking",
+    createAccountHint: "Set a password to view your trips anytime under My Trips.",
+    passwordLabel: "Password",
+    passwordPlaceholder: "At least 8 characters",
+    errPassword: "Please choose a password with at least 8 characters.",
   },
   payment: {
     missingRef: "Missing booking reference.",
@@ -492,6 +499,8 @@ const es: Dictionary = {
     selfDrive: "En coche",
     contact: "Contacto",
     menu: "Menú",
+    myTrips: "Mis viajes",
+    signIn: "Iniciar sesión",
   },
   selfDrive: {
     title: "Tours en coche",
@@ -926,6 +935,11 @@ const es: Dictionary = {
     errYourName: "Por favor, introduce tu nombre.",
     errEmail: "Por favor, introduce tu correo electrónico.",
     errPhone: "Por favor, introduce tu número de teléfono.",
+    createAccountLabel: "Crea una cuenta para seguir esta reserva",
+    createAccountHint: "Elige una contraseña para ver tus viajes cuando quieras en Mis viajes.",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "Al menos 8 caracteres",
+    errPassword: "Elige una contraseña de al menos 8 caracteres.",
   },
   payment: {
     missingRef: "Falta la referencia de la reserva.",
@@ -974,6 +988,8 @@ const pt: Dictionary = {
     selfDrive: "De carro",
     contact: "Contacto",
     menu: "Menu",
+    myTrips: "As minhas viagens",
+    signIn: "Entrar",
   },
   selfDrive: {
     title: "Tours de carro",
@@ -1408,6 +1424,11 @@ const pt: Dictionary = {
     errYourName: "Por favor, introduza o seu nome.",
     errEmail: "Por favor, introduza o seu e-mail.",
     errPhone: "Por favor, introduza o seu número de telefone.",
+    createAccountLabel: "Crie uma conta para acompanhar esta reserva",
+    createAccountHint: "Defina uma palavra-passe para ver as suas viagens quando quiser em As minhas viagens.",
+    passwordLabel: "Palavra-passe",
+    passwordPlaceholder: "Pelo menos 8 caracteres",
+    errPassword: "Escolha uma palavra-passe com pelo menos 8 caracteres.",
   },
   payment: {
     missingRef: "Falta a referência da reserva.",
@@ -1456,6 +1477,8 @@ const it: Dictionary = {
     selfDrive: "In auto",
     contact: "Contatto",
     menu: "Menu",
+    myTrips: "I miei viaggi",
+    signIn: "Accedi",
   },
   selfDrive: {
     title: "Tour in auto",
@@ -1888,6 +1911,11 @@ const it: Dictionary = {
     errYourName: "Inserisci il tuo nome.",
     errEmail: "Inserisci la tua email.",
     errPhone: "Inserisci il tuo numero di telefono.",
+    createAccountLabel: "Crea un account per seguire questa prenotazione",
+    createAccountHint: "Imposta una password per vedere i tuoi viaggi quando vuoi in I miei viaggi.",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Almeno 8 caratteri",
+    errPassword: "Scegli una password di almeno 8 caratteri.",
   },
   payment: {
     missingRef: "Riferimento della prenotazione mancante.",

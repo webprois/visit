@@ -2,15 +2,21 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Menu, X } from "lucide-react"
+import { Menu, X, UserRound } from "lucide-react"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { CurrencySwitcher } from "@/components/currency-switcher"
 import { useDict } from "@/components/i18n-provider"
+import { authClient } from "@/lib/auth-client"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n"
 
 export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
   const [open, setOpen] = useState(false)
   const dict = useDict()
+  const { data: session } = authClient.useSession()
+  // Signed-in customers get "My Trips"; everyone else gets a sign-in link.
+  const accountLink = session
+    ? { label: dict.nav.myTrips, href: "/account" }
+    : { label: dict.nav.signIn, href: "/sign-in" }
 
   const navLinks = [
     { label: dict.nav.allTours, href: "/tours" },
@@ -49,6 +55,13 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
         <div className="hidden items-center gap-3 md:flex">
           <CurrencySwitcher />
           <LanguageSwitcher locale={locale} />
+          <a
+            href={accountLink.href}
+            className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <UserRound className="size-4" aria-hidden="true" />
+            {accountLink.label}
+          </a>
         </div>
 
         <button
@@ -74,6 +87,14 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
                 {link.label}
               </a>
             ))}
+            <a
+              href={accountLink.href}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium text-foreground hover:bg-secondary"
+            >
+              <UserRound className="size-5" aria-hidden="true" />
+              {accountLink.label}
+            </a>
             <div className="flex items-center gap-3 px-3 py-2">
               <CurrencySwitcher />
               <LanguageSwitcher locale={locale} />

@@ -1,10 +1,10 @@
 import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/require-auth"
+import { assertAdmin } from "@/lib/require-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth()
+    await assertAdmin()
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

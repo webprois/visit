@@ -37,6 +37,8 @@ import {
 import { startBooking, type BookingInput } from "@/app/actions/booking"
 import { useDict, useLocale } from "@/components/i18n-provider"
 import { fmt } from "@/lib/translations"
+import { authClient } from "@/lib/auth-client"
+import { Checkbox } from "@/components/ui/checkbox"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 // Full country dialing list. `iso` is the unique select value (some countries
@@ -442,6 +444,10 @@ export function BookingForm({
   const phoneDial =
     PHONE_CODES.find((c) => c.iso === phoneCountry)?.dial ?? "+354"
   const [phone, setPhone] = useState("")
+  // Opt-in account creation at checkout. Hidden when already signed in.
+  const { data: session } = authClient.useSession()
+  const [createAccount, setCreateAccount] = useState(false)
+  const [accountPassword, setAccountPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(1)
   // Wizard steps. The add-ons step only appears when the tour has extras, so a
@@ -590,6 +596,11 @@ export function BookingForm({
       setError(t.errPhone)
       return
     }
+    const wantsAccount = !session && createAccount
+    if (wantsAccount && accountPassword.length < 8) {
+      setError(t.errPassword)
+      return
+    }
 
     const selections = slot.pricedPerPerson
       ? slot.lines
@@ -621,6 +632,8 @@ export function BookingForm({
       customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       customerEmail: email,
       customerPhone: `${phoneDial} ${phone.trim()}`,
+      createAccount: wantsAccount,
+      accountPassword: wantsAccount ? accountPassword : undefined,
     }
 
     startTransition(async () => {
@@ -910,6 +923,7 @@ export function BookingForm({
       {/* ---------- Booking form (inline, 3-step wizard) ---------- */}
       <form
         onSubmit={onSubmit}
+        noValidate
         className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-sm"
       >
             <div>
@@ -1225,7 +1239,7 @@ export function BookingForm({
                   >
                     <SelectTrigger
                       aria-label={t.phoneCountryCode}
-                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
                     >
                       <span className="text-sm font-medium tabular-nums">
                         {phoneDial}
@@ -1252,6 +1266,42 @@ export function BookingForm({
                 </div>
               </div>
             </div>
+
+            {/* Optional account creation */}
+            {!session && (
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <label className="flex items-start gap-3">
+                  <Checkbox
+                    checked={createAccount}
+                    onCheckedChange={(v) => setCreateAccount(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-foreground">
+                      {t.createAccountLabel}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t.createAccountHint}
+                    </span>
+                  </span>
+                </label>
+
+                {createAccount && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="booking-password">{t.passwordLabel}</Label>
+                    <Input
+                      id="booking-password"
+                      type="password"
+                      value={accountPassword}
+                      onChange={(e) => setAccountPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder={t.passwordPlaceholder}
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">

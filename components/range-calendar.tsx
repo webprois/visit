@@ -184,7 +184,7 @@ function MonthGrid({
         {WEEKDAYS.map((w) => (
           <div
             key={w}
-            className="pb-1 text-center text-xs font-medium text-muted-foreground"
+            className="min-w-0 truncate pb-1 text-center text-xs font-medium text-muted-foreground"
           >
             {w}
           </div>
@@ -201,7 +201,7 @@ function MonthGrid({
             <div
               key={i}
               className={
-                "flex justify-center " +
+                "flex min-w-0 justify-center " +
                 (inRange || isEdge ? "bg-primary/10 " : "") +
                 (isFrom && to ? "rounded-l-full " : "") +
                 (isTo ? "rounded-r-full " : "")
@@ -213,7 +213,7 @@ function MonthGrid({
                 onClick={() => onPick(day)}
                 aria-label={`${MONTHS[m]} ${day.getDate()}, ${year}`}
                 className={
-                  "flex size-9 items-center justify-center rounded-full text-sm transition-colors " +
+                  "flex aspect-square w-full max-w-9 items-center justify-center rounded-full text-sm transition-colors " +
                   (disabled
                     ? "cursor-not-allowed text-muted-foreground/40 "
                     : "text-foreground hover:bg-primary/20 ") +

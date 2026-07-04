@@ -980,3 +980,412 @@ export function fetchTourPickup(bokunId: string): Promise<TourPickup> {
     { revalidate: 900, tags: ["bokun-tours"] },
   )()
 }
+
+/* =====================================================================
+   Bookings — read every reservation from Bokun (all sales channels,
+   including bookings placed on this site which sync back into Bokun).
+   The key has booking READ access (verified) even though booking WRITE
+   is not permitted, so this is the source of truth for the admin list.
+   ===================================================================== */
+
+export type BokunBookingStatus =
+  | "CONFIRMED"
+  | "CANCELLED"
+  | "ARRIVED"
+  | "NO_SHOW"
+  | "REJECTED"
+  | string
+
+/** A single reservation, mapped to a clean shape for the admin UI. */
+export type BokunBooking = {
+  id: number
+  parentBookingId: number | null
+  confirmationCode: string
+  productConfirmationCode: string | null
+  status: BokunBookingStatus
+  /** Sales channel the booking came through (e.g. Website, Marketplace). */
+  channel: string | null
+  channelType: string | null
+  productId: number | null
+  productTitle: string
+  productExternalId: string | null
+  vendor: string | null
+  seller: string | null
+  /** Customer / lead traveller. */
+  customerName: string
+  customerFirstName: string | null
+  customerLastName: string | null
+  customerEmail: string | null
+  customerPhone: string | null
+  customerNationality: string | null
+  /** Milliseconds since epoch. */
+  bookedAt: number | null
+  travelDate: number | null
+  travelDateTime: number | null
+  startTime: string | null
+  rateTitle: string | null
+  totalParticipants: number
+  /** Per pricing-category breakdown, e.g. [{ title: "Adult", quantity: 2 }]. */
+  participants: { title: string; quantity: number }[]
+  /** Booked add-ons, e.g. [{ title: "National Park Fee", quantity: 6 }]. */
+  extras: { title: string; quantity: number }[]
+  totalPrice: number
+  currency: string
+  paidAmount: number
+  paidType: string | null
+  prepaid: boolean
+  discountAmount: number
+  discountPercentage: number
+  /** Seller commission — always in the seller's base currency (ISK), NOT the booking's sale currency. */
+  sellerCommission: number
+  /** Cancellation metadata (null when active). */
+  cancelledAt: number | null
+  cancelNote: string | null
+  specialRequests: string | null
+  pickup: boolean
+  dropoff: boolean
+  pickupDescription: string | null
+  labels: string[]
+}
+
+export type BokunBookingResult = {
+  items: BokunBooking[]
+  totalHits: number
+  page: number
+  pageSize: number
+}
+
+export type BokunBookingFilters = {
+  page?: number
+  pageSize?: number
+  /** Booking statuses to include; omit for all. */
+  statuses?: BokunBookingStatus[]
+  /** Exact Bokun confirmation code (e.g. "VTI-95561587"). */
+  confirmationCode?: string
+  /** Travel-date range as "yyyy-MM-dd" strings (inclusive). */
+  travelFrom?: string
+  travelTo?: string
+}
+
+/* ---- Raw response shapes (subset of Bokun's payload) ---- */
+
+type RawParty = { id?: number; title?: string }
+type RawCustomer = {
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+  phoneNumber?: string | null
+  nationality?: string | null
+}
+type RawInvoice = { total?: number; currency?: string; totalCommission?: number }
+type RawPriceCat = { bookedTitle?: string; pricingCategory?: { title?: string }; quantity?: number }
+type RawExtra = { extra?: { title?: string }; unitCount?: number }
+type RawBookingFields = {
+  startTimeStr?: string | null
+  pickup?: boolean
+  dropoff?: boolean
+  pickupPlaceDescription?: string | null
+  totalParticipants?: number
+  priceCategoryBookings?: RawPriceCat[]
+  bookedExtras?: RawExtra[]
+}
+type RawBooking = {
+  id: number
+  parentBookingId?: number | null
+  confirmationCode?: string
+  productConfirmationCode?: string | null
+  status?: string
+  channel?: { title?: string; channelType?: string }
+  product?: RawParty
+  productExternalId?: string | null
+  vendor?: RawParty
+  seller?: RawParty
+  customer?: RawCustomer
+  creationDate?: number | null
+  bookingCreationDate?: number | null
+  startDate?: number | null
+  startDateTime?: number | null
+  rateTitle?: string | null
+  totalParticipants?: number
+  totalPrice?: number
+  currency?: string
+  paidAmount?: number
+  paidType?: string | null
+  prepaid?: boolean
+  discountAmount?: number
+  discountPercentage?: number
+  sellerCommission?: number
+  cancellationDate?: number | null
+  cancelNote?: string | null
+  specialRequests?: string | null
+  customerInvoice?: RawInvoice
+  labels?: { title?: string }[] | string[]
+  fields?: RawBookingFields
+}
+
+type RawBookingSearch = { totalHits?: number; results?: RawBooking[] }
+
+/** Collapse repeated pricing-category / extra rows into title + quantity. */
+function tally<T>(rows: T[], titleOf: (r: T) => string, qtyOf: (r: T) => number) {
+  const map = new Map<string, number>()
+  for (const r of rows) {
+    const title = titleOf(r).trim()
+    if (!title) continue
+    map.set(title, (map.get(title) ?? 0) + (qtyOf(r) || 0))
+  }
+  return [...map.entries()].map(([title, quantity]) => ({ title, quantity }))
+}
+
+function mapBooking(b: RawBooking): BokunBooking {
+  const f = b.fields ?? {}
+  const first = b.customer?.firstName?.trim() || null
+  const last = b.customer?.lastName?.trim() || null
+  const fullName = [first, last].filter(Boolean).join(" ") || "—"
+  const labels = (b.labels ?? [])
+    .map((l) => (typeof l === "string" ? l : l?.title))
+    .filter((l): l is string => Boolean(l))
+
+  return {
+    id: b.id,
+    parentBookingId: b.parentBookingId ?? null,
+    confirmationCode: b.confirmationCode ?? String(b.id),
+    productConfirmationCode: b.productConfirmationCode ?? null,
+    status: b.status ?? "CONFIRMED",
+    channel: b.channel?.title?.trim() || null,
+    channelType: b.channel?.channelType ?? null,
+    productId: b.product?.id ?? null,
+    productTitle: b.product?.title?.trim() || "—",
+    productExternalId: b.productExternalId ?? null,
+    vendor: b.vendor?.title?.trim() || null,
+    seller: b.seller?.title?.trim() || null,
+    customerName: fullName,
+    customerFirstName: first,
+    customerLastName: last,
+    customerEmail: b.customer?.email?.trim() || null,
+    customerPhone: b.customer?.phoneNumber?.trim() || null,
+    customerNationality: b.customer?.nationality || null,
+    bookedAt: b.bookingCreationDate ?? b.creationDate ?? null,
+    travelDate: b.startDate ?? null,
+    travelDateTime: b.startDateTime ?? null,
+    startTime: f.startTimeStr ?? null,
+    rateTitle: b.rateTitle ?? null,
+    totalParticipants: f.totalParticipants ?? b.totalParticipants ?? 0,
+    participants: tally(
+      f.priceCategoryBookings ?? [],
+      (r) => r.bookedTitle || r.pricingCategory?.title || "",
+      (r) => r.quantity ?? 1,
+    ),
+    extras: tally(
+      f.bookedExtras ?? [],
+      (r) => r.extra?.title || "",
+      (r) => r.unitCount ?? 1,
+    ),
+    totalPrice: Math.round(b.totalPrice ?? b.customerInvoice?.total ?? 0),
+    currency: b.currency ?? b.customerInvoice?.currency ?? "ISK",
+    paidAmount: Math.round(b.paidAmount ?? 0),
+    paidType: b.paidType ?? null,
+    prepaid: Boolean(b.prepaid),
+    discountAmount: Math.round(b.discountAmount ?? 0),
+    discountPercentage: b.discountPercentage ?? 0,
+    sellerCommission: Math.round(b.sellerCommission ?? 0),
+    cancelledAt: b.cancellationDate ?? null,
+    cancelNote: b.cancelNote ?? null,
+    specialRequests: b.specialRequests?.trim() || null,
+    pickup: Boolean(f.pickup),
+    dropoff: Boolean(f.dropoff),
+    pickupDescription: f.pickupPlaceDescription ?? null,
+    labels,
+  }
+}
+
+/**
+ * Fetch reservations from Bokun with optional server-side filters (status,
+ * confirmation code, travel-date range) and pagination. Live data — not
+ * cached. Returns an empty result if the API is unavailable so the admin
+ * page still renders.
+ */
+export async function fetchBokunBookings(
+  filters: BokunBookingFilters = {},
+): Promise<BokunBookingResult> {
+  const page = Math.max(1, filters.page ?? 1)
+  const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 50))
+
+  const body: Record<string, unknown> = {
+    page,
+    pageSize,
+    excludeComboBookings: false,
+  }
+  if (filters.statuses?.length) body.bookingStatuses = filters.statuses
+  if (filters.confirmationCode?.trim()) body.confirmationCode = filters.confirmationCode.trim()
+  if (filters.travelFrom || filters.travelTo) {
+    body.startDateRange = {
+      from: filters.travelFrom ? Date.parse(filters.travelFrom) : 0,
+      to: filters.travelTo ? Date.parse(filters.travelTo) + 86_399_000 : Date.now() + 10 * 365 * 86_400_000,
+      includeLower: true,
+      includeUpper: true,
+    }
+  }
+
+  const data = await bokunRequest<RawBookingSearch>(
+    "POST",
+    "/booking.json/product-booking-search?lang=EN",
+    body,
+  )
+
+  if (!data) return { items: [], totalHits: 0, page, pageSize }
+
+  return {
+    items: (data.results ?? []).map(mapBooking),
+    totalHits: data.totalHits ?? 0,
+    page,
+    pageSize,
+  }
+}
+
+/**
+ * Fetch all bookings belonging to a customer, matched by email address. Uses
+ * Bokun's free-text search to narrow server-side, then filters exactly on
+ * customerEmail (case-insensitive) so we never show someone else's booking.
+ * Returns most-recent-first. Empty on error so the account page still renders.
+ */
+export async function fetchBokunBookingsByEmail(
+  email: string,
+  maxPages = 3,
+): Promise<BokunBooking[]> {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return []
+
+  const pageSize = 100
+  const collected: BokunBooking[] = []
+
+  for (let page = 1; page <= maxPages; page++) {
+    const data = await bokunRequest<RawBookingSearch>(
+      "POST",
+      "/booking.json/product-booking-search?lang=EN",
+      { page, pageSize, excludeComboBookings: false, textSearch: normalized },
+    )
+    const results = data?.results ?? []
+    for (const r of results) collected.push(mapBooking(r))
+    if (results.length < pageSize) break
+  }
+
+  return collected
+    .filter((b) => b.customerEmail?.trim().toLowerCase() === normalized)
+    .sort((a, b) => (b.travelDate ?? b.bookedAt ?? 0) - (a.travelDate ?? a.bookedAt ?? 0))
+}
+
+/**
+ * Fetch every matching booking by walking Bokun's paged search (200 per page).
+ * Used by the dashboard to aggregate revenue, channels and departures across
+ * the whole book of business. Capped so a runaway account can't fetch forever.
+ * The mapped result is cached briefly to keep the dashboard snappy.
+ */
+async function fetchAllBokunBookingsUncached(
+  statuses: BokunBookingStatus[],
+  maxBookings = 4000,
+): Promise<BokunBooking[]> {
+  const pageSize = 200
+  const all: BokunBooking[] = []
+
+  for (let page = 1; ; page++) {
+    const body: Record<string, unknown> = {
+      page,
+      pageSize,
+      excludeComboBookings: false,
+    }
+    if (statuses.length) body.bookingStatuses = statuses
+
+    const data = await bokunRequest<RawBookingSearch>(
+      "POST",
+      "/booking.json/product-booking-search?lang=EN",
+      body,
+    )
+
+    const results = data?.results ?? []
+    for (const r of results) all.push(mapBooking(r))
+
+    const totalHits = data?.totalHits ?? all.length
+    if (results.length < pageSize || all.length >= totalHits || all.length >= maxBookings) {
+      break
+    }
+  }
+
+  return all
+}
+
+export const fetchAllBokunBookings = unstable_cache(
+  fetchAllBokunBookingsUncached,
+  ["bokun-all-bookings"],
+  { revalidate: 600, tags: ["bokun-bookings"] },
+)
+
+export type CancelBookingOptions = {
+  /** Reason shown in Bokun's cancellation record. */
+  note?: string
+  /** Email the customer (and supplier) about the cancellation. Default false. */
+  notify?: boolean
+  /** Attempt an automatic refund of any prepaid amount. Default false. */
+  refund?: boolean
+}
+
+export type CancelBookingResult = { ok: true } | { ok: false; error: string }
+
+/**
+ * Cancel a reservation in Bokun by its confirmation code. This is a live,
+ * destructive write against Bokun — unlike the read helpers it does its own
+ * fetch so it can surface Bokun's exact error message on failure. Defaults are
+ * intentionally conservative: no customer notification and no auto-refund.
+ */
+export async function cancelBokunBooking(
+  confirmationCode: string,
+  options: CancelBookingOptions = {},
+): Promise<CancelBookingResult> {
+  const accessKey = process.env.BOKUN_ACCESS_KEY
+  const secret = process.env.BOKUN_SECRET_KEY
+  if (!accessKey || !secret) return { ok: false, error: "Bokun API keys are not configured." }
+
+  const code = confirmationCode.trim()
+  if (!code) return { ok: false, error: "Missing confirmation code." }
+
+  const method = "POST"
+  const path = `/booking.json/cancel-booking/${encodeURIComponent(code)}?lang=EN`
+  const date = bokunDate()
+  const signature = sign(date, accessKey, secret, method, path)
+
+  try {
+    const res = await fetch(`https://${DOMAIN}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        "X-Bokun-Date": date,
+        "X-Bokun-AccessKey": accessKey,
+        "X-Bokun-Signature": signature,
+      },
+      body: JSON.stringify({
+        note: options.note?.trim() || "Cancelled from admin",
+        notify: Boolean(options.notify),
+        refund: Boolean(options.refund),
+      }),
+      cache: "no-store",
+    })
+
+    const text = await res.text()
+    if (!res.ok) {
+      let message = `Bokun returned ${res.status}`
+      try {
+        const parsed = JSON.parse(text) as { message?: string; error?: string }
+        message = parsed.message || parsed.error || message
+      } catch {
+        if (text) message = text.slice(0, 200)
+      }
+      console.log("[v0] Bokun cancel failed:", res.status, message)
+      return { ok: false, error: message }
+    }
+
+    return { ok: true }
+  } catch (err) {
+    const message = (err as Error).message
+    console.log("[v0] Bokun cancel error:", message)
+    return { ok: false, error: message }
+  }
+}
