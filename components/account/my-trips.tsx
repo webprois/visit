@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Calendar, Users, Clock, Ticket, MapPin } from "lucide-react"
+import { Calendar, Users, Clock, Ticket, MapPin, Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatMoney } from "@/lib/currency"
@@ -69,15 +69,28 @@ function TripCard({ trip }: { trip: MyTrip }) {
         <span className="font-heading text-xl font-bold text-foreground">
           {formatMoney(trip.amount, trip.currency)}
         </span>
-        {trip.bokunId && trip.status !== "cancelled" && (
-          <Link
-            href={`/tours/${trip.bokunId}`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <MapPin className="size-4" aria-hidden="true" />
-            View tour
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {trip.bokunBookingId && trip.status !== "cancelled" && trip.status !== "pending" && (
+            <a
+              href={`/api/account/vouchers/${trip.bokunBookingId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Voucher
+            </a>
+          )}
+          {trip.bokunId && trip.status !== "cancelled" && (
+            <Link
+              href={`/tours/${trip.bokunId}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <MapPin className="size-4" aria-hidden="true" />
+              View tour
+            </Link>
+          )}
+        </div>
       </div>
       </div>
     </li>
