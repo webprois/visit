@@ -1490,12 +1490,18 @@ export async function reserveBokunBooking(
     `/activity.json/${input.bokunId}/availabilities` +
       `?start=${input.date}&end=${input.date}&lang=EN&currency=ISK&includeSoldOut=false`,
   )
+  console.log(
+    `[v0] reserve debug: bokunId=${input.bokunId} date=${input.date} slotId=${input.slotId} startTimeId=${input.startTimeId} rowsReturned=${(rows ?? []).length} rowIds=${JSON.stringify((rows ?? []).map((a) => ({ id: a.id, sti: a.startTimeId, avail: a.availabilityCount })))}`,
+  )
   const row =
     (rows ?? []).find((a) => a.id === input.slotId) ??
     (rows ?? []).find((a) => a.startTimeId === input.startTimeId)
   if (!row) return { ok: false, error: "Selected departure is no longer available." }
   const rate = row.rates?.find((r) => r.id === row.defaultRateId) ?? row.rates?.[0]
   if (!rate) return { ok: false, error: "No rate available for this departure." }
+  console.log(
+    `[v0] reserve debug: matchedRow=${row.id} rateId=${rate.id} pricedPerPerson=${input.pricedPerPerson} pcids=${JSON.stringify(rate.pricingCategoryIds)} selections=${JSON.stringify(input.selections)} totalPax=${input.totalPax}`,
+  )
 
   // One passenger per head, each tagged with its pricing category.
   const passengers: { pricingCategoryId: number }[] = []
@@ -1538,17 +1544,19 @@ export async function reserveBokunBooking(
     mainContactDetails.push({ questionId: "phoneNumber", values: [input.contact.phone] })
   }
 
-  const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", {
+  const submitBody = {
     source: "DIRECT_REQUEST",
     checkoutOption: "CUSTOMER_FULL_PAYMENT",
     paymentMethod: "RESERVE_FOR_EXTERNAL_PAYMENT",
     sendNotificationToMainContact: false,
     directBooking: { mainContactDetails, activityBookings: [activityBooking] },
-  })
+  }
+  const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", submitBody)
 
   const code = res.data?.booking?.confirmationCode
   if (!res.ok || !code) {
     console.log("[v0] Bokun reserve failed:", res.status, res.error)
+    console.log("[v0] reserve debug: submitBody=", JSON.stringify(submitBody))
     return { ok: false, error: res.error ?? "Could not reserve the booking in Bokun." }
   }
   console.log(
