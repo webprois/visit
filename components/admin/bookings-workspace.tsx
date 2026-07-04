@@ -471,7 +471,7 @@ function BookingDetail({
               </Row>
             )}
             {b.sellerCommission > 0 && (
-              <Row label="Commission">{fmtMoney(b.sellerCommission, b.currency)}</Row>
+              <Row label="Commission">{fmtMoney(b.sellerCommission, b.commissionCurrency)}</Row>
             )}
             <Row label="Prepaid">{b.prepaid ? "Yes" : "No"}</Row>
           </Section>
