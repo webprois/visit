@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatMoney } from "@/lib/currency"
 import type { MyTrip } from "@/lib/my-trips"
+import { EditPickup } from "@/components/account/edit-pickup"
 
 const STATUS_LABELS: Record<MyTrip["status"], string> = {
   upcoming: "Upcoming",
@@ -31,7 +32,8 @@ function formatDate(ms: number | null): string {
 
 function TripCard({ trip }: { trip: MyTrip }) {
   return (
-    <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-heading text-lg font-bold text-foreground">
@@ -78,6 +80,12 @@ function TripCard({ trip }: { trip: MyTrip }) {
           </Link>
         )}
       </div>
+      </div>
+      {trip.siteId && trip.editablePickup && (
+        <div className="border-t border-border/60 pt-4">
+          <EditPickup bookingId={trip.siteId} pickup={trip.editablePickup} />
+        </div>
+      )}
     </li>
   )
 }

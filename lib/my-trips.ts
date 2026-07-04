@@ -1,14 +1,47 @@
 import { db } from "@/lib/db"
 import { booking } from "@/lib/db/schema"
-import { eq, sql } from "drizzle-orm"
-import { fetchBokunBookingsByEmail } from "@/lib/bokun"
+import { sql } from "drizzle-orm"
+import { fetchBokunBookingsByEmail, fetchTourPickup } from "@/lib/bokun"
 import { asCurrency, type Currency } from "@/lib/currency"
+
+/** A pickup or drop-off option the customer can pick from when editing. */
+export type PickupOption = {
+  id: number
+  title: string
+  askForRoomNumber: boolean
+}
+
+/**
+ * Everything the "edit pickup" panel needs for a site booking whose tour offers
+ * pickup: the choices, whether one is required, and the current selection.
+ */
+export type EditablePickup = {
+  required: boolean
+  pickupPlaces: PickupOption[]
+  dropoffPlaces: PickupOption[]
+  current: {
+    pickupId: number | null
+    dropoffId: number | null
+    roomNumber: string | null
+  }
+}
+
+/** Shape of the `pickup` JSONB stored on a site booking row. */
+type StoredPickup = {
+  pickupId?: number | null
+  pickupTitle?: string | null
+  roomNumber?: string | null
+  dropoffId?: number | null
+  dropoffTitle?: string | null
+} | null
 
 /** A booking shown on the customer's "My Trips" page, from either source. */
 export type MyTrip = {
   /** Stable key for React and dedup (confirmation code when known). */
   id: string
   source: "bokun" | "site"
+  /** The Neon booking row id (site bookings only) — needed to edit pickup. */
+  siteId: string | null
   bokunId: string | null
   confirmationCode: string | null
   tourTitle: string
@@ -21,6 +54,8 @@ export type MyTrip = {
   currency: Currency
   /** Normalized lifecycle status for the badge. */
   status: "upcoming" | "completed" | "cancelled" | "pending"
+  /** Present when this booking's pickup can be changed by the customer. */
+  editablePickup: EditablePickup | null
 }
 
 /** Map a Bokun status + travel date onto our simplified lifecycle status. */
@@ -81,6 +116,7 @@ export async function getMyTrips(email: string): Promise<MyTrip[]> {
     trips.push({
       id: b.confirmationCode || `bokun-${b.id}`,
       source: "bokun",
+      siteId: null,
       bokunId: b.productId ? String(b.productId) : null,
       confirmationCode: b.confirmationCode || null,
       tourTitle: b.productTitle,
@@ -90,16 +126,23 @@ export async function getMyTrips(email: string): Promise<MyTrip[]> {
       amount: Math.round(b.totalPrice),
       currency: asCurrency(b.currency),
       status: bokunStatus(b.status, b.travelDateTime ?? b.travelDate ?? null),
+      editablePickup: null,
     })
   }
+
+  // Site trips that may be pickup-editable, paired with their raw row so we can
+  // read the current pickup selection when enriching below.
+  const editableSite: { trip: MyTrip; pickup: StoredPickup; bokunId: string }[] = []
 
   for (const s of siteRows) {
     // Skip site bookings already represented by a Bokun record.
     if (s.teyaReference && bokunCodes.has(s.teyaReference)) continue
     const travelDate = parseSiteDate(s.tourDate, s.startTime)
-    trips.push({
+    const status = siteStatus(s.status, travelDate)
+    const trip: MyTrip = {
       id: `site-${s.id}`,
       source: "site",
+      siteId: s.id,
       bokunId: s.bokunId,
       confirmationCode: s.teyaReference,
       tourTitle: s.tourTitle,
@@ -108,9 +151,51 @@ export async function getMyTrips(email: string): Promise<MyTrip[]> {
       totalPax: s.totalPax,
       amount: Math.round(s.amountMinor / 100),
       currency: asCurrency(s.currency),
-      status: siteStatus(s.status, travelDate),
-    })
+      status,
+      editablePickup: null,
+    }
+    trips.push(trip)
+    // Only future upcoming/pending bookings with a tour id can change pickup.
+    const isFuture = travelDate === null || travelDate >= Date.now()
+    if ((status === "upcoming" || status === "pending") && isFuture && s.bokunId) {
+      editableSite.push({
+        trip,
+        pickup: s.pickup as StoredPickup,
+        bokunId: s.bokunId,
+      })
+    }
   }
+
+  // Fetch pickup options for eligible site trips in parallel (cached in Bokun
+  // layer). Any failure just leaves the trip non-editable.
+  await Promise.all(
+    editableSite.map(async ({ trip, pickup, bokunId }) => {
+      try {
+        const config = await fetchTourPickup(bokunId)
+        if (config.pickupPlaces.length === 0) return
+        trip.editablePickup = {
+          required: config.required,
+          pickupPlaces: config.pickupPlaces.map((p) => ({
+            id: p.id,
+            title: p.title,
+            askForRoomNumber: p.askForRoomNumber,
+          })),
+          dropoffPlaces: config.dropoffPlaces.map((p) => ({
+            id: p.id,
+            title: p.title,
+            askForRoomNumber: p.askForRoomNumber,
+          })),
+          current: {
+            pickupId: pickup?.pickupId ?? null,
+            dropoffId: pickup?.dropoffId ?? null,
+            roomNumber: pickup?.roomNumber ?? null,
+          },
+        }
+      } catch (err) {
+        console.error("[v0] getMyTrips pickup fetch failed:", err)
+      }
+    }),
+  )
 
   return trips.sort((a, b) => (b.travelDate ?? 0) - (a.travelDate ?? 0))
 }
