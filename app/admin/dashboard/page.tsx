@@ -1,6 +1,4 @@
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
+import { requireAdmin } from "@/lib/require-auth"
 import { fetchAllBokunBookings } from "@/lib/bokun"
 import { getExchangeRates } from "@/lib/exchange-rates"
 import { buildDashboardData } from "@/lib/dashboard"
@@ -10,8 +8,7 @@ import { DashboardShell } from "@/components/admin/dashboard-shell"
 export const dynamic = "force-dynamic"
 
 export default async function AdminDashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) redirect("/sign-in")
+  const session = await requireAdmin()
 
   const [bookings, rates] = await Promise.all([
     fetchAllBokunBookings(["CONFIRMED"]),

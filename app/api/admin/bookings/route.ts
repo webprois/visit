@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/require-auth"
+import { assertAdmin } from "@/lib/require-auth"
 import { fetchBokunBookings, type BokunBookingFilters } from "@/lib/bokun"
 
 export const dynamic = "force-dynamic"
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(request: Request) {
   try {
-    await requireAuth()
+    await assertAdmin()
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

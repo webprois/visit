@@ -16,6 +16,8 @@ import {
 } from "@/lib/bokun"
 import { getTourById } from "@/lib/tours"
 import { buildSecurePayForm, verifyReturnHash, type SecurePayForm } from "@/lib/teya"
+import { auth } from "@/lib/auth"
+import { isAdminEmail } from "@/lib/roles"
 
 export type BookingInput = {
   bokunId: string
@@ -37,6 +39,10 @@ export type BookingInput = {
   customerEmail: string
   customerPhone?: string
   notes?: string
+  /** Opt-in: create a customer account so they can track this booking. */
+  createAccount?: boolean
+  /** Password for the new account (only used when createAccount is true). */
+  accountPassword?: string
 }
 
 export type StartBookingResult =
@@ -59,6 +65,35 @@ async function getOrigin(): Promise<string> {
 
 function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+/**
+ * Best-effort customer account creation during checkout. Never throws and never
+ * blocks the booking: if the email already has an account, or sign-up fails for
+ * any reason, we simply skip it. Admin emails are never created this way.
+ */
+async function maybeCreateCustomerAccount(input: BookingInput): Promise<void> {
+  if (!input.createAccount) return
+  const email = input.customerEmail.trim()
+  const password = input.accountPassword ?? ""
+  if (!isEmail(email) || password.length < 8) return
+  if (isAdminEmail(email)) return
+
+  try {
+    await auth.api.signUpEmail({
+      body: {
+        email,
+        password,
+        name: input.customerName.trim() || email,
+      },
+    })
+  } catch (err) {
+    // Email already registered, weak password, etc. — don't fail the booking.
+    console.log(
+      "[v0] Checkout account creation skipped:",
+      (err as Error).message,
+    )
+  }
 }
 
 type PreparedBooking = {
@@ -250,6 +285,9 @@ export async function startBooking(
   if (!prep.ok) return { ok: false, error: prep.error }
   const { id, amountIsk, tourTitle, date, customerEmail } = prep.booking
 
+  // Opt-in account creation. Best-effort; never blocks the payment flow.
+  await maybeCreateCustomerAccount(input)
+
   const origin = await getOrigin()
   const returnBase = `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`
   try {
@@ -297,6 +335,10 @@ export async function createPendingBooking(
 ): Promise<CreatePendingResult> {
   const prep = await persistBooking(input, "pending_payment")
   if (!prep.ok) return { ok: false, error: prep.error }
+
+  // Opt-in account creation. Best-effort; never blocks the payment flow.
+  await maybeCreateCustomerAccount(input)
+
   return {
     ok: true,
     bookingId: prep.booking.id,

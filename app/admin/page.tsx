@@ -1,6 +1,5 @@
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { requireAdmin } from "@/lib/require-auth"
 import {
   getMergedTours,
   getCategories,
@@ -16,8 +15,7 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{ section?: string }>
 }) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) redirect("/sign-in")
+  const session = await requireAdmin()
 
   const { section } = await searchParams
   // The overview dashboard is the landing page; bare /admin sends you there.

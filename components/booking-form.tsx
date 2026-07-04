@@ -37,6 +37,8 @@ import {
 import { startBooking, type BookingInput } from "@/app/actions/booking"
 import { useDict, useLocale } from "@/components/i18n-provider"
 import { fmt } from "@/lib/translations"
+import { authClient } from "@/lib/auth-client"
+import { Checkbox } from "@/components/ui/checkbox"
 
 /** Phone area codes (Iceland first, then common visitor origins). */
 // Full country dialing list. `iso` is the unique select value (some countries

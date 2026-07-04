@@ -1,6 +1,6 @@
 "use server"
 
-import { requireAuth } from "@/lib/require-auth"
+import { assertAdmin } from "@/lib/require-auth"
 import { db } from "@/lib/db"
 import {
   tourOverride,
@@ -53,19 +53,19 @@ async function upsertOverride(
 }
 
 export async function setTourVisibility(bokunId: string, visible: boolean) {
-  await requireAuth()
+  await assertAdmin()
   await upsertOverride(bokunId, { visible })
   revalidateAll()
 }
 
   export async function setTourFeatured(bokunId: string, featured: boolean) {
-  await requireAuth()
+  await assertAdmin()
   await upsertOverride(bokunId, { featured })
   revalidateAll()
   }
 
   export async function setTourHidden(bokunId: string, hidden: boolean) {
-  await requireAuth()
+  await assertAdmin()
   await upsertOverride(bokunId, { hidden })
   revalidateAll()
   }
@@ -74,7 +74,7 @@ export async function setTourVisibility(bokunId: string, visible: boolean) {
 
 /** Publish or unpublish many tours at once. */
 export async function bulkSetVisibility(bokunIds: string[], visible: boolean) {
-  await requireAuth()
+  await assertAdmin()
   for (const id of bokunIds) {
     await upsertOverride(id, { visible })
   }
@@ -83,7 +83,7 @@ export async function bulkSetVisibility(bokunIds: string[], visible: boolean) {
 
 /** Feature or unfeature many tours at once. */
 export async function bulkSetFeatured(bokunIds: string[], featured: boolean) {
-  await requireAuth()
+  await assertAdmin()
   for (const id of bokunIds) {
     await upsertOverride(id, { featured })
   }
@@ -95,7 +95,7 @@ export async function bulkSetFeatured(bokunIds: string[], featured: boolean) {
  * legacy single-category column populated when a tour had none.
  */
 export async function bulkAddCategory(bokunIds: string[], categoryId: number) {
-  await requireAuth()
+  await assertAdmin()
   if (!Number.isFinite(categoryId)) return
   for (const bokunId of bokunIds) {
     await db
@@ -121,7 +121,7 @@ export async function bulkRemoveCategory(
   bokunIds: string[],
   categoryId: number,
 ) {
-  await requireAuth()
+  await assertAdmin()
   if (!Number.isFinite(categoryId)) return
   for (const bokunId of bokunIds) {
     await db
@@ -189,7 +189,7 @@ export type TourOverrideInput = {
 }
 
 export async function saveTourOverride(bokunId: string, input: TourOverrideInput) {
-  await requireAuth()
+  await assertAdmin()
   const categoryIds = (input.categoryIds ?? []).filter(
     (id, i, arr) => Number.isFinite(id) && arr.indexOf(id) === i,
   )
@@ -294,7 +294,7 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
 }
 
 export async function createCategory(name: string) {
-  await requireAuth()
+  await assertAdmin()
   const trimmed = name.trim()
   if (!trimmed) return
   // Place new categories at the end of the current order.
@@ -309,7 +309,7 @@ export async function createCategory(name: string) {
 }
 
 export async function renameCategory(id: number, name: string) {
-  await requireAuth()
+  await assertAdmin()
   const trimmed = name.trim()
   if (!trimmed) return
   await db
@@ -337,7 +337,7 @@ export type CategoryDetailsInput = {
  * short description, sort order, image and translated display names.
  */
 export async function updateCategory(id: number, input: CategoryDetailsInput) {
-  await requireAuth()
+  await assertAdmin()
   const values: Partial<typeof tourCategory.$inferInsert> = {
     description: input.description?.trim() || null,
     imageUrl: input.imageUrl?.trim() || null,
@@ -365,7 +365,7 @@ export async function updateCategory(id: number, input: CategoryDetailsInput) {
  * ids in the order they should appear on the site.
  */
 export async function reorderCategories(orderedIds: number[]) {
-  await requireAuth()
+  await assertAdmin()
   await Promise.all(
     orderedIds.map((id, index) =>
       db
@@ -378,7 +378,7 @@ export async function reorderCategories(orderedIds: number[]) {
 }
 
 export async function deleteCategory(id: number) {
-  await requireAuth()
+  await assertAdmin()
   await db.delete(tourCategory).where(eq(tourCategory.id, id))
   // Clear the category from any tours that referenced it.
   await db
@@ -391,7 +391,7 @@ export async function deleteCategory(id: number) {
 /* ---------------- Starting locations CRUD ---------------- */
 
 export async function createStartingLocation(name: string) {
-  await requireAuth()
+  await assertAdmin()
   const trimmed = name.trim()
   if (!trimmed) return
   const existing = await db.select().from(startingLocation)
@@ -405,7 +405,7 @@ export async function createStartingLocation(name: string) {
 }
 
 export async function renameStartingLocation(id: number, name: string) {
-  await requireAuth()
+  await assertAdmin()
   const trimmed = name.trim()
   if (!trimmed) return
   await db
@@ -420,7 +420,7 @@ export async function renameStartingLocation(id: number, name: string) {
  * location ids in the order they should appear.
  */
 export async function reorderStartingLocations(orderedIds: number[]) {
-  await requireAuth()
+  await assertAdmin()
   await Promise.all(
     orderedIds.map((id, index) =>
       db
@@ -433,14 +433,14 @@ export async function reorderStartingLocations(orderedIds: number[]) {
 }
 
 export async function deleteStartingLocation(id: number) {
-  await requireAuth()
+  await assertAdmin()
   // tour_starting_location rows are removed automatically via ON DELETE CASCADE.
   await db.delete(startingLocation).where(eq(startingLocation.id, id))
   revalidateAll()
 }
 
 export async function refreshBokun() {
-  await requireAuth()
+  await assertAdmin()
   revalidateTag("bokun-tours", "max")
   // Auto-categorize from Bokun categories. Tours that already have categories
   // (e.g. set manually) are left untouched; missing categories are created.
@@ -451,7 +451,7 @@ export async function refreshBokun() {
 
 /** Original photo URLs for a tour from Bokun, for the Images tab (admin only). */
 export async function getBokunGallery(bokunId: string): Promise<string[]> {
-  await requireAuth()
+  await assertAdmin()
   const detail = await fetchTourDetail(bokunId)
   return detail?.gallery ?? []
 }
@@ -460,7 +460,7 @@ export async function getBokunGallery(bokunId: string): Promise<string[]> {
 export async function getTourTranslations(
   bokunId: string,
 ): Promise<TourTranslation[]> {
-  await requireAuth()
+  await assertAdmin()
   return fetchTourTranslations(bokunId)
 }
 
@@ -472,7 +472,7 @@ export async function getTourTranslations(
 export async function translateCategoryName(
   name: string,
 ): Promise<{ es: string; pt: string; it: string }> {
-  await requireAuth()
+  await assertAdmin()
   const source = name.trim()
   if (!source) return { es: "", pt: "", it: "" }
   const [es, pt, it] = await Promise.all([
@@ -526,7 +526,7 @@ function cleanItinerary(value?: string | null): string | null {
 export async function getTourTranslationContent(
   bokunId: string,
 ): Promise<Partial<Record<Locale, TourTranslationRow>>> {
-  await requireAuth()
+  await assertAdmin()
   const rows = await db
     .select()
     .from(tourTranslation)
@@ -549,7 +549,7 @@ export async function saveTourTranslations(
   bokunId: string,
   byLang: Partial<Record<Locale, TourTranslationInput>>,
 ) {
-  await requireAuth()
+  await assertAdmin()
 
   for (const lang of LOCALES) {
     const input = byLang[lang]
@@ -621,7 +621,7 @@ export async function translateTourContent(
   source: TourTranslationInput,
   target: Locale,
 ): Promise<TourTranslationInput> {
-  await requireAuth()
+  await assertAdmin()
 
   if (target === "en") return source
 

@@ -1243,6 +1243,38 @@ export async function fetchBokunBookings(
 }
 
 /**
+ * Fetch all bookings belonging to a customer, matched by email address. Uses
+ * Bokun's free-text search to narrow server-side, then filters exactly on
+ * customerEmail (case-insensitive) so we never show someone else's booking.
+ * Returns most-recent-first. Empty on error so the account page still renders.
+ */
+export async function fetchBokunBookingsByEmail(
+  email: string,
+  maxPages = 3,
+): Promise<BokunBooking[]> {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return []
+
+  const pageSize = 100
+  const collected: BokunBooking[] = []
+
+  for (let page = 1; page <= maxPages; page++) {
+    const data = await bokunRequest<RawBookingSearch>(
+      "POST",
+      "/booking.json/product-booking-search?lang=EN",
+      { page, pageSize, excludeComboBookings: false, textSearch: normalized },
+    )
+    const results = data?.results ?? []
+    for (const r of results) collected.push(mapBooking(r))
+    if (results.length < pageSize) break
+  }
+
+  return collected
+    .filter((b) => b.customerEmail?.trim().toLowerCase() === normalized)
+    .sort((a, b) => (b.travelDate ?? b.bookedAt ?? 0) - (a.travelDate ?? a.bookedAt ?? 0))
+}
+
+/**
  * Fetch every matching booking by walking Bokun's paged search (200 per page).
  * Used by the dashboard to aggregate revenue, channels and departures across
  * the whole book of business. Capped so a runaway account can't fetch forever.
