@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatMoney } from "@/lib/currency"
 import type { MyTrip } from "@/lib/my-trips"
-import { EditPickup } from "@/components/account/edit-pickup"
 
 const STATUS_LABELS: Record<MyTrip["status"], string> = {
   upcoming: "Upcoming",
@@ -81,11 +80,6 @@ function TripCard({ trip }: { trip: MyTrip }) {
         )}
       </div>
       </div>
-      {trip.siteId && trip.editablePickup && (
-        <div className="border-t border-border/60 pt-4">
-          <EditPickup bookingId={trip.siteId} pickup={trip.editablePickup} />
-        </div>
-      )}
     </li>
   )
 }

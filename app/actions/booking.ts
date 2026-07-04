@@ -11,6 +11,8 @@ import {
   fetchTourPickup,
   priceSlotIsk,
   priceExtrasIsk,
+  reserveBokunBooking,
+  confirmBokunBooking,
   type SlotSelection,
   type AddonSelection,
 } from "@/lib/bokun"
@@ -239,7 +241,37 @@ async function persistBooking(
   const tour = await getTourById(input.bokunId)
   const tourTitle = tour?.title ?? slot.id
 
-  // --- Persist a pending booking ---
+  // --- Reserve the booking in Bokun (holds inventory during payment) ---
+  // Bokun is the source of truth; we take payment via Teya and confirm after.
+  // If the reservation fails, we do NOT create a local row — there is nothing
+  // to pay for.
+  const { firstName, lastName } = splitName(input.customerName)
+  const reservation = await reserveBokunBooking({
+    bokunId: input.bokunId,
+    slotId: slot.id,
+    date: input.date,
+    startTimeId: input.startTimeId || slot.startTimeId,
+    pricedPerPerson: slot.pricedPerPerson,
+    totalPax,
+    selections: input.selections,
+    pickupId: storedPickup?.pickupId ?? null,
+    dropoffId: storedPickup?.dropoffId ?? null,
+    contact: {
+      firstName,
+      lastName,
+      email: input.customerEmail.trim(),
+      phone: input.customerPhone?.trim() || null,
+    },
+  })
+  if (!reservation.ok) {
+    return {
+      ok: false,
+      error:
+        "That departure could not be reserved (it may have just sold out). Please pick another date or contact us.",
+    }
+  }
+
+  // --- Persist a pending booking (internal reconciliation record) ---
   const id = randomUUID()
   await db.insert(booking).values({
     id,
@@ -260,6 +292,8 @@ async function persistBooking(
     customerPhone: input.customerPhone?.trim() || null,
     notes: input.notes?.trim() || null,
     status,
+    bokunConfirmationCode: reservation.confirmationCode,
+    bokunBookingId: reservation.bookingId,
   })
 
   return {
@@ -272,6 +306,14 @@ async function persistBooking(
       customerEmail: input.customerEmail.trim(),
     },
   }
+}
+
+/** Split a full name into first/last for Bokun's main contact (needs both). */
+function splitName(full: string): { firstName: string; lastName: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: "Guest", lastName: "Guest" }
+  if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] }
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
 }
 
 /**
@@ -366,10 +408,34 @@ export async function markBookingConfirmed(
     .where(
       and(eq(booking.id, bookingId), eq(booking.status, "pending_payment")),
     )
-    .returning({ id: booking.id })
+    .returning({
+      id: booking.id,
+      code: booking.bokunConfirmationCode,
+      amount: booking.amountMinor,
+      currency: booking.currency,
+    })
   const confirmed = res.length > 0
   if (confirmed) {
     console.log(`[v0] Booking ${bookingId} CONFIRMED (Teya ${paymentId ?? "?"})`)
+    // Confirm the reserved Bokun booking now that payment succeeded.
+    const row = res[0]
+    if (row.code) {
+      const ok = await confirmBokunBooking(row.code, {
+        amount: row.amount,
+        currency: row.currency,
+        transactionId: paymentId,
+      })
+      if (!ok.ok) {
+        console.error(
+          `[v0] ALERT: Booking ${bookingId} PAID but Bokun confirm FAILED ` +
+            `(${row.code}): ${ok.error}`,
+        )
+      }
+    } else {
+      console.error(
+        `[v0] ALERT: Booking ${bookingId} PAID but has no Bokun reservation code`,
+      )
+    }
   }
   return confirmed
 }
@@ -473,19 +539,43 @@ export async function confirmBookingFromReturn(
         : row.status
 
     if (nextStatus !== row.status) {
-      await db
+      // Atomic transition guarded on the current status so the webhook and the
+      // browser return can't both act — exactly one caller "wins" and is then
+      // responsible for confirming the Bokun reservation.
+      const claimed = await db
         .update(booking)
         .set({
           status: nextStatus,
           teyaReference: ret.orderhash ?? null,
           updatedAt: new Date(),
         })
-        .where(eq(booking.id, bookingId))
+        .where(and(eq(booking.id, bookingId), eq(booking.status, "pending")))
+        .returning({ id: booking.id })
       row.status = nextStatus
-      if (nextStatus === "paid") {
+
+      if (claimed.length > 0 && nextStatus === "paid") {
         console.log(
           `[v0] Booking ${bookingId} PAID — ${row.tourTitle} on ${row.tourDate}, ${row.totalPax} pax, ${row.amountMinor} ISK, ${row.customerEmail}`,
         )
+        // Confirm the reserved Bokun booking now that payment succeeded.
+        if (row.bokunConfirmationCode) {
+          const confirmed = await confirmBokunBooking(row.bokunConfirmationCode, {
+            amount: row.amountMinor,
+            currency: row.currency,
+            transactionId: ret.orderhash ?? null,
+          })
+          if (!confirmed.ok) {
+            // Money is captured but Bokun didn't confirm — needs manual action.
+            console.error(
+              `[v0] ALERT: Booking ${bookingId} PAID but Bokun confirm FAILED ` +
+                `(${row.bokunConfirmationCode}): ${confirmed.error}`,
+            )
+          }
+        } else {
+          console.error(
+            `[v0] ALERT: Booking ${bookingId} PAID but has no Bokun reservation code`,
+          )
+        }
       }
     }
   }
