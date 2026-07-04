@@ -230,6 +230,9 @@ export const booking = pgTable("booking", {
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
   customerPhone: text("customer_phone"),
+  // Language the customer used at checkout ("en" | "es" | "pt" | "it"). Drives
+  // the language of the confirmation and reminder emails.
+  locale: text("locale").notNull().default("en"),
   notes: text("notes"),
   // Legacy SecurePay flow: "pending" | "paid" | "failed" | "cancelled".
   // Teya Hosted Checkout flow: "pending_payment" | "confirmed" | "cancelled".
@@ -240,12 +243,56 @@ export const booking = pgTable("booking", {
   // Confirmed after Teya payment succeeds. This is the customer-facing booking.
   bokunConfirmationCode: text("bokun_confirmation_code"),
   bokunBookingId: integer("bokun_booking_id"),
+  // Set once the confirmation email (with voucher link) has been sent, so it is
+  // never sent twice.
+  confirmationEmailSentAt: timestamp("confirmation_email_sent_at", {
+    withTimezone: true,
+  }),
+  // Set when each reminder has been sent so the daily cron is idempotent.
+  reminderWeekSentAt: timestamp("reminder_week_sent_at", { withTimezone: true }),
+  reminderDaySentAt: timestamp("reminder_day_sent_at", { withTimezone: true }),
+  // Set when the booking is cancelled (by the customer within policy, or by an
+  // approved cancellation request). Distinct from status for auditability.
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+})
+
+/**
+ * A customer-initiated cancellation that requires staff review. Created when a
+ * customer asks to cancel a tour with less than the free-cancellation window
+ * (72h) remaining, so the 20%/no-refund policy is decided by staff. Cancellations
+ * made 72h+ before departure are free and processed instantly (no row here).
+ * Reviewed in the admin Bookings workspace under "Cancellation requests".
+ */
+export const cancellationRequest = pgTable("cancellation_request", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull(),
+  // Account that requested it, when signed in. Null for guest bookings.
+  userId: text("user_id"),
+  bokunBookingId: integer("bokun_booking_id"),
+  bokunConfirmationCode: text("bokun_confirmation_code"),
+  tourTitle: text("tour_title").notNull(),
+  tourDate: text("tour_date").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone"),
+  locale: text("locale").notNull().default("en"),
+  reason: text("reason"),
+  // Hours between request time and departure, captured at request time so staff
+  // can see how far inside the window it was.
+  hoursUntilTour: integer("hours_until_tour"),
+  // "pending" | "approved" | "rejected"
+  status: text("status").notNull().default("pending"),
+  adminNote: text("admin_note"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 })
 
 /**

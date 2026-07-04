@@ -8,6 +8,8 @@ import { asCurrency, type Currency } from "@/lib/currency"
 export type MyTrip = {
   /** Stable key for React (confirmation code when known). */
   id: string
+  /** Internal booking row id — used to target cancellation. */
+  bookingId: string
   bokunId: string | null
   /** Bokun's numeric booking id — used to fetch the voucher PDF. */
   bokunBookingId: number | null
@@ -102,6 +104,7 @@ export async function getMyTrips(owner: MyTripsOwner): Promise<MyTrip[]> {
       }
       return {
         id: row.bokunConfirmationCode || row.id,
+        bookingId: row.id,
         bokunId: row.bokunId || null,
         bokunBookingId: row.bokunBookingId ?? null,
         confirmationCode: row.bokunConfirmationCode || null,

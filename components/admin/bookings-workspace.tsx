@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,19 @@ import {
 import { formatMoney as formatIskMoney } from "@/lib/currency"
 import type { BokunBooking, BokunBookingResult } from "@/lib/bokun"
 import type { BookingFiltersState } from "./bookings-shell"
+import { CancellationRequestsPanel } from "./cancellation-requests-panel"
+
+const PENDING_REQUESTS_KEY = "/api/admin/cancellation-requests?status=pending"
+
+// Returns the whole payload (same shape the panel uses) so the two hooks share
+// one SWR cache entry for this key without colliding — never strips `requests`.
+const pendingRequestsFetcher = async (
+  url: string,
+): Promise<{ requests?: unknown[]; pendingCount?: number }> => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("Failed to load cancellation requests")
+  return (await res.json()) as { requests?: unknown[]; pendingCount?: number }
+}
 
 const STATUS_OPTIONS = [
   { value: "CONFIRMED", label: "Confirmed" },
@@ -101,6 +115,17 @@ export function BookingsWorkspace({
   // has no fuzzy name/product search — only exact confirmation code).
   const [text, setText] = useState("")
   const [selected, setSelected] = useState<BokunBooking | null>(null)
+  // Sub-tab within the Bookings workspace.
+  const [view, setView] = useState<"bookings" | "requests">("bookings")
+
+  // Pending cancellation-request count drives the tab badge. Poll so staff see
+  // new requests without a manual refresh. Shares the panel's SWR cache key.
+  const { data: pendingData } = useSWR(
+    PENDING_REQUESTS_KEY,
+    pendingRequestsFetcher,
+    { refreshInterval: 60_000, keepPreviousData: true },
+  )
+  const pendingCount = pendingData?.pendingCount ?? 0
 
   const items = result.items
   const visible = useMemo(() => {
@@ -148,8 +173,46 @@ export function BookingsWorkspace({
           <SummaryChip label="Participants" value={pax.toLocaleString("en-GB")} />
           <SummaryChip label="Revenue (confirmed)" value={fmtMoney(revenue, currency)} tone="primary" />
         </div>
+        {/* Sub-tabs */}
+        <div className="flex items-center gap-1" role="tablist" aria-label="Bookings views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "bookings"}
+            onClick={() => setView("bookings")}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === "bookings"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-secondary/50"
+            }`}
+          >
+            All bookings
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "requests"}
+            onClick={() => setView("requests")}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === "requests"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-secondary/50"
+            }`}
+          >
+            Cancellation requests
+            {pendingCount > 0 && (
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
+      {view === "requests" ? (
+        <CancellationRequestsPanel />
+      ) : (
+        <>
       {/* Filter bar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-6 py-3">
         <div className="relative min-w-[200px] flex-1">
@@ -318,6 +381,8 @@ export function BookingsWorkspace({
           </Button>
         </div>
       </div>
+        </>
+      )}
 
       {/* Detail drawer */}
       {selected && (

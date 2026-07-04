@@ -1,5 +1,27 @@
 import { betterAuth } from "better-auth"
 import { Pool } from "pg"
+import {
+  sendAccountVerificationEmail,
+  sendPasswordResetEmail,
+} from "@/lib/email/service"
+import { asLocale, LOCALE_COOKIE } from "@/lib/i18n"
+
+/**
+ * Best-effort read of the visitor's language from the `locale` cookie on the
+ * raw request that triggered an auth email, so verification / reset emails are
+ * sent in the same language as the site. Falls back to the default locale.
+ */
+function localeFromRequest(request?: Request): string {
+  const cookieHeader = request?.headers.get("cookie")
+  if (!cookieHeader) return asLocale(undefined)
+  for (const part of cookieHeader.split(";")) {
+    const [rawName, ...rest] = part.trim().split("=")
+    if (rawName === LOCALE_COOKIE) {
+      return asLocale(decodeURIComponent(rest.join("=")))
+    }
+  }
+  return asLocale(undefined)
+}
 
 const v0Url = process.env.V0_RUNTIME_URL
 const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -43,6 +65,31 @@ export const auth = betterAuth({
   database: new Pool({ connectionString: process.env.DATABASE_URL }),
   emailAndPassword: {
     enabled: true,
+    // Users must confirm their email before they can sign in.
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }, request) => {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        url,
+        locale: localeFromRequest(request),
+      })
+    },
+  },
+  emailVerification: {
+    // Send the verification link automatically on sign-up, and re-send it if an
+    // unverified user tries to sign in.
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }, request) => {
+      await sendAccountVerificationEmail({
+        to: user.email,
+        name: user.name,
+        url,
+        locale: localeFromRequest(request),
+      })
+    },
   },
   ...(process.env.NODE_ENV === "development"
     ? {
