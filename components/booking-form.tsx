@@ -910,6 +910,7 @@ export function BookingForm({
       {/* ---------- Booking form (inline, 3-step wizard) ---------- */}
       <form
         onSubmit={onSubmit}
+        noValidate
         className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-sm"
       >
             <div>
@@ -1225,7 +1226,7 @@ export function BookingForm({
                   >
                     <SelectTrigger
                       aria-label={t.phoneCountryCode}
-                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
                     >
                       <span className="text-sm font-medium tabular-nums">
                         {phoneDial}
