@@ -828,43 +828,88 @@ function moneyToIsk(value: unknown): number {
   return 0
 }
 
-async function fetchTourExtrasUncached(bokunId: string): Promise<TourExtra[]> {
+/**
+ * A mandatory, preselected paid extra that Bokun auto-adds to every booking
+ * (e.g. a national park fee). It is always charged, so it must be shown in the
+ * price and order summary — never offered as an optional toggle.
+ */
+export type TourFee = {
+  id: number
+  title: string
+  /** When true, charged once per participant; otherwise a flat per-booking fee. */
+  pricedPerPerson: boolean
+  unitIsk: number
+}
+
+type ExtrasBundle = { addons: TourExtra[]; fees: TourFee[] }
+
+async function fetchExtrasBundleUncached(bokunId: string): Promise<ExtrasBundle> {
   const activity = await bokunRequest<{ bookableExtras?: BokunExtra[] }>(
     "GET",
     `/activity.json/${bokunId}?lang=EN&currency=ISK`,
   )
   const raw = activity?.bookableExtras
-  if (!Array.isArray(raw) || raw.length === 0) return []
+  if (!Array.isArray(raw) || raw.length === 0) return { addons: [], fees: [] }
 
-  const extras: TourExtra[] = []
+  const addons: TourExtra[] = []
+  const fees: TourFee[] = []
   for (const e of raw) {
-    if (e.included || e.free) continue
+    if (e.free) continue // genuinely free inclusions never affect price
     const unitIsk = moneyToIsk(e.price)
     if (unitIsk <= 0) continue // skip "ask"/priceless extras
-    extras.push({
+    const pricedPerPerson = /PERSON|PARTICIPANT|PAX/i.test(e.pricingType ?? "")
+    if (e.included) {
+      // Mandatory preselected paid extra (e.g. Vatnajökull National Park Fee):
+      // Bokun applies it to every booking automatically, so we surface it as a
+      // fee rather than an optional add-on.
+      fees.push({ id: e.id, title: e.title ?? "Fee", pricedPerPerson, unitIsk })
+      continue
+    }
+    addons.push({
       id: e.id,
       title: e.title ?? "Add-on",
       information: e.information ?? "",
-      pricedPerPerson: /PERSON|PARTICIPANT|PAX/i.test(e.pricingType ?? ""),
+      pricedPerPerson,
       unitIsk,
       maxPerBooking: e.maxPerBooking && e.maxPerBooking > 0 ? e.maxPerBooking : 0,
       limitByPax: Boolean(e.limitByPax),
     })
   }
-  return extras
+  return { addons, fees }
+}
+
+function fetchExtrasBundle(bokunId: string): Promise<ExtrasBundle> {
+  return unstable_cache(
+    () => fetchExtrasBundleUncached(bokunId),
+    ["bokun-extras-bundle-v1", bokunId],
+    { revalidate: 900, tags: ["bokun-tours"] },
+  )()
 }
 
 /**
- * Paid, bookable add-ons for one tour (in ISK). Cached 15 minutes; returns an
- * empty array when none exist or the extras list fails to load (caller hides
- * the section). Booking participants still works without it.
+ * Paid, optional bookable add-ons for one tour (in ISK). Cached 15 minutes;
+ * returns an empty array when none exist or the extras list fails to load
+ * (caller hides the section). Booking participants still works without it.
  */
-export function fetchTourExtras(bokunId: string): Promise<TourExtra[]> {
-  return unstable_cache(
-    () => fetchTourExtrasUncached(bokunId),
-    ["bokun-extras-v2", bokunId],
-    { revalidate: 900, tags: ["bokun-tours"] },
-  )()
+export async function fetchTourExtras(bokunId: string): Promise<TourExtra[]> {
+  return (await fetchExtrasBundle(bokunId)).addons
+}
+
+/**
+ * Mandatory, auto-applied fees for one tour (in ISK), e.g. a national park fee.
+ * These are always charged by Bokun and must be included in the displayed total.
+ */
+export async function fetchTourFees(bokunId: string): Promise<TourFee[]> {
+  return (await fetchExtrasBundle(bokunId)).fees
+}
+
+/** Total of all mandatory fees (ISK) for a given participant count. */
+export function priceMandatoryFeesIsk(fees: TourFee[], totalPax: number): number {
+  let total = 0
+  for (const f of fees) {
+    total += f.pricedPerPerson ? f.unitIsk * Math.max(0, totalPax) : f.unitIsk
+  }
+  return Math.round(total)
 }
 
 /** Selected quantity per add-on. */

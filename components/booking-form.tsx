@@ -289,6 +289,14 @@ export type BookingExtra = {
   limitByPax: boolean
 }
 
+/** Mirror of the server's TourFee (mandatory, auto-applied fee). */
+export type BookingFee = {
+  id: number
+  title: string
+  pricedPerPerson: boolean
+  unitIsk: number
+}
+
 /** Clamp an add-on quantity given the current participant count. */
 function clampAddon(extra: BookingExtra, totalPax: number): number {
   const caps = [99]
@@ -366,6 +374,7 @@ export function BookingForm({
   bokunId,
   slots,
   extras = [],
+  fees = [],
   pickup = null,
   fallbackPhone,
   startingPriceIsk = 0,
@@ -373,6 +382,8 @@ export function BookingForm({
   bokunId: string
   slots: BookingSlot[]
   extras?: BookingExtra[]
+  /** Mandatory fees auto-applied by Bokun (e.g. national park fee). */
+  fees?: BookingFee[]
   pickup?: BookingPickup | null
   fallbackPhone: string
   /** "From" price shown before any participants are selected. */
@@ -472,7 +483,16 @@ export function BookingForm({
     (n, e) => n + (qtyByAddon[e.id] ?? 0) * e.unitIsk,
     0,
   )
-  const total = baseTotal + addonsTotal
+  // Mandatory fees are always charged: per-person fees scale with participants,
+  // flat fees are added once. Included only once at least one guest is selected.
+  const feesTotal =
+    totalPax > 0
+      ? fees.reduce(
+          (n, f) => n + (f.pricedPerPerson ? f.unitIsk * totalPax : f.unitIsk),
+          0,
+        )
+      : 0
+  const total = baseTotal + feesTotal + addonsTotal
 
   // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
   const guestSlots = useMemo(() => {
@@ -1369,6 +1389,24 @@ export function BookingForm({
                         </span>
                         <span className="text-foreground">
                           <Price isk={extra.unitIsk * qty} />
+                        </span>
+                      </div>
+                    )
+                  })}
+                  {fees.map((fee) => {
+                    const qty = fee.pricedPerPerson ? totalPax : 1
+                    const feeTotal = fee.unitIsk * qty
+                    return (
+                      <div
+                        key={fee.id}
+                        className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
+                      >
+                        <span>
+                          {fee.title}
+                          {fee.pricedPerPerson && ` × ${qty}`}
+                        </span>
+                        <span className="text-foreground">
+                          <Price isk={feeTotal} />
                         </span>
                       </div>
                     )

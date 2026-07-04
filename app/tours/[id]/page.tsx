@@ -7,7 +7,12 @@ import { BookingForm } from "@/components/booking-form"
 import { TourGallery } from "@/components/tour/tour-gallery"
 import { TourMapSection } from "@/components/tour/tour-map-section"
 import { getFullTour, getRelatedTours } from "@/lib/tours"
-import { fetchBookableSlots, fetchTourExtras, fetchTourPickup } from "@/lib/bokun"
+import {
+  fetchBookableSlots,
+  fetchTourExtras,
+  fetchTourFees,
+  fetchTourPickup,
+} from "@/lib/bokun"
 import { getLocale } from "@/lib/get-locale"
 import { getDictionary, fmt } from "@/lib/translations"
 import { translateTexts } from "@/lib/translate"
@@ -87,6 +92,15 @@ export default async function TourPage({
     extras = []
   }
 
+  // Mandatory fees Bokun auto-applies (e.g. national park fee). Always charged,
+  // so they're shown in the order summary and included in the total.
+  let fees: Awaited<ReturnType<typeof fetchTourFees>> = []
+  try {
+    fees = await fetchTourFees(tour.bokunId)
+  } catch {
+    fees = []
+  }
+
   // Pickup/drop-off options (no places → the pickup section is hidden).
   let pickup: Awaited<ReturnType<typeof fetchTourPickup>> | null = null
   try {
@@ -101,8 +115,9 @@ export default async function TourPage({
   // no-op. On failure the original English text is used.
   if (locale !== "en") {
     const extraStrings = extras.flatMap((e) => [e.title, e.information])
+    const feeTitles = fees.map((f) => f.title)
     const lineTitles = slots.flatMap((s) => s.lines.map((l) => l.title))
-    const sources = [...extraStrings, ...lineTitles]
+    const sources = [...extraStrings, ...feeTitles, ...lineTitles]
 
     if (sources.length > 0) {
       const translated = await translateTexts(sources, locale)
@@ -115,6 +130,7 @@ export default async function TourPage({
         title: tr(e.title),
         information: tr(e.information),
       }))
+      fees = fees.map((f) => ({ ...f, title: tr(f.title) }))
       slots = slots.map((s) => ({
         ...s,
         lines: s.lines.map((l) => ({ ...l, title: tr(l.title) })),
@@ -524,10 +540,11 @@ export default async function TourPage({
             {/* Right: booking panel + reassurance cards */}
             <aside id="book" className="flex scroll-mt-24 flex-col gap-6">
               <BookingForm
-                bokunId={tour.bokunId}
-                slots={slots}
-                extras={extras}
-                pickup={pickup}
+                  bokunId={tour.bokunId}
+                  slots={slots}
+                  extras={extras}
+                  fees={fees}
+                  pickup={pickup}
                 fallbackPhone="+354 419 1600"
                 startingPriceIsk={priceAmount}
               />
