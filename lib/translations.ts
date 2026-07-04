@@ -16,7 +16,7 @@ const en = {
     selfDrive: "Self-Drive",
     contact: "Contact",
     menu: "Menu",
-    myTrips: "My Trips",
+    myTrips: "My account",
     signIn: "Sign in",
   },
   selfDrive: {
@@ -499,7 +499,7 @@ const es: Dictionary = {
     selfDrive: "En coche",
     contact: "Contacto",
     menu: "Menú",
-    myTrips: "Mis viajes",
+    myTrips: "Mi cuenta",
     signIn: "Iniciar sesión",
   },
   selfDrive: {
@@ -988,7 +988,7 @@ const pt: Dictionary = {
     selfDrive: "De carro",
     contact: "Contacto",
     menu: "Menu",
-    myTrips: "As minhas viagens",
+    myTrips: "A minha conta",
     signIn: "Entrar",
   },
   selfDrive: {
@@ -1477,7 +1477,7 @@ const it: Dictionary = {
     selfDrive: "In auto",
     contact: "Contatto",
     menu: "Menu",
-    myTrips: "I miei viaggi",
+    myTrips: "Il mio account",
     signIn: "Accedi",
   },
   selfDrive: {
