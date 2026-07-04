@@ -1,4 +1,5 @@
 import { getEmailStrings, fmtEmail, type EmailStrings } from "@/lib/email/copy"
+import { getAppUrl } from "@/lib/app-url"
 
 /**
  * Server-rendered HTML email templates (plain string HTML, table-based, inline
@@ -42,6 +43,9 @@ function layout(opts: {
 }): string {
   const { s, heading, bodyHtml } = opts
   const year = opts.year ?? new Date().getFullYear()
+  const baseUrl = getAppUrl()
+  const logoUrl = `${baseUrl}/email-logo.png`
+  const accountUrl = `${baseUrl}/account`
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:${COLORS.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.text};">
@@ -51,7 +55,9 @@ function layout(opts: {
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;">
             <tr>
               <td style="padding:8px 8px 20px;text-align:center;">
-                <span style="font-size:20px;font-weight:700;letter-spacing:0.02em;color:${COLORS.text};">${escapeHtml(s.brand)}</span>
+                <a href="${baseUrl}" style="text-decoration:none;">
+                  <img src="${logoUrl}" alt="${escapeHtml(s.brand)}" width="132" style="display:inline-block;width:132px;max-width:60%;height:auto;border:0;" />
+                </a>
               </td>
             </tr>
             <tr>
@@ -62,6 +68,7 @@ function layout(opts: {
             </tr>
             <tr>
               <td style="padding:20px 8px;text-align:center;color:${COLORS.muted};font-size:12px;line-height:1.5;">
+                <a href="${accountUrl}" style="color:${COLORS.accent};font-weight:600;text-decoration:none;">${escapeHtml(s.myAccountLabel)}</a><br/><br/>
                 ${s.questionsHtml}<br/>
                 &copy; ${year} ${escapeHtml(s.brand)}. ${escapeHtml(s.footerRights)}
               </td>
