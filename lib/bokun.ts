@@ -610,6 +610,8 @@ type BokunPricingCategory = {
   title?: string
   fullTitle?: string
   minAge?: number
+  ticketCategory?: string
+  defaultCategory?: boolean
 }
 
 /** Summarise a cancellation policy into one short sentence. */
@@ -680,13 +682,18 @@ async function fetchBookableSlotsUncached(
       // Group tiered per-category unit prices by pricing category id.
       const byCat = new Map<number, SlotPriceLine>()
       for (const u of priceRow?.pricePerCategoryUnit ?? []) {
+        // Skip orphaned pricing categories: entries that appear in the price
+        // matrix but are no longer real bookable categories on the activity
+        // (Bokun sometimes leaves stale, often 0-priced, ids behind). Booking
+        // them makes Bokun reject the whole reservation.
         const cat = catById.get(u.id)
+        if (!cat) continue
         let line = byCat.get(u.id)
         if (!line) {
           line = {
             id: u.id,
-            title: cat?.title ?? cat?.fullTitle ?? "Participant",
-            minAge: cat?.minAge ?? 0,
+            title: cat.title ?? cat.fullTitle ?? "Participant",
+            minAge: cat.minAge ?? 0,
             tiers: [],
           }
           byCat.set(u.id, line)
@@ -697,7 +704,19 @@ async function fetchBookableSlotsUncached(
           maxPax: u.maxParticipantsRequired ?? 9999,
         })
       }
-      lines.push(...byCat.values())
+      // Order categories so the primary "Adult"/default line comes first. Bokun
+      // rejects bookings that include e.g. a Child without an Adult, so the
+      // default category must be the natural first choice in the UI.
+      const orderedLines = [...byCat.values()].sort((a, b) => {
+        const ca = catById.get(a.id)
+        const cb = catById.get(b.id)
+        const adultA = ca?.defaultCategory || ca?.ticketCategory === "ADULT" ? 1 : 0
+        const adultB = cb?.defaultCategory || cb?.ticketCategory === "ADULT" ? 1 : 0
+        if (adultA !== adultB) return adultB - adultA
+        // Then oldest age band first (Adult 16+ before Child 8+).
+        return (cb?.minAge ?? 0) - (ca?.minAge ?? 0)
+      })
+      lines.push(...orderedLines)
       // Tours with no per-category prices fall back to a flat booking price.
       if (lines.length === 0) {
         flatPriceIsk = Math.round(priceRow?.pricePerBooking?.amount ?? 0)
@@ -1490,18 +1509,12 @@ export async function reserveBokunBooking(
     `/activity.json/${input.bokunId}/availabilities` +
       `?start=${input.date}&end=${input.date}&lang=EN&currency=ISK&includeSoldOut=false`,
   )
-  console.log(
-    `[v0] reserve debug: bokunId=${input.bokunId} date=${input.date} slotId=${input.slotId} startTimeId=${input.startTimeId} rowsReturned=${(rows ?? []).length} rowIds=${JSON.stringify((rows ?? []).map((a) => ({ id: a.id, sti: a.startTimeId, avail: a.availabilityCount })))}`,
-  )
   const row =
     (rows ?? []).find((a) => a.id === input.slotId) ??
     (rows ?? []).find((a) => a.startTimeId === input.startTimeId)
   if (!row) return { ok: false, error: "Selected departure is no longer available." }
   const rate = row.rates?.find((r) => r.id === row.defaultRateId) ?? row.rates?.[0]
   if (!rate) return { ok: false, error: "No rate available for this departure." }
-  console.log(
-    `[v0] reserve debug: matchedRow=${row.id} rateId=${rate.id} pricedPerPerson=${input.pricedPerPerson} pcids=${JSON.stringify(rate.pricingCategoryIds)} selections=${JSON.stringify(input.selections)} totalPax=${input.totalPax}`,
-  )
 
   // One passenger per head, each tagged with its pricing category.
   const passengers: { pricingCategoryId: number }[] = []
@@ -1556,7 +1569,6 @@ export async function reserveBokunBooking(
   const code = res.data?.booking?.confirmationCode
   if (!res.ok || !code) {
     console.log("[v0] Bokun reserve failed:", res.status, res.error)
-    console.log("[v0] reserve debug: submitBody=", JSON.stringify(submitBody))
     return { ok: false, error: res.error ?? "Could not reserve the booking in Bokun." }
   }
   console.log(
