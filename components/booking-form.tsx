@@ -1182,12 +1182,13 @@ export function BookingForm({
                       <Input
                         id={`guest-${g.key}-first`}
                         value={firstByGuest[g.key] ?? ""}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setError(null)
                           setFirstByGuest((prev) => ({
                             ...prev,
                             [g.key]: e.target.value,
                           }))
-                        }
+                        }}
                         required
                         autoComplete="off"
                         placeholder={t.firstName}
@@ -1197,12 +1198,13 @@ export function BookingForm({
                       <Input
                         id={`guest-${g.key}-last`}
                         value={lastByGuest[g.key] ?? ""}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setError(null)
                           setLastByGuest((prev) => ({
                             ...prev,
                             [g.key]: e.target.value,
                           }))
-                        }
+                        }}
                         required
                         autoComplete="off"
                         placeholder={t.lastName}
@@ -1231,7 +1233,10 @@ export function BookingForm({
                   <Input
                     id="booking-first-name"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                  setError(null)
+                  setFirstName(e.target.value)
+                }}
                     required
                     autoComplete="given-name"
                     className={FIELD_CLASS}
@@ -1242,7 +1247,10 @@ export function BookingForm({
                   <Input
                     id="booking-last-name"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => {
+                  setError(null)
+                  setLastName(e.target.value)
+                }}
                     required
                     autoComplete="family-name"
                     className={FIELD_CLASS}
@@ -1255,7 +1263,10 @@ export function BookingForm({
                   id="booking-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                  setError(null)
+                  setEmail(e.target.value)
+                }}
                   required
                   autoComplete="email"
                   readOnly={!!lockedEmail}
@@ -1298,7 +1309,10 @@ export function BookingForm({
                     id="booking-phone"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                  setError(null)
+                  setPhone(e.target.value)
+                }}
                     required
                     autoComplete="tel-national"
                     placeholder={t.phoneNumber}
