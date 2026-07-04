@@ -109,14 +109,23 @@ export function ToursBrowser({
   const [draftFrom, setDraftFrom] = useState<Date | null>(fromDate)
   const [draftTo, setDraftTo] = useState<Date | null>(toDate)
 
-  // Position the calendar directly under the trigger and match its width so the
-  // popover lines up exactly with the button on every screen size.
+  // Position the calendar under the trigger. The two-month calendar needs more
+  // room than the narrow sidebar button, so give the popover a comfortable
+  // width (enough for both months) but never wider than the viewport. On small
+  // screens it falls back to the trigger width, where the calendar shows a
+  // single month.
   function positionDatePopover() {
     const btn = dateBtnRef.current
     if (!btn) return
     const r = btn.getBoundingClientRect()
-    const left = Math.min(Math.max(12, r.left), window.innerWidth - r.width - 12)
-    setDatePos({ top: r.bottom + 8, left, width: r.width })
+    const vw = window.innerWidth
+    // Two months (~252px each) + gap + padding above the `sm` breakpoint; below
+    // it the calendar renders a single month, so use nearly the full viewport
+    // width. Never wider than the viewport.
+    const desired = vw >= 640 ? 600 : vw - 24
+    const width = Math.min(desired, vw - 24)
+    const left = Math.min(Math.max(12, r.left), vw - width - 12)
+    setDatePos({ top: r.bottom + 8, left, width })
   }
 
   function openDatePopover() {
