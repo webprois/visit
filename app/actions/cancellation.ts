@@ -86,7 +86,13 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
   }
 
   // --- Unpaid booking: cancel immediately. No payment was taken, so there's no
-  // fee and nothing to refund. Release the Bokun reservation if one exists. ---
+  // fee and nothing to refund. ---
+  //
+  // An unpaid booking is only a Bokun *reservation* (RESERVE_FOR_EXTERNAL_PAYMENT),
+  // whose inventory hold expires on its own after ~30 min. Bokun's cancel-booking
+  // endpoint only works on *confirmed* bookings and returns "Booking is not
+  // confirmed." for a reservation, so we attempt it best-effort and never block
+  // the customer's cancellation on its result.
   if (isUnpaid) {
     if (row.bokunConfirmationCode) {
       const res = await cancelBokunBooking(row.bokunConfirmationCode, {
@@ -95,14 +101,9 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
         refund: false,
       })
       if (!res.ok) {
-        console.error(
-          `[v0] customer cancel: Bokun cancel failed for unpaid booking (${row.id}): ${res.error}`,
+        console.log(
+          `[v0] customer cancel: best-effort Bokun cancel skipped for unpaid booking (${row.id}): ${res.error}`,
         )
-        return {
-          ok: false,
-          error:
-            "We couldn't cancel your booking just now. Please try again or contact us.",
-        }
       }
     }
 
