@@ -184,20 +184,9 @@ export function AdminSidebar({
           </button>
         </div>
 
-        {/* Version + attribution */}
+        {/* Version */}
         <div className="mt-2 px-3 text-[11px] leading-relaxed text-muted-foreground/70">
           <p className="font-medium text-muted-foreground">Version 1.1</p>
-          <p>
-            {"\u00A9 2026 Visit Travel Iceland | Developed by "}
-            <a
-              href="https://webpro.is"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
-            >
-              WebPro
-            </a>
-          </p>
         </div>
       </div>
     </aside>
