@@ -1038,7 +1038,6 @@ export type BokunBooking = {
   discountPercentage: number
   /** Seller commission — always in the seller's base currency (ISK), NOT the booking's sale currency. */
   sellerCommission: number
-  commissionCurrency: string
   /** Cancellation metadata (null when active). */
   cancelledAt: number | null
   cancelNote: string | null
@@ -1189,9 +1188,6 @@ function mapBooking(b: RawBooking): BokunBooking {
     discountAmount: Math.round(b.discountAmount ?? 0),
     discountPercentage: b.discountPercentage ?? 0,
     sellerCommission: Math.round(b.sellerCommission ?? 0),
-    // Bokun reports commission in the seller's account base currency (ISK),
-    // regardless of the booking's sale currency.
-    commissionCurrency: "ISK",
     cancelledAt: b.cancellationDate ?? null,
     cancelNote: b.cancelNote ?? null,
     specialRequests: b.specialRequests?.trim() || null,

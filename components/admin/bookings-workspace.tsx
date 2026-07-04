@@ -30,6 +30,7 @@ import {
   Ban,
   AlertTriangle,
 } from "lucide-react"
+import { formatMoney as formatIskMoney } from "@/lib/currency"
 import type { BokunBooking, BokunBookingResult } from "@/lib/bokun"
 import type { BookingFiltersState } from "./bookings-shell"
 
@@ -471,7 +472,7 @@ function BookingDetail({
               </Row>
             )}
             {b.sellerCommission > 0 && (
-              <Row label="Commission">{fmtMoney(b.sellerCommission, b.commissionCurrency)}</Row>
+              <Row label="Commission">{formatIskMoney(b.sellerCommission, "ISK")}</Row>
             )}
             <Row label="Prepaid">{b.prepaid ? "Yes" : "No"}</Row>
           </Section>
