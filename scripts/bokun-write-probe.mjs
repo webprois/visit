@@ -129,8 +129,54 @@ async function main() {
       console.log(`    paymentMethods=${JSON.stringify(o.paymentMethods)?.slice(0, 300)}`)
     }
     console.log(`\n[probe] top-level keys: ${Object.keys(opts.json).join(", ")}`)
+    // Dump the main-contact questions so we know the exact answer field names.
+    const questions = opts.json.questions ?? {}
+    console.log(`[probe] questions keys: ${Object.keys(questions).join(", ")}`)
+    const mainContact = questions.mainContactDetails ?? questions.contactDetails ?? []
+    console.log("[probe] mainContactDetails questions:")
+    for (const q of mainContact) {
+      console.log(`    - ${q.answersFieldName ?? q.questionId ?? q.dataTitle} required=${q.required} type=${q.dataType} label=${q.label ?? q.dataTitle}`)
+    }
   } else {
     console.log("[probe] body:", opts.text.slice(0, 500))
+  }
+
+  // 5) LIVE RESERVE + ABORT to validate the exact submit shape end to end.
+  //    Reserve holds inventory ~30 min; we abort immediately so nothing sticks.
+  //    No confirm => no real/confirmed booking is created.
+  if (process.env.PROBE_RESERVE !== "1") {
+    console.log("\n[probe] skipping live reserve (set PROBE_RESERVE=1 to run)")
+    return
+  }
+
+  const checkoutRequest = {
+    checkoutOption: "CUSTOMER_FULL_PAYMENT",
+    paymentMethod: "RESERVE_FOR_EXTERNAL_PAYMENT",
+    sendNotificationToMainContact: false,
+    currency: "ISK",
+    bookingRequest: {
+      mainContactDetails: {
+        firstName: "Test",
+        lastName: "Probe",
+        email: "probe@example.com",
+      },
+      activityBookings: [booking],
+    },
+  }
+  console.log("[probe] submit body sent:", JSON.stringify(checkoutRequest).slice(0, 400))
+  const submit = await call("POST", "/checkout.json/submit", checkoutRequest)
+  console.log(`\n[probe] submit(RESERVE) -> ${submit.status}`)
+  const bk = submit.json?.booking
+  const code =
+    bk?.confirmationCode ??
+    bk?.activityBookings?.[0]?.parentBookingConfirmationCode ??
+    submit.json?.confirmationCode
+  console.log(`[probe] reserved booking: bookingId=${bk?.bookingId} confirmationCode=${code} status=${bk?.status}`)
+  console.log("[probe] submit body:", submit.text.slice(0, 900))
+
+  if (code) {
+    const abort = await call("POST", `/booking.json/${code}/abort-reserved`)
+    console.log(`[probe] abort-reserved(${code}) -> ${abort.status} ${abort.text.slice(0, 200)}`)
   }
 }
 
