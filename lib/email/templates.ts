@@ -209,6 +209,8 @@ export type CancellationEmailData = {
   tourTitle: string
   tourDate: string
   bookingRef: string
+  /** Optional free-text note from staff, shown in resolution emails. */
+  adminNote?: string
 }
 
 /** Confirmation that a booking was cancelled (free, 72h+ before departure). */
@@ -278,6 +280,78 @@ export function buildCancellationRequestEmail(
   return {
     subject: fmtEmail(s.cancelReqSubject, { tour: data.tourTitle }),
     html: layout({ s, heading: s.cancelReqHeading, bodyHtml }),
+    text,
+  }
+}
+
+/** Staff approved an under-72h cancellation request: booking is now cancelled. */
+export function buildCancellationApprovedEmail(
+  data: CancellationEmailData,
+): BuiltEmail {
+  const s = getEmailStrings(data.locale)
+  const rows: DetailRow[] = [
+    { label: s.tourLabel, value: data.tourTitle },
+    { label: s.dateLabel, value: data.tourDate },
+    { label: s.bookingRefLabel, value: data.bookingRef },
+  ]
+  if (data.adminNote) rows.push({ label: s.adminNoteLabel, value: data.adminNote })
+
+  const bodyHtml = [
+    paragraph(fmtEmail(s.hi, { name: data.customerName })),
+    paragraph(s.cancelApprovedIntro),
+    detailsTable(rows),
+    mutedParagraph(s.cancelApprovedOutro),
+  ].join("\n")
+
+  const text = [
+    fmtEmail(s.hi, { name: data.customerName }),
+    "",
+    s.cancelApprovedIntro,
+    "",
+    textDetails(rows),
+    "",
+    s.cancelApprovedOutro,
+  ].join("\n")
+
+  return {
+    subject: fmtEmail(s.cancelApprovedSubject, { tour: data.tourTitle }),
+    html: layout({ s, heading: s.cancelApprovedHeading, bodyHtml }),
+    text,
+  }
+}
+
+/** Staff declined a cancellation request: booking still stands. */
+export function buildCancellationDeclinedEmail(
+  data: CancellationEmailData,
+): BuiltEmail {
+  const s = getEmailStrings(data.locale)
+  const rows: DetailRow[] = [
+    { label: s.tourLabel, value: data.tourTitle },
+    { label: s.dateLabel, value: data.tourDate },
+    { label: s.bookingRefLabel, value: data.bookingRef },
+  ]
+  if (data.adminNote) rows.push({ label: s.adminNoteLabel, value: data.adminNote })
+
+  const bodyHtml = [
+    paragraph(fmtEmail(s.hi, { name: data.customerName })),
+    paragraph(s.cancelDeclinedIntro),
+    detailsTable(rows),
+    mutedParagraph(s.cancelDeclinedOutro),
+  ].join("\n")
+
+  const text = [
+    fmtEmail(s.hi, { name: data.customerName }),
+    "",
+    s.cancelDeclinedIntro,
+    "",
+    textDetails(rows),
+    "",
+    s.cancelDeclinedOutro,
+  ].join("\n")
+
+  return {
+    subject: fmtEmail(s.cancelDeclinedSubject, { tour: data.tourTitle }),
+    html: layout({ s, heading: s.cancelDeclinedHeading, bodyHtml }),
     text,
   }
 }

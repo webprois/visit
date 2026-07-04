@@ -1,5 +1,6 @@
 import { getMyTrips } from "@/lib/my-trips"
 import { MyTrips } from "@/components/account/my-trips"
+import type { Locale } from "@/lib/i18n"
 
 /**
  * Async server component that loads the customer's trips. Rendered inside a
@@ -9,12 +10,14 @@ import { MyTrips } from "@/components/account/my-trips"
 export async function TripsSection({
   userId,
   email,
+  locale,
 }: {
   userId: string
   email: string
+  locale: Locale
 }) {
   const trips = await getMyTrips({ userId, email })
-  return <MyTrips trips={trips} />
+  return <MyTrips trips={trips} locale={locale} />
 }
 
 /** Skeleton placeholder shown while trips are loading. */

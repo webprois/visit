@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,16 @@ import {
 import { formatMoney as formatIskMoney } from "@/lib/currency"
 import type { BokunBooking, BokunBookingResult } from "@/lib/bokun"
 import type { BookingFiltersState } from "./bookings-shell"
+import { CancellationRequestsPanel } from "./cancellation-requests-panel"
+
+const PENDING_REQUESTS_KEY = "/api/admin/cancellation-requests?status=pending"
+
+const pendingCountFetcher = async (url: string): Promise<number> => {
+  const res = await fetch(url)
+  if (!res.ok) return 0
+  const json = (await res.json()) as { pendingCount?: number }
+  return json.pendingCount ?? 0
+}
 
 const STATUS_OPTIONS = [
   { value: "CONFIRMED", label: "Confirmed" },

@@ -47,6 +47,18 @@ export type EmailStrings = {
   cancelReqHeading: string
   cancelReqIntro: string
   cancelReqOutro: string
+  // Cancellation request approved by staff (under 72h)
+  cancelApprovedSubject: string
+  cancelApprovedHeading: string
+  cancelApprovedIntro: string
+  cancelApprovedOutro: string
+  // Cancellation request declined by staff
+  cancelDeclinedSubject: string
+  cancelDeclinedHeading: string
+  cancelDeclinedIntro: string
+  cancelDeclinedOutro: string
+  // Optional staff note shown in resolution emails
+  adminNoteLabel: string
 }
 
 const en: EmailStrings = {
@@ -98,6 +110,19 @@ const en: EmailStrings = {
     "We've received your request to cancel the following booking. Because it's within 72 hours of departure, our team will review it against our cancellation policy and get back to you shortly:",
   cancelReqOutro:
     "You don't need to do anything else for now — we'll email you once your request has been reviewed.",
+  cancelApprovedSubject: "Your cancellation is confirmed – {tour}",
+  cancelApprovedHeading: "Your cancellation is approved",
+  cancelApprovedIntro:
+    "We've reviewed your request and cancelled the following booking:",
+  cancelApprovedOutro:
+    "Any refund due will be processed to your original payment method according to our cancellation policy. We hope to welcome you on another adventure soon.",
+  cancelDeclinedSubject: "Update on your cancellation request – {tour}",
+  cancelDeclinedHeading: "About your cancellation request",
+  cancelDeclinedIntro:
+    "We've reviewed your request to cancel the following booking. Unfortunately, we're unable to cancel it under our cancellation policy, so your booking still stands:",
+  cancelDeclinedOutro:
+    "If you have any questions, just reply to this email and our team will be happy to help.",
+  adminNoteLabel: "Note from our team",
 }
 
 const es: EmailStrings = {
@@ -148,6 +173,19 @@ const es: EmailStrings = {
     "Hemos recibido tu solicitud para cancelar la siguiente reserva. Como faltan menos de 72 horas para la salida, nuestro equipo la revisará según nuestra política de cancelación y te responderá en breve:",
   cancelReqOutro:
     "Por ahora no tienes que hacer nada más: te escribiremos en cuanto se revise tu solicitud.",
+  cancelApprovedSubject: "Tu cancelación está confirmada – {tour}",
+  cancelApprovedHeading: "Tu cancelación está aprobada",
+  cancelApprovedIntro:
+    "Hemos revisado tu solicitud y cancelado la siguiente reserva:",
+  cancelApprovedOutro:
+    "Cualquier reembolso correspondiente se procesará a tu método de pago original según nuestra política de cancelación. Esperamos recibirte pronto en otra aventura.",
+  cancelDeclinedSubject: "Actualización sobre tu solicitud de cancelación – {tour}",
+  cancelDeclinedHeading: "Sobre tu solicitud de cancelación",
+  cancelDeclinedIntro:
+    "Hemos revisado tu solicitud para cancelar la siguiente reserva. Lamentablemente, no podemos cancelarla según nuestra política de cancelación, por lo que tu reserva sigue vigente:",
+  cancelDeclinedOutro:
+    "Si tienes alguna pregunta, responde a este correo y nuestro equipo estará encantado de ayudarte.",
+  adminNoteLabel: "Nota de nuestro equipo",
 }
 
 const pt: EmailStrings = {
@@ -198,6 +236,19 @@ const pt: EmailStrings = {
     "Recebemos o seu pedido para cancelar a seguinte reserva. Como faltam menos de 72 horas para a partida, a nossa equipa irá analisá-lo de acordo com a nossa política de cancelamento e responder-lhe em breve:",
   cancelReqOutro:
     "Por agora não precisa de fazer mais nada — enviaremos um e-mail assim que o seu pedido for analisado.",
+  cancelApprovedSubject: "O seu cancelamento está confirmado – {tour}",
+  cancelApprovedHeading: "O seu cancelamento está aprovado",
+  cancelApprovedIntro:
+    "Analisámos o seu pedido e cancelámos a seguinte reserva:",
+  cancelApprovedOutro:
+    "Qualquer reembolso devido será processado para o seu método de pagamento original de acordo com a nossa política de cancelamento. Esperamos recebê-lo em breve noutra aventura.",
+  cancelDeclinedSubject: "Atualização sobre o seu pedido de cancelamento – {tour}",
+  cancelDeclinedHeading: "Sobre o seu pedido de cancelamento",
+  cancelDeclinedIntro:
+    "Analisámos o seu pedido para cancelar a seguinte reserva. Infelizmente, não podemos cancelá-la ao abrigo da nossa política de cancelamento, pelo que a sua reserva se mantém:",
+  cancelDeclinedOutro:
+    "Se tiver alguma dúvida, basta responder a este e-mail e a nossa equipa terá todo o gosto em ajudar.",
+  adminNoteLabel: "Nota da nossa equipa",
 }
 
 const it: EmailStrings = {
@@ -248,6 +299,19 @@ const it: EmailStrings = {
     "Abbiamo ricevuto la tua richiesta di annullare la seguente prenotazione. Poiché mancano meno di 72 ore alla partenza, il nostro team la valuterà secondo la nostra politica di cancellazione e ti risponderà a breve:",
   cancelReqOutro:
     "Per ora non devi fare altro: ti invieremo un'email non appena la tua richiesta sarà esaminata.",
+  cancelApprovedSubject: "Il tuo annullamento è confermato – {tour}",
+  cancelApprovedHeading: "Il tuo annullamento è approvato",
+  cancelApprovedIntro:
+    "Abbiamo esaminato la tua richiesta e annullato la seguente prenotazione:",
+  cancelApprovedOutro:
+    "Eventuali rimborsi dovuti verranno elaborati sul tuo metodo di pagamento originale secondo la nostra politica di cancellazione. Speriamo di accoglierti presto in un'altra avventura.",
+  cancelDeclinedSubject: "Aggiornamento sulla tua richiesta di annullamento – {tour}",
+  cancelDeclinedHeading: "Informazioni sulla tua richiesta di annullamento",
+  cancelDeclinedIntro:
+    "Abbiamo esaminato la tua richiesta di annullare la seguente prenotazione. Purtroppo non possiamo annullarla in base alla nostra politica di cancellazione, quindi la tua prenotazione resta valida:",
+  cancelDeclinedOutro:
+    "Se hai domande, rispondi a questa email e il nostro team sarà lieto di aiutarti.",
+  adminNoteLabel: "Nota del nostro team",
 }
 
 const EMAIL_STRINGS: Record<Locale, EmailStrings> = { en, es, pt, it }

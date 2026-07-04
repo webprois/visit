@@ -10,6 +10,8 @@ import {
   buildReminderEmail,
   buildCancellationEmail,
   buildCancellationRequestEmail,
+  buildCancellationApprovedEmail,
+  buildCancellationDeclinedEmail,
   type BookingEmailData,
   type CancellationEmailData,
 } from "@/lib/email/templates"
@@ -173,6 +175,44 @@ export async function sendCancellationRequestEmail(
 ): Promise<boolean> {
   if (!row.customerEmail) return false
   const email = buildCancellationRequestEmail(toCancellationEmailData(row))
+  const result = await sendEmail({
+    to: row.customerEmail,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  })
+  return result.ok
+}
+
+/** Tell the customer their cancellation request was approved (booking cancelled). */
+export async function sendCancellationApprovedEmail(
+  row: Booking,
+  adminNote?: string | null,
+): Promise<boolean> {
+  if (!row.customerEmail) return false
+  const email = buildCancellationApprovedEmail({
+    ...toCancellationEmailData(row),
+    adminNote: adminNote?.trim() || undefined,
+  })
+  const result = await sendEmail({
+    to: row.customerEmail,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  })
+  return result.ok
+}
+
+/** Tell the customer their cancellation request was declined (booking stands). */
+export async function sendCancellationDeclinedEmail(
+  row: Booking,
+  adminNote?: string | null,
+): Promise<boolean> {
+  if (!row.customerEmail) return false
+  const email = buildCancellationDeclinedEmail({
+    ...toCancellationEmailData(row),
+    adminNote: adminNote?.trim() || undefined,
+  })
   const result = await sendEmail({
     to: row.customerEmail,
     subject: email.subject,

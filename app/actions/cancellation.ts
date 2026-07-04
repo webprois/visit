@@ -135,8 +135,9 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
   }
 
   // --- 72h+: free, immediate cancellation with refund ---
-  if (row.bokunBookingId) {
-    const res = await cancelBokunBooking(row.bokunBookingId, {
+  if (row.bokunConfirmationCode) {
+    const res = await cancelBokunBooking(row.bokunConfirmationCode, {
+      note: "Cancelled by customer (72h+ before departure, free per policy)",
       notify: false,
       refund: true,
     })
@@ -146,12 +147,13 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
       )
       return {
         ok: false,
-        error: "We couldn't cancel your booking just now. Please try again or contact us.",
+        error:
+          "We couldn't cancel your booking just now. Please try again or contact us.",
       }
     }
   } else {
     console.error(
-      `[v0] customer cancel: booking ${row.id} has no Bokun booking id`,
+      `[v0] customer cancel: booking ${row.id} has no Bokun confirmation code`,
     )
   }
 

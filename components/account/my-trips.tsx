@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatMoney } from "@/lib/currency"
 import type { MyTrip } from "@/lib/my-trips"
+import type { Locale } from "@/lib/i18n"
+import { CancelTripButton } from "@/components/account/cancel-trip-button"
 
 const STATUS_LABELS: Record<MyTrip["status"], string> = {
   upcoming: "Upcoming",
@@ -29,7 +31,9 @@ function formatDate(ms: number | null): string {
   })
 }
 
-function TripCard({ trip }: { trip: MyTrip }) {
+function TripCard({ trip, locale }: { trip: MyTrip; locale: Locale }) {
+  // Only upcoming, paid trips can be cancelled by the customer.
+  const canCancel = trip.status === "upcoming"
   return (
     <li className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -90,6 +94,13 @@ function TripCard({ trip }: { trip: MyTrip }) {
               View tour
             </Link>
           )}
+          {canCancel && (
+            <CancelTripButton
+              bookingId={trip.bookingId}
+              travelDate={trip.travelDate}
+              locale={locale}
+            />
+          )}
         </div>
       </div>
       </div>
@@ -97,7 +108,13 @@ function TripCard({ trip }: { trip: MyTrip }) {
   )
 }
 
-export function MyTrips({ trips }: { trips: MyTrip[] }) {
+export function MyTrips({
+  trips,
+  locale,
+}: {
+  trips: MyTrip[]
+  locale: Locale
+}) {
   if (trips.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
@@ -127,7 +144,7 @@ export function MyTrips({ trips }: { trips: MyTrip[] }) {
           </h2>
           <ul className="flex flex-col gap-4">
             {upcoming.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
+              <TripCard key={trip.id} trip={trip} locale={locale} />
             ))}
           </ul>
         </section>
@@ -139,7 +156,7 @@ export function MyTrips({ trips }: { trips: MyTrip[] }) {
           </h2>
           <ul className="flex flex-col gap-4">
             {past.map((trip) => (
-              <TripCard key={trip.id} trip={trip} />
+              <TripCard key={trip.id} trip={trip} locale={locale} />
             ))}
           </ul>
         </section>
