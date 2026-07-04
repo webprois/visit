@@ -337,7 +337,13 @@ export async function startBooking(
   // Enabled with BOOKING_TEST_BYPASS_PAYMENT=1. Marks the booking paid and
   // confirms the Bokun reservation directly, then sends the user to the normal
   // confirmation page. Remove the env var to restore real payments.
-  if (process.env.BOOKING_TEST_BYPASS_PAYMENT === "1") {
+  const bypassRaw = (process.env.BOOKING_TEST_BYPASS_PAYMENT ?? "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .toLowerCase()
+  const bypassPayment = bypassRaw === "1" || bypassRaw === "true" || bypassRaw === "yes"
+  console.log(`[v0] payment bypass flag raw="${bypassRaw}" active=${bypassPayment}`)
+  if (bypassPayment) {
     console.log(`[v0] TEST BYPASS: confirming booking ${id} without payment`)
     const claimed = await db
       .update(booking)

@@ -6,6 +6,8 @@ export type MyTrip = {
   /** Stable key for React (confirmation code when known). */
   id: string
   bokunId: string | null
+  /** Bokun's numeric booking id — used to fetch the voucher PDF. */
+  bokunBookingId: number | null
   confirmationCode: string | null
   tourTitle: string
   /** Travel date as ms since epoch, or null when unknown. */
@@ -49,6 +51,7 @@ export async function getMyTrips(email: string): Promise<MyTrip[]> {
     return {
       id: b.confirmationCode || `bokun-${b.id}`,
       bokunId: b.productId ? String(b.productId) : null,
+      bokunBookingId: b.id ?? null,
       confirmationCode: b.confirmationCode || null,
       tourTitle: b.productTitle,
       travelDate,

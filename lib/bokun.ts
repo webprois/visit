@@ -1570,7 +1570,14 @@ export async function confirmBokunBooking(
   const code = confirmationCode.trim()
   if (!code) return { ok: false, error: "Missing confirmation code." }
 
-  const body: Record<string, unknown> = { amount: paid.amount, currency: paid.currency }
+  const body: Record<string, unknown> = {
+    amount: paid.amount,
+    currency: paid.currency,
+    // Have Bokun email the confirmation + voucher to the customer once the
+    // reserved booking is confirmed (payment already succeeded at this point).
+    sendNotificationToMainContact: true,
+    showPricesInNotification: true,
+  }
   if (paid.transactionId) {
     body.transactionDetails = {
       transactionId: paid.transactionId,
@@ -1588,4 +1595,47 @@ export async function confirmBokunBooking(
   }
   console.log(`[v0] Bokun CONFIRMED ${code}`)
   return { ok: true }
+}
+
+/**
+ * Fetch the customer-facing voucher PDF for a confirmed Bokun booking. Returns
+ * the raw PDF bytes, or null if unavailable. `bokunBookingId` is Bokun's
+ * numeric booking id (stored on our booking row / returned by booking search).
+ */
+export async function fetchBokunVoucherPdf(
+  bokunBookingId: number,
+): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  const accessKey = process.env.BOKUN_ACCESS_KEY
+  const secret = process.env.BOKUN_SECRET_KEY
+  if (!accessKey || !secret) return null
+  if (!Number.isFinite(bokunBookingId) || bokunBookingId <= 0) return null
+
+  const path = `/booking.json/${bokunBookingId}/summary?type=CUSTOMER`
+  const date = bokunDate()
+  const signature = sign(date, accessKey, secret, "GET", path)
+  try {
+    const res = await fetch(`https://${DOMAIN}${path}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/pdf",
+        "X-Bokun-Date": date,
+        "X-Bokun-AccessKey": accessKey,
+        "X-Bokun-Signature": signature,
+      },
+      cache: "no-store",
+    })
+    if (!res.ok) {
+      console.log("[v0] Bokun voucher fetch failed:", res.status)
+      return null
+    }
+    const contentType = res.headers.get("content-type") ?? "application/pdf"
+    if (!contentType.includes("pdf")) {
+      console.log("[v0] Bokun voucher unexpected content-type:", contentType)
+      return null
+    }
+    return { bytes: await res.arrayBuffer(), contentType }
+  } catch (err) {
+    console.log("[v0] Bokun voucher fetch error:", (err as Error).message)
+    return null
+  }
 }

@@ -1,6 +1,13 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CheckCircle2, Clock, XCircle, CalendarDays, Users } from "lucide-react"
+import {
+  CheckCircle2,
+  Clock,
+  XCircle,
+  CalendarDays,
+  Users,
+  Download,
+} from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Price } from "@/components/price"
@@ -113,10 +120,21 @@ export default async function BookingReturnPage({
                 {t.tryAgain}
               </Link>
             )}
+            {paid && (
+              <a
+                href={`/api/bookings/${bookingId}/voucher`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ size: "lg" })}
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {t.downloadVoucher}
+              </a>
+            )}
             <Link
               href="/tours"
               className={buttonVariants({
-                variant: failed ? "outline" : "default",
+                variant: paid || failed ? "outline" : "default",
                 size: "lg",
               })}
             >
