@@ -529,7 +529,7 @@ export function BookingForm({
   // review in the same tick it is set.
   useEffect(() => {
     setReview(null)
-  }, [promoCode, total, slot?.id, firstName, lastName, email, phone])
+  }, [promoCode, total, slot?.id, email, phone, firstByGuest, lastByGuest])
 
   // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
   const guestSlots = useMemo(() => {
@@ -545,6 +545,17 @@ export function BookingForm({
     }
     return slotsOut
   }, [lines, qtyByLine])
+
+  // Participant 1 is always the primary contact, so the booking's contact name
+  // is derived from their name fields rather than collected separately. This
+  // means a solo traveller only enters their details once.
+  const primaryGuestKey = guestSlots[0]?.key ?? null
+  const contactFirstName = primaryGuestKey
+    ? (firstByGuest[primaryGuestKey] ?? "")
+    : ""
+  const contactLastName = primaryGuestKey
+    ? (lastByGuest[primaryGuestKey] ?? "")
+    : ""
 
   const selectedPickup = pickupPlaces.find((p) => String(p.id) === pickupId)
   const needsRoomNumber = Boolean(selectedPickup?.askForRoomNumber)
@@ -642,23 +653,17 @@ export function BookingForm({
       setError(t.errGuestNames)
       return null
     }
+    // Contact name comes from participant 1 (the primary contact); the guest
+    // names check above already guarantees it's filled. Only email + phone are
+    // collected separately.
     const contactErrors: typeof fieldErrors = {}
-    if (!firstName.trim()) contactErrors.firstName = t.errYourName
-    if (!lastName.trim()) contactErrors.lastName = t.errYourName
     if (!email.trim()) contactErrors.email = t.errEmail
     if (!phone.trim()) contactErrors.phone = t.errPhone
     if (Object.keys(contactErrors).length > 0) {
       setFieldErrors(contactErrors)
-      // Focus + scroll the first invalid field into view so the inline message
-      // is visible (the fields sit at the top of this step, the button at the
-      // bottom).
-      const firstInvalidId = contactErrors.firstName
-        ? "booking-first-name"
-        : contactErrors.lastName
-          ? "booking-last-name"
-          : contactErrors.email
-            ? "booking-email"
-            : "booking-phone"
+      const firstInvalidId = contactErrors.email
+        ? "booking-email"
+        : "booking-phone"
       requestAnimationFrame(() => {
         const el = document.getElementById(firstInvalidId)
         el?.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -699,7 +704,7 @@ export function BookingForm({
       pickupId: selectedPickup ? selectedPickup.id : undefined,
       dropoffId: dropoffId ? Number(dropoffId) : undefined,
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
-      customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      customerName: `${contactFirstName.trim()} ${contactLastName.trim()}`.trim(),
       customerEmail: email,
       customerPhone: `${phoneDial} ${phone.trim()}`,
       createAccount: wantsAccount,
@@ -858,6 +863,28 @@ export function BookingForm({
       )
     ) {
       setError(t.errGuestNames)
+      return false
+    }
+    // Contact email + phone belong to participant 1 (primary contact) and are
+    // now collected on this step, so validate them before advancing.
+    const contactErrors: typeof fieldErrors = {}
+    if (!email.trim()) contactErrors.email = t.errEmail
+    if (!phone.trim()) contactErrors.phone = t.errPhone
+    if (Object.keys(contactErrors).length > 0) {
+      setFieldErrors(contactErrors)
+      const firstInvalidId = contactErrors.email
+        ? "booking-email"
+        : "booking-phone"
+      requestAnimationFrame(() => {
+        const el = document.getElementById(firstInvalidId)
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        el?.focus({ preventScroll: true })
+      })
+      return false
+    }
+    const wantsAccount = !session && createAccount
+    if (wantsAccount && accountPassword.length < 8) {
+      setError(t.errPassword)
       return false
     }
     return true
@@ -1306,17 +1333,23 @@ export function BookingForm({
               </div>
             )}
 
-            {/* Participant names */}
+            {/* Participants — participant 1 is the primary contact and also
+                supplies the booking's email + phone. */}
             {guestSlots.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">
-                  {guestSlots.length === 1
-                    ? t.participantName
-                    : t.participantNames}
+                  {guestSlots.length === 1 ? t.yourDetails : t.participantNames}
                 </p>
-                {guestSlots.map((g) => (
+                {guestSlots.map((g, gi) => (
                   <div key={g.key} className="flex flex-col gap-1.5">
-                    <Label>{g.label}</Label>
+                    <Label className="flex items-center gap-2">
+                      {guestSlots.length === 1 ? t.contactDetails : g.label}
+                      {gi === 0 && guestSlots.length > 1 && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          {t.primaryContact}
+                        </span>
+                      )}
+                    </Label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         id={`guest-${g.key}-first`}
@@ -1351,137 +1384,95 @@ export function BookingForm({
                         className={FIELD_CLASS}
                       />
                     </div>
+
+                    {/* Primary contact also enters email + phone. */}
+                    {gi === 0 && (
+                      <div className="mt-1 flex flex-col gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="booking-email">{t.email}</Label>
+                          <Input
+                            id="booking-email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                              clearFieldError("email")
+                              setEmail(e.target.value)
+                            }}
+                            required
+                            autoComplete="email"
+                            readOnly={!!lockedEmail}
+                            aria-invalid={!!fieldErrors.email}
+                            aria-describedby={
+                              lockedEmail ? "booking-email-hint" : undefined
+                            }
+                            className={FIELD_CLASS}
+                          />
+                          {fieldErrors.email && (
+                            <p className="text-xs text-destructive">
+                              {fieldErrors.email}
+                            </p>
+                          )}
+                          {lockedEmail && (
+                            <p
+                              id="booking-email-hint"
+                              className="text-xs text-muted-foreground"
+                            >
+                              {t.emailLockedHint}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="booking-phone">{t.phone}</Label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={phoneCountry}
+                              onValueChange={(v) => v && setPhoneCountry(v)}
+                            >
+                              <SelectTrigger
+                                aria-label={t.phoneCountryCode}
+                                className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                              >
+                                <span className="text-sm font-medium tabular-nums">
+                                  {phoneDial}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PHONE_CODES.map((c) => (
+                                  <SelectItem key={c.iso} value={c.iso}>
+                                    {c.dial} {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              id="booking-phone"
+                              type="tel"
+                              value={phone}
+                              onChange={(e) => {
+                                clearFieldError("phone")
+                                setPhone(e.target.value)
+                              }}
+                              required
+                              autoComplete="tel-national"
+                              placeholder={t.phoneNumber}
+                              aria-invalid={!!fieldErrors.phone}
+                              className={`${FIELD_CLASS} flex-1`}
+                            />
+                          </div>
+                          {fieldErrors.phone && (
+                            <p className="text-xs text-destructive">
+                              {fieldErrors.phone}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-              </>
-            )}
 
-            {/* Step: confirm — contact, summary & pay */}
-            {currentKey === "confirm" && (
-              <>
-            {/* Contact details */}
-            <div className="flex flex-col gap-3 border-t border-border pt-4">
-              <p className="text-sm font-semibold text-foreground">
-                {t.contactDetails}
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-first-name">{t.firstName}</Label>
-                  <Input
-                    id="booking-first-name"
-                    value={firstName}
-                    onChange={(e) => {
-                      clearFieldError("firstName")
-                      setFirstName(e.target.value)
-                    }}
-                    required
-                    autoComplete="given-name"
-                    aria-invalid={!!fieldErrors.firstName}
-                    className={FIELD_CLASS}
-                  />
-                  {fieldErrors.firstName && (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors.firstName}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-last-name">{t.lastName}</Label>
-                  <Input
-                    id="booking-last-name"
-                    value={lastName}
-                    onChange={(e) => {
-                      clearFieldError("lastName")
-                      setLastName(e.target.value)
-                    }}
-                    required
-                    autoComplete="family-name"
-                    aria-invalid={!!fieldErrors.lastName}
-                    className={FIELD_CLASS}
-                  />
-                  {fieldErrors.lastName && (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors.lastName}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-email">{t.email}</Label>
-                <Input
-                  id="booking-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    clearFieldError("email")
-                    setEmail(e.target.value)
-                  }}
-                  required
-                  autoComplete="email"
-                  readOnly={!!lockedEmail}
-                  aria-invalid={!!fieldErrors.email}
-                  aria-describedby={lockedEmail ? "booking-email-hint" : undefined}
-                  className={FIELD_CLASS}
-                />
-                {fieldErrors.email && (
-                  <p className="text-xs text-destructive">{fieldErrors.email}</p>
-                )}
-                {lockedEmail && (
-                  <p
-                    id="booking-email-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    {t.emailLockedHint}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-phone">{t.phone}</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={phoneCountry}
-                    onValueChange={(v) => v && setPhoneCountry(v)}
-                  >
-                    <SelectTrigger
-                      aria-label={t.phoneCountryCode}
-                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
-                    >
-                      <span className="text-sm font-medium tabular-nums">
-                        {phoneDial}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PHONE_CODES.map((c) => (
-                        <SelectItem key={c.iso} value={c.iso}>
-                          {c.dial} {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    id="booking-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => {
-                      clearFieldError("phone")
-                      setPhone(e.target.value)
-                    }}
-                    required
-                    autoComplete="tel-national"
-                    placeholder={t.phoneNumber}
-                    aria-invalid={!!fieldErrors.phone}
-                    className={`${FIELD_CLASS} flex-1`}
-                  />
-                </div>
-                {fieldErrors.phone && (
-                  <p className="text-xs text-destructive">{fieldErrors.phone}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Optional account creation */}
+            {/* Optional account creation (moved here with contact details). */}
             {!session && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <label className="flex items-start gap-3">
@@ -1516,7 +1507,12 @@ export function BookingForm({
                 )}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step: confirm — contact, summary & pay */}
+            {currentKey === "confirm" && (
+              <>
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
