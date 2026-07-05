@@ -234,6 +234,13 @@ export const booking = pgTable("booking", {
   // the language of the confirmation and reminder emails.
   locale: text("locale").notNull().default("en"),
   notes: text("notes"),
+  // Promo/discount code the customer applied at checkout (as entered). The
+  // discount itself is applied by Bokun; we store the code + resulting discount
+  // for display in admin and the confirmation email.
+  promoCode: text("promo_code"),
+  // Discount granted by the promo code, in minor units of `currency`. 0 / null
+  // when no code (or an ineligible code) was used.
+  discountMinor: integer("discount_minor").default(0),
   // Legacy SecurePay flow: "pending" | "paid" | "failed" | "cancelled".
   // Teya Hosted Checkout flow: "pending_payment" | "confirmed" | "cancelled".
   status: text("status").notNull().default("pending"),
