@@ -44,7 +44,7 @@ export async function SiteFooter({
         <div>
           <a href="#top" className="flex items-center">
             <Image
-              src="/images/visit-logo.webp"
+              src="/images/visit-logo-dark.webp"
               alt="Visit.is"
               width={120}
               height={32}

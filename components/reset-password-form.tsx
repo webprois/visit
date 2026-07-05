@@ -57,7 +57,7 @@ export function ResetPasswordForm() {
       <Card className="w-full max-w-sm p-6">
         <div className="flex flex-col items-center gap-4 text-center">
           <Image
-            src="/images/visit-logo.webp"
+            src="/images/visit-logo-dark.webp"
             alt="Visit.is"
             width={120}
             height={32}
@@ -93,7 +93,7 @@ export function ResetPasswordForm() {
     <Card className="w-full max-w-sm p-6">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <Image
-          src="/images/visit-logo.webp"
+          src="/images/visit-logo-dark.webp"
           alt="Visit.is"
           width={120}
           height={32}

@@ -45,7 +45,7 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
             <a
               key={tour.id ?? tour.title}
               href={tour.id ? `/tours/${tour.id}` : "/tours"}
-              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-[#1E2738] shadow-sm"
+              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image
@@ -61,7 +61,7 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
               <div className="flex flex-1 flex-col p-5">
                 {tour.rating > 0 && (
                   <div className="mb-2 flex items-center gap-1 text-sm font-semibold text-foreground">
-                    <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
+                    <Star className="size-4 fill-primary text-primary" aria-hidden="true" />
                     {tour.rating.toFixed(1)}
                   </div>
                 )}

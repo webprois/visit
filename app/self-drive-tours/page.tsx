@@ -75,7 +75,7 @@ export default async function SelfDriveToursPage() {
                 return (
                   <div
                     key={tier.key}
-                    className="flex flex-col overflow-hidden rounded-2xl border border-border bg-[#1E2738] shadow-sm"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                   >
                     <div className="flex flex-1 flex-col p-6">
                       <h3 className="font-heading text-2xl font-extrabold text-foreground">

@@ -30,7 +30,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
         <a href="/" className="flex items-center">
           <Image
-            src="/images/visit-logo.webp"
+            src="/images/visit-logo-dark.webp"
             alt="Visit.is"
             width={120}
             height={32}

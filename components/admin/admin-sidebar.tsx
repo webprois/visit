@@ -65,7 +65,7 @@ export function AdminSidebar({
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-border px-5">
         <Image
-          src="/images/visit-logo.webp"
+          src="/images/visit-logo-dark.webp"
           alt="Visit.is"
           width={110}
           height={30}

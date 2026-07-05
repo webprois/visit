@@ -50,47 +50,47 @@
 }
 
 :root {
-  color-scheme: dark;
-  --background: #121823;
-  --foreground: #e7ecf3;
-  --card: #212c40;
-  --card-foreground: #e7ecf3;
-  --popover: #212c40;
-  --popover-foreground: #e7ecf3;
-  --primary: #ec4647;
-  --primary-foreground: #fff5f5;
-  --secondary: #1e2738;
-  --secondary-foreground: #e7ecf3;
-  --muted: #1c2433;
-  --muted-foreground: #93a0b4;
-  --accent: #ec4647;
-  --accent-foreground: #fff5f5;
-  --destructive: #ec4647;
+  color-scheme: light;
+  --background: #eef1f6;
+  --foreground: #1a2434;
+  --card: #ffffff;
+  --card-foreground: #1a2434;
+  --popover: #ffffff;
+  --popover-foreground: #1a2434;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e9f1;
+  --secondary-foreground: #1a2434;
+  --muted: #e7ecf3;
+  --muted-foreground: #5a6a80;
+  --accent: #e2ebfc;
+  --accent-foreground: #1d4ed8;
+  --destructive: #ec4447;
   /* Public site is borderless: thin 1px outlines are replaced by filled
      surfaces, soft rings and shadows. Admin restores a visible border below. */
   --border: transparent;
-  --input: #3a4762;
-  --ring: #ec4647;
-  --chart-1: #ec4647;
-  --chart-2: #4a90c2;
-  --chart-3: #56b89a;
+  --input: #d3dbe7;
+  --ring: #2563eb;
+  --chart-1: #ec4447;
+  --chart-2: #2563eb;
+  --chart-3: #41845b;
   --chart-4: #e2a13c;
   --chart-5: #8a7ce0;
   --radius: 0.75rem;
-  --sidebar: #121823;
-  --sidebar-foreground: #e7ecf3;
-  --sidebar-primary: #ec4647;
-  --sidebar-primary-foreground: #fff5f5;
-  --sidebar-accent: #1e2738;
-  --sidebar-accent-foreground: #e7ecf3;
-  --sidebar-border: #26303f;
-  --sidebar-ring: #ec4647;
+  --sidebar: #f4f6fa;
+  --sidebar-foreground: #1a2434;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4e9f1;
+  --sidebar-accent-foreground: #1a2434;
+  --sidebar-border: #dbe1ea;
+  --sidebar-ring: #2563eb;
 }
 
 /* The admin back-office is a dense, table-heavy tool that relies on structural
    1px borders for legibility, so it opts back in to a visible border color. */
 .admin-surface {
-  --border: #2b3650;
+  --border: #d3dbe7;
 }
 
 @layer base {
@@ -111,8 +111,8 @@
     z-index: -1;
     pointer-events: none;
     background-image:
-      radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%),
-      radial-gradient(50rem 50rem at 100% 0%, color-mix(in oklch, var(--chart-2) 8%, transparent), transparent 70%);
+      radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 70%),
+      radial-gradient(50rem 50rem at 100% 0%, color-mix(in oklch, var(--chart-3) 6%, transparent), transparent 70%);
   }
   html {
     @apply font-sans;
@@ -127,8 +127,8 @@
 /* Soft branded glow for primary CTAs and accent surfaces. */
 @utility glow-primary {
   box-shadow:
-    0 1px 2px color-mix(in oklch, black 40%, transparent),
-    0 8px 24px -8px color-mix(in oklch, var(--primary) 55%, transparent);
+    0 1px 2px color-mix(in oklch, black 12%, transparent),
+    0 8px 24px -8px color-mix(in oklch, var(--primary) 45%, transparent);
 }
 
 /* Reusable lift-on-hover for cards. */
@@ -141,8 +141,8 @@
     transform: translateY(-4px);
     /* Neutral lift: a deeper drop shadow on hover, no colored border or ring. */
     box-shadow:
-      0 26px 55px -18px color-mix(in oklch, black 80%, transparent),
-      0 14px 40px -14px color-mix(in oklch, black 55%, transparent);
+      0 26px 55px -18px color-mix(in oklch, black 22%, transparent),
+      0 14px 40px -14px color-mix(in oklch, black 14%, transparent);
   }
 }
 

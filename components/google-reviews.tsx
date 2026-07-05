@@ -61,7 +61,7 @@ export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
           {data.reviews.map((review, i) => (
             <li
               key={i}
-              className="flex flex-col gap-4 rounded-2xl bg-[#1E2738] p-6 shadow-sm"
+              className="flex flex-col gap-4 rounded-2xl bg-card p-6 shadow-sm"
             >
               <Stars rating={review.rating} />
               <p className="flex-1 text-pretty leading-relaxed text-muted-foreground">
@@ -103,7 +103,7 @@ export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
               href={data.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[#1E2738] px-6 py-3 font-medium text-foreground transition-colors hover:bg-[#242f44]"
+              className="inline-flex items-center gap-2 rounded-full bg-card px-6 py-3 font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
             >
               <Image
                 src="/brand/google.svg"
