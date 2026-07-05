@@ -466,6 +466,14 @@ export function BookingForm({
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [promoCode, setPromoCode] = useState("")
+  // After a valid promo code is applied, we hold the prepared (discounted) Teya
+  // form here and show a review panel so the guest sees the discount before
+  // paying. "Pay now" then submits this exact form — no second Bokun call.
+  const [review, setReview] = useState<{
+    form: { url: string; fields: Record<string, string> }
+    amountIsk: number
+    discountIsk: number
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Inline, per-field errors for the confirm-step contact inputs. Shown right
   // under each field (instead of the shared banner near the total) so the guest
@@ -510,6 +518,14 @@ export function BookingForm({
         )
       : 0
   const total = baseTotal + feesTotal + addonsTotal
+
+  // Any change that affects price or the reserved booking invalidates a prepared
+  // (discounted) Teya form, so drop back to "Confirm & pay" and re-reserve on the
+  // next attempt. Runs only when a dep actually changes, so it never clears the
+  // review in the same tick it is set.
+  useEffect(() => {
+    setReview(null)
+  }, [promoCode, total, slot?.id, firstName, lastName, email, phone])
 
   // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
   const guestSlots = useMemo(() => {
@@ -591,6 +607,12 @@ export function BookingForm({
     // here, so just advance through the wizard instead of attempting to pay.
     if (currentKey !== "confirm") {
       goNext()
+      return
+    }
+    // Discount already previewed: pay with the prepared (discounted) form and
+    // skip a second reservation.
+    if (review) {
+      submitSecurePayForm(review.form)
       return
     }
     if (!slot) {
@@ -713,7 +735,22 @@ export function BookingForm({
         window.location.href = res.redirectUrl
         return
       }
-      // 2. Auto-submit the signed form to Teya's hosted SecurePay page.
+      // A promo discount was applied: show it for review first. The guest confirms
+      // with "Pay now", which submits this same prepared form (no re-reservation).
+      if (res.discountIsk > 0) {
+        setReview({
+          form: res.form,
+          amountIsk: res.amountIsk,
+          discountIsk: res.discountIsk,
+        })
+        requestAnimationFrame(() => {
+          document
+            .getElementById("booking-discount-review")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" })
+        })
+        return
+      }
+      // 2. Otherwise auto-submit the signed form to Teya's hosted SecurePay page.
       submitSecurePayForm(res.form)
     })
   }
@@ -1517,6 +1554,35 @@ export function BookingForm({
               </div>
             )}
 
+            {review && (
+              <div
+                id="booking-discount-review"
+                className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-4"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Check className="size-4" aria-hidden="true" />
+                  {promoCode
+                    ? `${t.discountApplied} (${promoCode})`
+                    : t.discountApplied}
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{t.promoLabel}</span>
+                  <span className="font-medium text-foreground">
+                    {"\u2212"}
+                    <Price isk={review.discountIsk} />
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {t.newTotal}
+                  </span>
+                  <span className="font-heading text-xl font-extrabold text-foreground">
+                    <Price isk={review.amountIsk} />
+                  </span>
+                </div>
+              </div>
+            )}
+
             {error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -1531,7 +1597,10 @@ export function BookingForm({
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   {totalPax > 0 ? (
-                    <Price isk={total} showIskBelow={step === totalSteps} />
+                    <Price
+                      isk={review ? review.amountIsk : total}
+                      showIskBelow={step === totalSteps}
+                    />
                   ) : startingPriceIsk > 0 ? (
                     <>
                       <Price isk={startingPriceIsk} />
@@ -1582,6 +1651,8 @@ export function BookingForm({
                         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         {t.redirecting}
                       </>
+                    ) : review ? (
+                      t.payNow
                     ) : (
                       t.confirmPay
                     )}
