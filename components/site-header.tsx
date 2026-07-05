@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Menu, X, UserRound } from "lucide-react"
 import { SiteLogo } from "@/components/site-logo"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { CurrencySwitcher } from "@/components/currency-switcher"
 import { useDict } from "@/components/i18n-provider"
@@ -46,7 +45,6 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <ThemeToggle />
           <CurrencySwitcher />
           <LanguageSwitcher locale={locale} />
           <a
@@ -90,7 +88,6 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
               {accountLink.label}
             </a>
             <div className="flex items-center gap-3 px-3 py-2">
-              <ThemeToggle />
               <CurrencySwitcher />
               <LanguageSwitcher locale={locale} />
             </div>

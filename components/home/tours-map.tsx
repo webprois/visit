@@ -32,7 +32,7 @@ export function ToursMap({
   if (points.length === 0) return null
 
   return (
-    <section id="map" aria-labelledby="home-map-heading" className="py-16 md:py-24">
+    <section id="map" aria-labelledby="home-map-heading" className="pt-16 pb-4 md:pt-24 md:pb-6">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="mb-8 max-w-2xl md:mb-10">
           <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
