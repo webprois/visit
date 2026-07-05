@@ -1782,7 +1782,26 @@ export async function fetchBokunVoucherPdf(
   if (!accessKey || !secret) return null
   if (!Number.isFinite(bokunBookingId) || bokunBookingId <= 0) return null
 
-  const path = `/booking.json/${bokunBookingId}/summary?type=CUSTOMER`
+  // The voucher (ticket) is a per-product document, so it's keyed by the
+  // ACTIVITY booking's product confirmation code (e.g. "ARC-T136613520"), not
+  // the parent booking id we store. Resolve it from the parent booking first.
+  // (Using `/booking.json/{id}/summary?type=CUSTOMER` here was the bug: that
+  // endpoint returns the customer INVOICE PDF, not the voucher.)
+  const parent = await bokunRequest<{
+    productBookings?: { productConfirmationCode?: string | null }[]
+    activityBookings?: { productConfirmationCode?: string | null }[]
+  }>("GET", `/booking.json/booking/${bokunBookingId}`)
+  const productBookings =
+    parent?.productBookings ?? parent?.activityBookings ?? []
+  const productCode = productBookings
+    .map((pb) => pb.productConfirmationCode?.trim())
+    .find((c): c is string => Boolean(c))
+  if (!productCode) {
+    console.log("[v0] Bokun voucher: no product confirmation code for", bokunBookingId)
+    return null
+  }
+
+  const path = `/booking.json/activity-booking/${encodeURIComponent(productCode)}/ticket`
   const date = bokunDate()
   const signature = sign(date, accessKey, secret, "GET", path)
   try {
