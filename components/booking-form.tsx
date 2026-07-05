@@ -474,6 +474,10 @@ export function BookingForm({
     amountIsk: number
     discountIsk: number
   } | null>(null)
+  // True only while the "Apply" promo action is in flight. Kept separate from
+  // the shared `pending` transition flag so applying a code doesn't make the
+  // main pay button read "Redirecting…" (they both used to share `pending`).
+  const [applying, setApplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Inline, per-field errors for the confirm-step contact inputs. Shown right
   // under each field (instead of the shared banner near the total) so the guest
@@ -725,35 +729,40 @@ export function BookingForm({
     const payload = validateAndBuildPayload()
     if (!payload) return
 
+    setApplying(true)
     startTransition(async () => {
-      const res = await startBooking(payload)
-      if (!res.ok) {
-        setError(res.error)
-        if (res.promoError) focusPromoField()
-        return
+      try {
+        const res = await startBooking(payload)
+        if (!res.ok) {
+          setError(res.error)
+          if (res.promoError) focusPromoField()
+          return
+        }
+        // TEST bypass: server confirmed without payment — go to confirmation.
+        if ("redirectUrl" in res) {
+          window.location.href = res.redirectUrl
+          return
+        }
+        if (res.discountIsk > 0) {
+          setReview({
+            form: res.form,
+            amountIsk: res.amountIsk,
+            discountIsk: res.discountIsk,
+          })
+          requestAnimationFrame(() => {
+            document
+              .getElementById("booking-discount-review")
+              ?.scrollIntoView({ behavior: "smooth", block: "center" })
+          })
+          return
+        }
+        // Reserved fine but Bokun applied no discount — treat as an invalid code
+        // rather than silently sending the guest to pay full price.
+        setError(t.promoInvalid)
+        focusPromoField()
+      } finally {
+        setApplying(false)
       }
-      // TEST bypass: server confirmed without payment — go to confirmation.
-      if ("redirectUrl" in res) {
-        window.location.href = res.redirectUrl
-        return
-      }
-      if (res.discountIsk > 0) {
-        setReview({
-          form: res.form,
-          amountIsk: res.amountIsk,
-          discountIsk: res.discountIsk,
-        })
-        requestAnimationFrame(() => {
-          document
-            .getElementById("booking-discount-review")
-            ?.scrollIntoView({ behavior: "smooth", block: "center" })
-        })
-        return
-      }
-      // Reserved fine but Bokun applied no discount — treat as an invalid code
-      // rather than silently sending the guest to pay full price.
-      setError(t.promoInvalid)
-      focusPromoField()
     })
   }
 
@@ -1625,7 +1634,7 @@ export function BookingForm({
                     disabled={pending || !promoCode.trim() || Boolean(review)}
                     className="shrink-0"
                   >
-                    {pending && !review ? (
+                    {applying ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : (
                       t.promoApply
@@ -1728,7 +1737,7 @@ export function BookingForm({
                     disabled={pending || totalPax <= 0}
                     className="flex-1 rounded-full"
                   >
-                    {pending ? (
+                    {pending && !applying ? (
                       <>
                         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         {t.redirecting}
