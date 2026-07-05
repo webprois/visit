@@ -526,7 +526,7 @@ export function TourEditor({
         className="flex flex-wrap items-center gap-2"
       >
         {LOCALES.map((l) => {
-          const filled = isLangFilled(content[l])
+          const complete = isLangComplete(content[l])
           return (
             <button
               key={l}
@@ -534,6 +534,11 @@ export function TourEditor({
               role="tab"
               aria-selected={lang === l}
               onClick={() => setLang(l)}
+              title={
+                complete
+                  ? "All content filled in"
+                  : "Missing content for this language"
+              }
               className={
                 "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors " +
                 (lang === l
@@ -542,15 +547,13 @@ export function TourEditor({
               }
             >
               {LOCALE_LABELS[l]}
-              {filled && (
-                <span
-                  className={
-                    "size-1.5 rounded-full " +
-                    (lang === l ? "bg-primary-foreground" : "bg-primary")
-                  }
-                  aria-hidden="true"
-                />
-              )}
+              <span
+                className={
+                  "size-2 rounded-full ring-1 ring-inset ring-black/10 " +
+                  (complete ? "bg-emerald-500" : "bg-red-500")
+                }
+                aria-hidden="true"
+              />
             </button>
           )
         })}
@@ -1301,6 +1304,20 @@ function isLangFilled(c: LangContent): boolean {
       c.included ||
       c.excluded ||
       c.goodToKnow ||
+      c.itinerary.length > 0,
+  )
+}
+
+/** True only when every core content field is present for a language, so the
+ *  status dot can go green. Missing anything keeps it red. */
+function isLangComplete(c: LangContent): boolean {
+  return Boolean(
+    c.title.trim() &&
+      c.excerpt.trim() &&
+      c.description.trim() &&
+      c.included.trim() &&
+      c.excluded.trim() &&
+      c.goodToKnow.trim() &&
       c.itinerary.length > 0,
   )
 }
