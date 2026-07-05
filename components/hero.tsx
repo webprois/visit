@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 import { Star } from "lucide-react"
@@ -10,14 +9,19 @@ export async function Hero({ experiences }: { experiences: Experience[] }) {
   const dict = await getServerDict()
   return (
     <section id="top" className="relative isolate z-30">
-      <Image
-        src="/images/hero-iceland.png"
-        alt="Powerful Icelandic waterfall over volcanic cliffs at golden hour"
-        fill
-        priority
-        className="-z-10 object-cover"
-        sizes="100vw"
-      />
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster="/images/hero-iceland.png"
+        className="absolute inset-0 -z-10 h-full w-full object-cover"
+      >
+        <source
+          src="https://new.visit.is/wp-content/uploads/2025/10/iceland.mp4"
+          type="video/mp4"
+        />
+      </video>
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/45 to-background/95" />
       {/* Vignette + corner glow to focus the eye on the copy and blend into the page. */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
