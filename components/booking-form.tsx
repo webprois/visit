@@ -600,44 +600,33 @@ export function BookingForm({
     el.submit()
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
-    // here, so just advance through the wizard instead of attempting to pay.
-    if (currentKey !== "confirm") {
-      goNext()
-      return
-    }
-    // Discount already previewed: pay with the prepared (discounted) form and
-    // skip a second reservation.
-    if (review) {
-      submitSecurePayForm(review.form)
-      return
-    }
+  // Validate the confirm step and build the server payload. Returns null (after
+  // surfacing the relevant error) when something is missing, so both "Confirm &
+  // pay" and the promo "Apply" button can share the exact same checks.
+  function validateAndBuildPayload(): BookingInput | null {
     if (!slot) {
       setError(t.errChooseDate)
-      return
+      return null
     }
     if (totalPax <= 0) {
       setError(t.errAddParticipant)
-      return
+      return null
     }
     if (totalPax < slot.minPax) {
       setError(fmt(t.errMinParticipants, { count: slot.minPax }))
-      return
+      return null
     }
     if (!slot.unlimited && totalPax > slot.seats) {
       setError(fmt(t.errSeatsLeft, { count: slot.seats }))
-      return
+      return null
     }
     if (pickupRequired && !selectedPickup) {
       setError(t.errChoosePickup)
-      return
+      return null
     }
     if (needsRoomNumber && !roomNumber.trim()) {
       setError(t.errRoomNumber)
-      return
+      return null
     }
     if (
       guestSlots.some(
@@ -647,7 +636,7 @@ export function BookingForm({
       )
     ) {
       setError(t.errGuestNames)
-      return
+      return null
     }
     const contactErrors: typeof fieldErrors = {}
     if (!firstName.trim()) contactErrors.firstName = t.errYourName
@@ -671,12 +660,12 @@ export function BookingForm({
         el?.scrollIntoView({ behavior: "smooth", block: "center" })
         el?.focus({ preventScroll: true })
       })
-      return
+      return null
     }
     const wantsAccount = !session && createAccount
     if (wantsAccount && accountPassword.length < 8) {
       setError(t.errPassword)
-      return
+      return null
     }
 
     const selections = slot.pricedPerPerson
@@ -694,7 +683,7 @@ export function BookingForm({
       name: `${(firstByGuest[g.key] ?? "").trim()} ${(lastByGuest[g.key] ?? "").trim()}`.trim(),
     }))
 
-    const payload: BookingInput = {
+    return {
       bokunId,
       slotId: slot.id,
       date: slot.date,
@@ -713,6 +702,78 @@ export function BookingForm({
       accountPassword: wantsAccount ? accountPassword : undefined,
       promoCode: promoCode.trim() || undefined,
     }
+  }
+
+  function focusPromoField() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById("booking-promo")
+      el?.scrollIntoView({ behavior: "smooth", block: "center" })
+      el?.focus({ preventScroll: true })
+    })
+  }
+
+  // "Apply" the promo code: reserve against Bokun so we can show the real
+  // discounted price in the form before the guest commits to paying. The
+  // prepared (discounted) Teya form is stashed in `review`, so the later "Pay
+  // now" click reuses it without a second reservation.
+  function onApplyPromo() {
+    setError(null)
+    if (!promoCode.trim()) {
+      focusPromoField()
+      return
+    }
+    const payload = validateAndBuildPayload()
+    if (!payload) return
+
+    startTransition(async () => {
+      const res = await startBooking(payload)
+      if (!res.ok) {
+        setError(res.error)
+        if (res.promoError) focusPromoField()
+        return
+      }
+      // TEST bypass: server confirmed without payment — go to confirmation.
+      if ("redirectUrl" in res) {
+        window.location.href = res.redirectUrl
+        return
+      }
+      if (res.discountIsk > 0) {
+        setReview({
+          form: res.form,
+          amountIsk: res.amountIsk,
+          discountIsk: res.discountIsk,
+        })
+        requestAnimationFrame(() => {
+          document
+            .getElementById("booking-discount-review")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" })
+        })
+        return
+      }
+      // Reserved fine but Bokun applied no discount — treat as an invalid code
+      // rather than silently sending the guest to pay full price.
+      setError(t.promoInvalid)
+      focusPromoField()
+    })
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
+    // here, so just advance through the wizard instead of attempting to pay.
+    if (currentKey !== "confirm") {
+      goNext()
+      return
+    }
+    // Discount already previewed: pay with the prepared (discounted) form and
+    // skip a second reservation.
+    if (review) {
+      submitSecurePayForm(review.form)
+      return
+    }
+    const payload = validateAndBuildPayload()
+    if (!payload) return
 
     startTransition(async () => {
       // 1. Create a pending booking and get a signed Teya SecurePay form
@@ -721,13 +782,7 @@ export function BookingForm({
       const res = await startBooking(payload)
       if (!res.ok) {
         setError(res.error)
-        if (res.promoError) {
-          requestAnimationFrame(() => {
-            const el = document.getElementById("booking-promo")
-            el?.scrollIntoView({ behavior: "smooth", block: "center" })
-            el?.focus({ preventScroll: true })
-          })
-        }
+        if (res.promoError) focusPromoField()
         return
       }
       // TEST bypass: server confirmed without payment — go to confirmation.
@@ -1541,15 +1596,42 @@ export function BookingForm({
             {step === totalSteps && totalPax > 0 && (
               <div className="flex flex-col gap-1.5 border-t border-border pt-4">
                 <Label htmlFor="booking-promo">{t.promoLabel}</Label>
-                <Input
-                  id="booking-promo"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder={t.promoPlaceholder}
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  className="uppercase"
-                />
+                <div className="flex items-start gap-2">
+                  <Input
+                    id="booking-promo"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      // Enter applies the code instead of submitting the whole
+                      // form, but not while an IME is composing.
+                      if (
+                        e.key === "Enter" &&
+                        !e.nativeEvent.isComposing &&
+                        e.keyCode !== 229
+                      ) {
+                        e.preventDefault()
+                        onApplyPromo()
+                      }
+                    }}
+                    placeholder={t.promoPlaceholder}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    className="uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onApplyPromo}
+                    disabled={pending || !promoCode.trim() || Boolean(review)}
+                    className="shrink-0"
+                  >
+                    {pending && !review ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      t.promoApply
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">{t.promoHint}</p>
               </div>
             )}
