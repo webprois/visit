@@ -1607,13 +1607,20 @@ async function fetchReservedTotalIsk(
     const data = await bokunRequest<{
       totalPrice?: number
       currency?: string
-      discountAmount?: number
-      totalDiscount?: number
+      productBookings?: { discountAmount?: number; savedAmount?: number }[]
+      activityBookings?: { discountAmount?: number; savedAmount?: number }[]
     }>("GET", `/booking.json/booking/${bookingId}`)
     const total = data?.totalPrice
-    // Bokun exposes the applied discount as `discountAmount` (some payloads use
-    // `totalDiscount`); take whichever is present and positive.
-    const rawDiscount = data?.discountAmount ?? data?.totalDiscount ?? 0
+    // The applied promo discount is exposed PER PRODUCT booking (as
+    // `discountAmount`/`savedAmount`), not on the top-level booking — the
+    // top-level `discountAmount`/`totalDiscount` fields come back null. Sum the
+    // per-product discounts to get the total ISK saved. (top-level `totalPrice`
+    // already reflects the discounted amount, so we still charge it as-is.)
+    const productBookings = data?.productBookings ?? data?.activityBookings ?? []
+    const rawDiscount = productBookings.reduce(
+      (sum, pb) => sum + (pb.discountAmount ?? pb.savedAmount ?? 0),
+      0,
+    )
     const discountIsk =
       typeof rawDiscount === "number" && rawDiscount > 0 ? Math.round(rawDiscount) : 0
     const totalIsk =
@@ -1677,11 +1684,12 @@ export async function reserveBokunBooking(
     activityBooking.dropoff = true
     activityBooking.dropoffPlaceId = input.dropoffId
   }
-  // Attach the promo code so Bokun applies the discount at checkout. Bokun
-  // validates & ignores invalid/ineligible codes without erroring, so we detect
-  // whether it actually applied by reading the discount back below.
+  // Per Bokun's Booking Request schema, the promo code belongs on the booking
+  // request (directBooking), NOT on the individual activity booking — setting
+  // it on the activity booking is silently ignored and no discount is applied.
+  // Bokun validates & ignores invalid/ineligible codes without erroring, so we
+  // detect whether it actually applied by reading the discount back below.
   const promoCode = input.promoCode?.trim()
-  if (promoCode) activityBooking.promoCode = promoCode
 
   const mainContactDetails: { questionId: string; values: string[] }[] = [
     { questionId: "firstName", values: [input.contact.firstName] },
@@ -1692,12 +1700,17 @@ export async function reserveBokunBooking(
     mainContactDetails.push({ questionId: "phoneNumber", values: [input.contact.phone] })
   }
 
+  const directBooking: Record<string, unknown> = {
+    mainContactDetails,
+    activityBookings: [activityBooking],
+  }
+  if (promoCode) directBooking.promoCode = promoCode
   const submitBody = {
     source: "DIRECT_REQUEST",
     checkoutOption: "CUSTOMER_FULL_PAYMENT",
     paymentMethod: "RESERVE_FOR_EXTERNAL_PAYMENT",
     sendNotificationToMainContact: false,
-    directBooking: { mainContactDetails, activityBookings: [activityBooking] },
+    directBooking,
   }
   const res = await bokunWrite<CheckoutSubmitResponse>("/checkout.json/submit?currency=ISK", submitBody)
 
