@@ -492,6 +492,7 @@ export type TourTranslationInput = {
   included?: string | null
   excluded?: string | null
   goodToKnow?: string | null
+  importantInfo?: string | null
   /** JSON-encoded array of { title, body } itinerary steps. */
   itinerary?: string | null
 }
@@ -561,6 +562,7 @@ export async function saveTourTranslations(
       included: cleanText(input.included),
       excluded: cleanText(input.excluded),
       goodToKnow: cleanText(input.goodToKnow),
+      importantInfo: cleanText(input.importantInfo),
       itinerary: cleanItinerary(input.itinerary),
     }
     await db
@@ -600,6 +602,9 @@ const translationSchema = z.object({
   goodToKnow: z
     .string()
     .describe("Translated 'good to know' list, one item per line"),
+  importantInfo: z
+    .string()
+    .describe("Translated 'important information' free-text block"),
   itinerary: z
     .array(
       z.object({
@@ -650,6 +655,7 @@ export async function translateTourContent(
     included: source.included ?? "",
     excluded: source.excluded ?? "",
     goodToKnow: source.goodToKnow ?? "",
+    importantInfo: source.importantInfo ?? "",
     itinerary: sourceItinerary,
   }
 
@@ -778,6 +784,13 @@ const fullContentSchema = z.object({
   goodToKnow: z
     .string()
     .describe("Practical 'good to know' notes, one item per line"),
+  importantInfo: z
+    .string()
+    .describe(
+      "Important information travellers must read (safety, requirements, " +
+        "restrictions), as a short free-text block; use blank lines to " +
+        "separate distinct points",
+    ),
   itinerary: z
     .array(
       z.object({

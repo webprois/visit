@@ -141,6 +141,8 @@ export const tourTranslation = pgTable(
     included: text("included"),
     excluded: text("excluded"),
     goodToKnow: text("goodToKnow"),
+    // Free-text "important information" block shown on the tour page.
+    importantInfo: text("importantInfo"),
     // Itinerary steps stored as a JSON array of { title, body }.
     itinerary: text("itinerary"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),

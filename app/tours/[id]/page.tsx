@@ -180,7 +180,7 @@ export default async function TourPage({
   const hasKnowBefore =
     tour.goodToKnowItems.length > 0 ||
     Boolean(detail?.requirements) ||
-    Boolean(detail?.attention)
+    Boolean(tour.importantInfo)
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -476,8 +476,8 @@ export default async function TourPage({
                                 key={i}
                                 className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
                               >
-                                <Check
-                                  className="mt-0.5 size-4 shrink-0 text-primary"
+                                <span
+                                  className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground"
                                   aria-hidden="true"
                                 />
                                 {line}
@@ -508,8 +508,8 @@ export default async function TourPage({
                               key={i}
                               className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
                             >
-                              <Check
-                                className="mt-0.5 size-4 shrink-0 text-primary"
+                              <span
+                                className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground"
                                 aria-hidden="true"
                               />
                               {item}
@@ -518,7 +518,7 @@ export default async function TourPage({
                         </ul>
                       </div>
                     )}
-                    {detail?.attention && (
+                    {tour.importantInfo && (
                       <div className="rounded-2xl border border-border bg-card p-5 sm:col-span-2">
                         <div className="flex items-center gap-2">
                           <HeartPulse
@@ -530,7 +530,7 @@ export default async function TourPage({
                           </p>
                         </div>
                         <ul className="mt-3 flex flex-col gap-2.5">
-                          {detail.attention
+                          {tour.importantInfo
                             .split(/\n\s*\n/)
                             .map((block) => block.trim())
                             .filter(Boolean)
@@ -539,8 +539,8 @@ export default async function TourPage({
                                 key={i}
                                 className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
                               >
-                                <Check
-                                  className="mt-0.5 size-4 shrink-0 text-primary"
+                                <span
+                                  className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground"
                                   aria-hidden="true"
                                 />
                                 <span className="whitespace-pre-line text-pretty">
