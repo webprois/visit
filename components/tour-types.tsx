@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowUpRight, Car, CalendarRange, Compass, Sparkles } from "lucide-react"
+import { ArrowRight, Car, CalendarRange, Compass, Sparkles } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { getServerDict } from "@/lib/get-dictionary"
 
@@ -60,7 +60,7 @@ export async function TourTypes() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
           const { Icon } = card
           return (
@@ -68,21 +68,33 @@ export async function TourTypes() {
               key={card.title}
               href={card.href}
               aria-label={card.title}
-              className="card-lift group relative flex min-h-64 flex-col justify-between overflow-hidden rounded-3xl p-6 text-white transition-[filter] duration-300 hover:brightness-110"
-              style={{ backgroundColor: card.color }}
+              className="card-lift group relative block min-h-72"
             >
-              {/* Notch + arrow button in the top-right corner */}
-              <span className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-white/5 transition-colors duration-300 group-hover:border-primary group-hover:bg-primary">
-                <ArrowUpRight className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              {/* Circular arrow button nestled in the top-right notch */}
+              <span
+                className="absolute right-2 top-2 z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-white"
+                style={{ borderColor: card.color, color: card.color }}
+              >
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
               </span>
 
-              <Icon className="h-8 w-8 text-white" strokeWidth={1.5} aria-hidden="true" />
+              {/* Colored card body with a concave notch carved from the top-right corner */}
+              <div
+                className="flex h-full flex-col rounded-3xl p-6 text-white transition-[filter] duration-300 group-hover:brightness-110"
+                style={{
+                  backgroundColor: card.color,
+                  WebkitMaskImage:
+                    "radial-gradient(circle 3.25rem at top right, transparent 0 3.25rem, black calc(3.25rem + 0.5px))",
+                  maskImage:
+                    "radial-gradient(circle 3.25rem at top right, transparent 0 3.25rem, black calc(3.25rem + 0.5px))",
+                }}
+              >
+                <Icon className="h-9 w-9 text-white" strokeWidth={1.75} aria-hidden="true" />
 
-              <div className="mt-8">
-                <h3 className="max-w-[85%] text-balance font-heading text-xl font-bold leading-tight">
+                <h3 className="mt-10 max-w-[90%] text-balance font-heading text-2xl font-bold leading-tight">
                   {card.title}
                 </h3>
-                <p className="mt-3 text-pretty text-sm leading-relaxed text-white/80">
+                <p className="mt-4 text-pretty text-sm leading-relaxed text-white/85">
                   {card.text}
                 </p>
               </div>
