@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
 import {
   LayoutDashboard,
   Compass,
@@ -64,13 +64,7 @@ export function AdminSidebar({
     <aside className="flex h-svh w-64 shrink-0 flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-border px-5">
-        <Image
-          src="/images/visit-logo.webp"
-          alt="Visit.is"
-          width={110}
-          height={30}
-          className="h-7 w-auto"
-        />
+        <SiteLogo width={110} height={30} className="h-7 w-auto" />
         <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Admin
         </span>

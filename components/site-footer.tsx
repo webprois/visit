@@ -1,8 +1,8 @@
-import Image from "next/image"
 import { Phone, Mail, MapPin } from "lucide-react"
 import { getServerDict } from "@/lib/get-dictionary"
 import { getLocale } from "@/lib/get-locale"
 import { NewsletterSignup } from "@/components/newsletter-signup"
+import { SiteLogo } from "@/components/site-logo"
 
 export async function SiteFooter({
   hideNewsletter = false,
@@ -43,13 +43,7 @@ export async function SiteFooter({
       <div className="mx-auto grid max-w-7xl gap-10 px-4 pb-12 md:grid-cols-4 md:px-6">
         <div>
           <a href="#top" className="flex items-center">
-            <Image
-              src="/images/visit-logo.webp"
-              alt="Visit.is"
-              width={120}
-              height={32}
-              className="h-8 w-auto"
-            />
+            <SiteLogo className="h-8 w-auto" />
           </a>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
             {dict.footer.tagline}

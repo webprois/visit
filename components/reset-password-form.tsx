@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
+import { SiteLogo } from "@/components/site-logo"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,13 +56,7 @@ export function ResetPasswordForm() {
     return (
       <Card className="w-full max-w-sm p-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Image
-            src="/images/visit-logo.webp"
-            alt="Visit.is"
-            width={120}
-            height={32}
-            className="h-8 w-auto"
-          />
+          <SiteLogo className="h-8 w-auto" />
           <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
             <CircleCheck className="size-6 text-primary" />
           </div>
@@ -92,13 +86,7 @@ export function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-sm p-6">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
-        <Image
-          src="/images/visit-logo.webp"
-          alt="Visit.is"
-          width={120}
-          height={32}
-          className="h-8 w-auto"
-        />
+        <SiteLogo className="h-8 w-auto" />
         <div>
           <h1 className="font-heading text-xl font-bold text-foreground">
             Set a new password

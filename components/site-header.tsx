@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { Menu, X, UserRound } from "lucide-react"
+import { SiteLogo } from "@/components/site-logo"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { CurrencySwitcher } from "@/components/currency-switcher"
 import { useDict } from "@/components/i18n-provider"
@@ -29,14 +30,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
     <header className="sticky top-0 z-50 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
         <a href="/" className="flex items-center">
-          <Image
-            src="/images/visit-logo.webp"
-            alt="Visit.is"
-            width={120}
-            height={32}
-            priority
-            className="h-7 w-auto md:h-8"
-          />
+          <SiteLogo priority className="h-7 w-auto md:h-8" />
         </a>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -52,6 +46,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
           <CurrencySwitcher />
           <LanguageSwitcher locale={locale} />
           <a
@@ -95,6 +90,7 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
               {accountLink.label}
             </a>
             <div className="flex items-center gap-3 px-3 py-2">
+              <ThemeToggle />
               <CurrencySwitcher />
               <LanguageSwitcher locale={locale} />
             </div>

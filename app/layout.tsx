@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, Inter } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeProvider } from '@/components/theme-provider'
 import { CurrencyProvider } from '@/components/currency-provider'
 import { I18nProvider } from '@/components/i18n-provider'
 import { getCurrency } from '@/lib/get-currency'
@@ -37,7 +38,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#121823',
+  themeColor: '#eef1f6',
 }
 
 export default async function RootLayout({
@@ -56,14 +57,22 @@ export default async function RootLayout({
     <html
       lang={locale}
       className={`${inter.variable} ${bricolage.variable} bg-background`}
+      suppressHydrationWarning
     >
       <body className="font-sans antialiased">
-        <I18nProvider locale={locale} dict={dict}>
-          <CurrencyProvider initialCurrency={currency} rates={rates}>
-            {children}
-          </CurrencyProvider>
-        </I18nProvider>
-        <Toaster richColors position="top-center" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <I18nProvider locale={locale} dict={dict}>
+            <CurrencyProvider initialCurrency={currency} rates={rates}>
+              {children}
+            </CurrencyProvider>
+          </I18nProvider>
+          <Toaster richColors position="top-center" />
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
