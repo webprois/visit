@@ -1,7 +1,6 @@
 import { SiteHeader } from "@/components/site-header"
 import { Hero } from "@/components/hero"
 import { TourCategories } from "@/components/tour-categories"
-import { TourTypes } from "@/components/tour-types"
 import { FeaturedTours } from "@/components/featured-tours"
 import { ToursMap } from "@/components/home/tours-map"
 import type { MapTourPoint } from "@/components/home/home-map"
@@ -93,7 +92,6 @@ export default async function Page() {
       <SiteHeader locale={locale} />
       <main className="flex-1">
         <Hero experiences={experiences} />
-        <TourTypes />
         <TourCategories categories={categories} />
         <FeaturedTours tours={handpicked} />
         <ToursMap
