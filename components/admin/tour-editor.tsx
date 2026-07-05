@@ -428,8 +428,13 @@ export function TourEditor({
       toast.success(
         `Draft content generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
       )
-    } catch {
-      toast.error("Generation failed. Please try again.")
+    } catch (err) {
+      console.log("[v0] generate all content error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
     } finally {
       setGeneratingFull(false)
     }
@@ -459,8 +464,13 @@ export function TourEditor({
       toast.success(
         `Itinerary generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
       )
-    } catch {
-      toast.error("Generation failed. Please try again.")
+    } catch (err) {
+      console.log("[v0] generate itinerary error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
     } finally {
       setGeneratingItinerary(false)
     }
@@ -1052,20 +1062,24 @@ export function TourEditor({
       tabContent = (
         <>
           {languageBar}
-          <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <FlaskConical className="size-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">
-                  Fill all content with AI
-                </span>
-                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                  Testing feature
-                </span>
+          <div className="flex flex-col gap-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <FlaskConical className="size-4.5" />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {`Generates a full draft (description, lists and itinerary) in ${LOCALE_LABELS[lang]} from this tour's details. It may make assumptions and overwrites the current content, so always review before publishing.`}
-              </p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    Fill all content with AI
+                  </span>
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                    Testing
+                  </span>
+                </div>
+                <p className="max-w-prose text-xs leading-relaxed text-muted-foreground">
+                  {`Generates a full draft (description, lists, and itinerary) in ${LOCALE_LABELS[lang]} from this tour's details. It may make assumptions and overwrites the current content, so always review before publishing.`}
+                </p>
+              </div>
             </div>
             <Button
               type="button"

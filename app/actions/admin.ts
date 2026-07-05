@@ -814,23 +814,35 @@ export async function generateFullTourContent(
     categories: source.categories ?? [],
   }
 
-  const { output } = await generateText({
-    model: "openai/gpt-5.4-mini",
-    system:
-      `You write complete marketing content for an Icelandic travel/tours ` +
-      `website. Given the basic details of a single tour, write a full draft ` +
-      `of ALL content fields in ${languageName}. Rules: keep the tone natural ` +
-      `and engaging for travellers; build on the provided details (place ` +
-      `names, activities, duration, difficulty, group size, categories); you ` +
-      `may make reasonable, plausible assumptions to fill gaps, but keep them ` +
-      `realistic for this kind of tour and do NOT invent specific prices, exact ` +
-      `times, or brand names that aren't implied; for the list fields keep one ` +
-      `concise item per line; make the itinerary a sensible ordered sequence. ` +
-      `If a provided title already exists, you may refine it but keep the same ` +
-      `subject. Return only the content.`,
-    prompt: JSON.stringify(payload),
-    output: Output.object({ schema: fullContentSchema }),
-  })
+  let output
+  try {
+    ;({ output } = await generateText({
+      model: "openai/gpt-5.4-mini",
+      system:
+        `You write complete marketing content for an Icelandic travel/tours ` +
+        `website. Given the basic details of a single tour, write a full draft ` +
+        `of ALL content fields in ${languageName}. Rules: keep the tone natural ` +
+        `and engaging for travellers; build on the provided details (place ` +
+        `names, activities, duration, difficulty, group size, categories); you ` +
+        `may make reasonable, plausible assumptions to fill gaps, but keep them ` +
+        `realistic for this kind of tour and do NOT invent specific prices, exact ` +
+        `times, or brand names that aren't implied; for the list fields keep one ` +
+        `concise item per line; make the itinerary a sensible ordered sequence. ` +
+        `If a provided title already exists, you may refine it but keep the same ` +
+        `subject. Return only the content.`,
+      prompt: JSON.stringify(payload),
+      output: Output.object({ schema: fullContentSchema }),
+    }))
+  } catch (err) {
+    console.error("[v0] generateFullTourContent failed:", err)
+    throw new Error(
+      err instanceof Error ? err.message : "AI content generation failed",
+    )
+  }
+
+  if (!output) {
+    throw new Error("AI did not return any content")
+  }
 
   const { itinerary, ...rest } = output
   return {
@@ -877,21 +889,29 @@ export async function generateTourItinerary(
     categories: source.categories ?? [],
   }
 
-  const { output } = await generateText({
-    model: "openai/gpt-5.4-mini",
-    system:
-      `You write itineraries for an Icelandic travel/tours website. Given the ` +
-      `basic details of a single tour, write a sensible ordered itinerary in ` +
-      `${languageName}. Rules: base it on the provided details (place names, ` +
-      `activities, duration, difficulty); you may make reasonable, plausible ` +
-      `assumptions but keep them realistic and do NOT invent specific prices, ` +
-      `exact times, or brand names that aren't implied; keep each step's body ` +
-      `to 1-2 sentences. Return only the itinerary.`,
-    prompt: JSON.stringify(payload),
-    output: Output.object({ schema: itinerarySchema }),
-  })
+  let output
+  try {
+    ;({ output } = await generateText({
+      model: "openai/gpt-5.4-mini",
+      system:
+        `You write itineraries for an Icelandic travel/tours website. Given the ` +
+        `basic details of a single tour, write a sensible ordered itinerary in ` +
+        `${languageName}. Rules: base it on the provided details (place names, ` +
+        `activities, duration, difficulty); you may make reasonable, plausible ` +
+        `assumptions but keep them realistic and do NOT invent specific prices, ` +
+        `exact times, or brand names that aren't implied; keep each step's body ` +
+        `to 1-2 sentences. Return only the itinerary.`,
+      prompt: JSON.stringify(payload),
+      output: Output.object({ schema: itinerarySchema }),
+    }))
+  } catch (err) {
+    console.error("[v0] generateTourItinerary failed:", err)
+    throw new Error(
+      err instanceof Error ? err.message : "AI itinerary generation failed",
+    )
+  }
 
-  return Array.isArray(output.itinerary) && output.itinerary.length > 0
+  return output && Array.isArray(output.itinerary) && output.itinerary.length > 0
     ? JSON.stringify(output.itinerary)
     : null
 }
