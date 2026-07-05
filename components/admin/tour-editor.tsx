@@ -1307,10 +1307,11 @@ function isLangFilled(c: LangContent): boolean {
   )
 }
 
-/** True when the core content a traveller sees is present for a language, so
- *  the status dot can go green. Missing any of these keeps it red. */
+/** True when the Overview essentials (title + short description) are present
+ *  for a language, so the status dot can go green. The full description on the
+ *  Content tab is not required. Missing either keeps it red. */
 function isLangComplete(c: LangContent): boolean {
-  return Boolean(c.title.trim() && c.excerpt.trim() && c.description.trim())
+  return Boolean(c.title.trim() && c.excerpt.trim())
 }
 
 /** Convert editor state into the server action's input shape. */
