@@ -183,7 +183,7 @@ export default async function TourPage({
     Boolean(detail?.attention)
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="theme-light relative flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero */}
