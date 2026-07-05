@@ -746,3 +746,152 @@ export async function generateTourExcerpt(
 
   return output.excerpt.trim()
 }
+
+/* ---------------- AI full content (testing) ---------------- */
+
+export type FullContentSourceInput = {
+  title?: string | null
+  description?: string | null
+  duration?: string | null
+  difficulty?: string | null
+  groupSize?: string | null
+  location?: string | null
+  categories?: string[]
+}
+
+const fullContentSchema = z.object({
+  title: z.string().describe("A clear, catchy tour title"),
+  excerpt: z
+    .string()
+    .describe("A punchy 1-2 sentence tour summary, under 160 characters"),
+  description: z
+    .string()
+    .describe(
+      "An engaging full description of 2-4 short paragraphs for the tour page",
+    ),
+  included: z
+    .string()
+    .describe("What's included list, one concise item per line"),
+  excluded: z
+    .string()
+    .describe("What's not included list, one concise item per line"),
+  goodToKnow: z
+    .string()
+    .describe("Practical 'good to know' notes, one item per line"),
+  itinerary: z
+    .array(
+      z.object({
+        title: z.string().describe("Short step title"),
+        body: z.string().describe("1-2 sentence step description"),
+      }),
+    )
+    .describe("An ordered itinerary of 3-6 plausible steps for the tour"),
+})
+
+/**
+ * TESTING FEATURE: generate a full draft of every content field for a tour
+ * (title, excerpt, description, included, excluded, good to know, itinerary)
+ * from its basic details, in the requested language. The model is allowed to
+ * make reasonable, plausible assumptions to produce a complete draft, so the
+ * output MUST be reviewed and edited before publishing. The caller decides
+ * whether to apply the result.
+ */
+export async function generateFullTourContent(
+  source: FullContentSourceInput,
+  target: Locale = "en",
+): Promise<TourTranslationInput> {
+  await assertAdmin()
+
+  const languageName = LOCALE_LABELS[target]
+
+  const payload = {
+    title: source.title ?? "",
+    description: source.description ?? "",
+    duration: source.duration ?? "",
+    difficulty: source.difficulty ?? "",
+    groupSize: source.groupSize ?? "",
+    location: source.location ?? "",
+    categories: source.categories ?? [],
+  }
+
+  const { output } = await generateText({
+    model: "openai/gpt-5.4-mini",
+    system:
+      `You write complete marketing content for an Icelandic travel/tours ` +
+      `website. Given the basic details of a single tour, write a full draft ` +
+      `of ALL content fields in ${languageName}. Rules: keep the tone natural ` +
+      `and engaging for travellers; build on the provided details (place ` +
+      `names, activities, duration, difficulty, group size, categories); you ` +
+      `may make reasonable, plausible assumptions to fill gaps, but keep them ` +
+      `realistic for this kind of tour and do NOT invent specific prices, exact ` +
+      `times, or brand names that aren't implied; for the list fields keep one ` +
+      `concise item per line; make the itinerary a sensible ordered sequence. ` +
+      `If a provided title already exists, you may refine it but keep the same ` +
+      `subject. Return only the content.`,
+    prompt: JSON.stringify(payload),
+    output: Output.object({ schema: fullContentSchema }),
+  })
+
+  const { itinerary, ...rest } = output
+  return {
+    ...rest,
+    itinerary:
+      Array.isArray(itinerary) && itinerary.length > 0
+        ? JSON.stringify(itinerary)
+        : null,
+  }
+}
+
+const itinerarySchema = z.object({
+  itinerary: z
+    .array(
+      z.object({
+        title: z.string().describe("Short step title"),
+        body: z.string().describe("1-2 sentence step description"),
+      }),
+    )
+    .describe("An ordered itinerary of 3-6 plausible steps for the tour"),
+})
+
+/**
+ * TESTING FEATURE: generate just the itinerary steps for a tour from its basic
+ * details, in the requested language. The model may make reasonable, plausible
+ * assumptions, so the result MUST be reviewed before publishing. Returns the
+ * steps as a JSON string (or null when none were produced).
+ */
+export async function generateTourItinerary(
+  source: FullContentSourceInput,
+  target: Locale = "en",
+): Promise<string | null> {
+  await assertAdmin()
+
+  const languageName = LOCALE_LABELS[target]
+
+  const payload = {
+    title: source.title ?? "",
+    description: source.description ?? "",
+    duration: source.duration ?? "",
+    difficulty: source.difficulty ?? "",
+    groupSize: source.groupSize ?? "",
+    location: source.location ?? "",
+    categories: source.categories ?? [],
+  }
+
+  const { output } = await generateText({
+    model: "openai/gpt-5.4-mini",
+    system:
+      `You write itineraries for an Icelandic travel/tours website. Given the ` +
+      `basic details of a single tour, write a sensible ordered itinerary in ` +
+      `${languageName}. Rules: base it on the provided details (place names, ` +
+      `activities, duration, difficulty); you may make reasonable, plausible ` +
+      `assumptions but keep them realistic and do NOT invent specific prices, ` +
+      `exact times, or brand names that aren't implied; keep each step's body ` +
+      `to 1-2 sentences. Return only the itinerary.`,
+    prompt: JSON.stringify(payload),
+    output: Output.object({ schema: itinerarySchema }),
+  })
+
+  return Array.isArray(output.itinerary) && output.itinerary.length > 0
+    ? JSON.stringify(output.itinerary)
+    : null
+}

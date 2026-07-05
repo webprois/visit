@@ -26,6 +26,7 @@ import {
   Send,
   FileText,
   Sparkles,
+  FlaskConical,
   Download,
   MapPin,
   ChevronUp,
@@ -45,6 +46,8 @@ import {
   getBokunGallery,
   translateTourContent,
   generateTourExcerpt,
+  generateFullTourContent,
+  generateTourItinerary,
   type TourTranslationInput,
 } from "@/app/actions/admin"
 import { LocationPicker } from "@/components/admin/location-picker"
@@ -170,6 +173,8 @@ export function TourEditor({
   const [loadingContent, setLoadingContent] = useState(true)
   const [translating, setTranslating] = useState(false)
   const [generatingExcerpt, setGeneratingExcerpt] = useState(false)
+  const [generatingFull, setGeneratingFull] = useState(false)
+  const [generatingItinerary, setGeneratingItinerary] = useState(false)
 
   // Shared (language-independent) settings.
   const [duration, setDuration] = useState(tour.duration)
@@ -363,6 +368,101 @@ export function TourEditor({
       toast.error("Generation failed. Please try again.")
     } finally {
       setGeneratingExcerpt(false)
+    }
+  }
+
+  /**
+   * TESTING FEATURE: fill in every content field for the active language with an
+   * AI-generated draft based on the tour's basic details. Overwrites the current
+   * language's content, so it must be reviewed before publishing.
+   */
+  /** Build the basic tour details AI uses as its source, or null when there's
+   *  not enough to work with. */
+  function buildAiSource() {
+    const source = content[lang]
+    const title = source.title || content.en.title || tour.title
+    const description =
+      source.description || content.en.description || tour.description || ""
+    const categoryNames = categories
+      .filter((c) => categoryIds.includes(c.id))
+      .map((c) => c.name)
+    const locationName =
+      locations.find((l) => l.id === locationIds[0])?.name || tour.location || ""
+
+    if (!title && !description && categoryNames.length === 0) return null
+
+    return {
+      title,
+      description,
+      duration,
+      difficulty,
+      groupSize,
+      location: locationName,
+      categories: categoryNames,
+    }
+  }
+
+  async function handleGenerateAllContent() {
+    const source = buildAiSource()
+    if (!source) {
+      toast.error("Add a title or some details first, then generate.")
+      return
+    }
+
+    setGeneratingFull(true)
+    try {
+      const result = await generateFullTourContent(source, lang)
+      markDirty()
+      setContent((prev) => ({
+        ...prev,
+        [lang]: {
+          title: result.title ?? "",
+          excerpt: result.excerpt ?? "",
+          description: result.description ?? "",
+          included: result.included ?? "",
+          excluded: result.excluded ?? "",
+          goodToKnow: result.goodToKnow ?? "",
+          itinerary: parseItinerary(result.itinerary),
+        },
+      }))
+      toast.success(
+        `Draft content generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
+      )
+    } catch {
+      toast.error("Generation failed. Please try again.")
+    } finally {
+      setGeneratingFull(false)
+    }
+  }
+
+  /**
+   * TESTING FEATURE: generate just the itinerary steps for the active language
+   * from the tour's basic details. Overwrites the current itinerary, so it must
+   * be reviewed before publishing.
+   */
+  async function handleGenerateItinerary() {
+    const source = buildAiSource()
+    if (!source) {
+      toast.error("Add a title or some details first, then generate.")
+      return
+    }
+
+    setGeneratingItinerary(true)
+    try {
+      const result = await generateTourItinerary(source, lang)
+      const steps = parseItinerary(result)
+      if (steps.length === 0) {
+        toast.error("No itinerary could be generated. Please try again.")
+        return
+      }
+      setItinerary(steps)
+      toast.success(
+        `Itinerary generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
+      )
+    } catch {
+      toast.error("Generation failed. Please try again.")
+    } finally {
+      setGeneratingItinerary(false)
     }
   }
 
@@ -951,6 +1051,36 @@ export function TourEditor({
       tabContent = (
         <>
           {languageBar}
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="size-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">
+                  Fill all content with AI
+                </span>
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  Testing feature
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {`Generates a full draft (description, lists and itinerary) in ${LOCALE_LABELS[lang]} from this tour's details. It may make assumptions and overwrites the current content, so always review before publishing.`}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0"
+              onClick={handleGenerateAllContent}
+              disabled={generatingFull}
+            >
+              {generatingFull ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4 text-primary" />
+              )}
+              {generatingFull ? "Generating…" : "Generate all content"}
+            </Button>
+          </div>
           <Field label="Full description" htmlFor="description">
             <Textarea
               id="description"
@@ -978,7 +1108,12 @@ export function TourEditor({
             value={current.goodToKnow}
             onChange={(v) => setField("goodToKnow", v)}
           />
-          <ItineraryField steps={current.itinerary} onChange={setItinerary} />
+              <ItineraryField
+                steps={current.itinerary}
+                onChange={setItinerary}
+                onGenerate={handleGenerateItinerary}
+                generating={generatingItinerary}
+              />
           {lang === "en" && bokunImportNode}
         </>
       )
@@ -1392,9 +1527,14 @@ function ListField({
 function ItineraryField({
   steps,
   onChange,
+  onGenerate,
+  generating,
 }: {
   steps: ItineraryStep[]
   onChange: (steps: ItineraryStep[]) => void
+  /** TESTING FEATURE: generate the itinerary with AI. */
+  onGenerate?: () => void
+  generating?: boolean
 }) {
   function update(index: number, patch: Partial<ItineraryStep>) {
     onChange(steps.map((s, i) => (i === index ? { ...s, ...patch } : s)))
@@ -1415,11 +1555,32 @@ function ItineraryField({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <Label>Itinerary</Label>
-        <span className="text-xs text-muted-foreground">
-          {steps.length} {steps.length === 1 ? "step" : "steps"}
-        </span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Label>Itinerary</Label>
+          <span className="text-xs text-muted-foreground">
+            {steps.length} {steps.length === 1 ? "step" : "steps"}
+          </span>
+        </div>
+        {onGenerate && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onGenerate}
+            disabled={generating}
+          >
+            {generating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4 text-primary" />
+            )}
+            {generating ? "Generating…" : "Generate with AI"}
+            <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+              Testing
+            </span>
+          </Button>
+        )}
       </div>
 
       {steps.length > 0 && (
