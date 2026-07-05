@@ -2,6 +2,7 @@ import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import { TourSearch, type Experience } from "@/components/tour-search"
+import { Aurora } from "@/components/aurora"
 import { getServerDict } from "@/lib/get-dictionary"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +24,8 @@ export async function Hero({ experiences }: { experiences: Experience[] }) {
         />
       </video>
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/45 to-background/95" />
+      {/* Animated northern-lights effect drifting across the hero. */}
+      <Aurora className="-z-10" />
       {/* Vignette + corner glow to focus the eye on the copy and blend into the page. */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
 
