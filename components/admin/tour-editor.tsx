@@ -679,8 +679,9 @@ export function TourEditor({
       {lang !== "en" && (
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/40 p-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            Editing the {LOCALE_LABELS[lang]} version. Empty fields fall back to
-            English (or the original Bokun text) on the live site.
+            Editing the {LOCALE_LABELS[lang]} version only. Translating fills in
+            just this language from the English content. Empty fields fall back
+            to English (or the original Bokun text) on the live site.
           </p>
           <Button
             type="button"
@@ -695,7 +696,7 @@ export function TourEditor({
             ) : (
               <Sparkles className="size-4 text-primary" />
             )}
-            Translate from English
+            Translate {LOCALE_LABELS[lang]} from English
           </Button>
         </div>
       )}
