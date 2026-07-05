@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
+import { SiteLogo } from "@/components/site-logo"
 import { getPostLoginPath } from "@/app/actions/session"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,13 +74,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
     return (
       <Card className="w-full max-w-sm p-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Image
-            src="/images/visit-logo-dark.webp"
-            alt="Visit.is"
-            width={120}
-            height={32}
-            className="h-8 w-auto"
-          />
+          <SiteLogo className="h-8 w-auto" />
           <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
             <MailCheck className="size-6 text-primary" />
           </div>
@@ -115,13 +109,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   return (
     <Card className="w-full max-w-sm p-6">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
-        <Image
-          src="/images/visit-logo-dark.webp"
-          alt="Visit.is"
-          width={120}
-          height={32}
-          className="h-8 w-auto"
-        />
+        <SiteLogo className="h-8 w-auto" />
         <div>
           <h1 className="font-heading text-xl font-bold text-foreground">
             {isSignUp ? "Create account" : "Sign in"}
