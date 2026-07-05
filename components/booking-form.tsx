@@ -396,7 +396,9 @@ export function BookingForm({
   const STEP_LABELS: Record<StepKey, string> = {
     tour: t.stepTour,
     details: t.stepDetails,
-    addons: t.stepAddons,
+    // The third step holds add-ons and/or pickup; label it for whichever it has
+    // (falls back to the pickup label when the tour has no paid add-ons).
+    addons: extras.length > 0 ? t.stepAddons : t.pickup,
     confirm: t.stepConfirm,
   }
   const pickupPlaces = pickup?.pickupPlaces ?? []
@@ -496,12 +498,12 @@ export function BookingForm({
       return next
     })
   const [step, setStep] = useState(1)
-  // Wizard steps. The add-ons step only appears when the tour has extras, so a
-  // tour without add-ons collapses to a 3-step flow.
-  const stepKeys: StepKey[] =
-    extras.length > 0
-      ? ["tour", "details", "addons", "confirm"]
-      : ["tour", "details", "confirm"]
+  // Wizard steps. The third step groups add-ons AND pickup, so it appears when
+  // the tour has either. A tour with neither collapses to a 3-step flow.
+  const hasExtrasStep = extras.length > 0 || pickupPlaces.length > 0
+  const stepKeys: StepKey[] = hasExtrasStep
+    ? ["tour", "details", "addons", "confirm"]
+    : ["tour", "details", "confirm"]
   const totalSteps = stepKeys.length
   const currentKey = stepKeys[Math.min(step, totalSteps) - 1]
   const [pending, startTransition] = useTransition()
@@ -847,14 +849,6 @@ export function BookingForm({
 
   function validateStep2(): boolean {
     setError(null)
-    if (pickupRequired && !selectedPickup) {
-      setError(t.errChoosePickup)
-      return false
-    }
-    if (needsRoomNumber && !roomNumber.trim()) {
-      setError(t.errRoomNumber)
-      return false
-    }
     if (
       guestSlots.some(
         (g) =>
@@ -890,9 +884,25 @@ export function BookingForm({
     return true
   }
 
+  // Add-ons + pickup step. Add-ons are optional, so only the pickup selection
+  // (when required) needs validation before advancing.
+  function validateStep3(): boolean {
+    setError(null)
+    if (pickupRequired && !selectedPickup) {
+      setError(t.errChoosePickup)
+      return false
+    }
+    if (needsRoomNumber && !roomNumber.trim()) {
+      setError(t.errRoomNumber)
+      return false
+    }
+    return true
+  }
+
   function goNext() {
     if (currentKey === "tour" && !validateStep1()) return
     if (currentKey === "details" && !validateStep2()) return
+    if (currentKey === "addons" && !validateStep3()) return
     setStep((s) => Math.min(totalSteps, s + 1))
   }
 
@@ -1196,7 +1206,7 @@ export function BookingForm({
               </>
             )}
 
-            {/* Step: add-ons */}
+            {/* Step: add-ons & pickup */}
             {currentKey === "addons" && (
               <>
                 {/* Add-ons */}
@@ -1251,13 +1261,8 @@ export function BookingForm({
                 })}
               </div>
             )}
-              </>
-            )}
 
-            {/* Step: details — pickup & participant names */}
-            {currentKey === "details" && (
-              <>
-            {/* Pickup / drop-off */}
+            {/* Pickup / drop-off (grouped with add-ons on this step) */}
             {pickupPlaces.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <div className="flex items-center gap-2">
@@ -1332,7 +1337,12 @@ export function BookingForm({
                 )}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step: details — participant names & primary contact */}
+            {currentKey === "details" && (
+              <>
             {/* Participants — participant 1 is the primary contact and also
                 supplies the booking's email + phone. */}
             {guestSlots.length > 0 && (
