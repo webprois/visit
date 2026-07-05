@@ -79,6 +79,7 @@ type EditorTab =
   | "overview"
   | "content"
   | "categories"
+  | "locations"
   | "images"
   | "map"
   | "seo"
@@ -87,6 +88,7 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
+  { id: "locations", label: "Starting Location" },
   { id: "images", label: "Images" },
   { id: "map", label: "Map" },
   { id: "seo", label: "SEO", soon: true },
@@ -651,7 +653,12 @@ export function TourEditor({
             : `${categoryIds.length} selected. The first one is shown as the badge.`}
         </p>
       </Field>
+    </div>
+  )
 
+  // Starting location tab: single-select location that also drives the label.
+  const locationsNode = (
+    <div className="flex flex-col gap-6">
       <Field label="Starting location">
         {locations.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -947,6 +954,9 @@ export function TourEditor({
       break
     case "categories":
       tabContent = categoriesNode
+      break
+    case "locations":
+      tabContent = locationsNode
       break
     case "images":
       tabContent = (
