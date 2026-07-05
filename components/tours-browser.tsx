@@ -1063,7 +1063,7 @@ export function ToursBrowser({
                     </span>
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between pt-4">
+                  <div className="mt-auto flex items-center justify-between pt-5">
                     <div>
                       <span className="text-xs text-muted-foreground">{dict.browser.from}</span>
                       <p className="font-heading text-xl font-extrabold text-foreground">

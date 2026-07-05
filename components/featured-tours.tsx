@@ -84,7 +84,7 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
                   </span>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
                   <div>
                     <span className="text-xs text-muted-foreground">{dict.featured.from}</span>
                     <p className="font-heading text-xl font-extrabold text-foreground">
