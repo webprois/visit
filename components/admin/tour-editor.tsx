@@ -65,6 +65,7 @@ type LangContent = {
   included: string
   excluded: string
   goodToKnow: string
+  whatToBring: string
   importantInfo: string
   /** Itinerary steps, edited as structured rows. */
   itinerary: ItineraryStep[]
@@ -107,6 +108,7 @@ function emptyLang(): LangContent {
     included: "",
     excluded: "",
     goodToKnow: "",
+    whatToBring: "",
     importantInfo: "",
     itinerary: [],
   }
@@ -241,6 +243,7 @@ export function TourEditor({
               included: row.included ?? "",
               excluded: row.excluded ?? "",
               goodToKnow: row.goodToKnow ?? "",
+              whatToBring: row.whatToBring ?? "",
               importantInfo: row.importantInfo ?? "",
               itinerary: parseItinerary(row.itinerary),
             }
@@ -281,6 +284,7 @@ export function TourEditor({
       | "included"
       | "excluded"
       | "goodToKnow"
+      | "whatToBring"
       | "importantInfo",
     value: string,
   ) {
@@ -319,6 +323,7 @@ export function TourEditor({
           included: result.included ?? "",
           excluded: result.excluded ?? "",
           goodToKnow: result.goodToKnow ?? "",
+          whatToBring: result.whatToBring ?? "",
           importantInfo: result.importantInfo ?? "",
           itinerary: parseItinerary(result.itinerary),
         },
@@ -433,6 +438,7 @@ export function TourEditor({
           included: result.included ?? "",
           excluded: result.excluded ?? "",
           goodToKnow: result.goodToKnow ?? "",
+          whatToBring: result.whatToBring ?? "",
           importantInfo: result.importantInfo ?? "",
           itinerary: parseItinerary(result.itinerary),
         },
@@ -858,10 +864,6 @@ export function TourEditor({
         toast.success("Applied")
       }}
       onImportAll={(t) => {
-        const goodToKnow = [t.goodToKnow, t.requirements]
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .join("\n")
         setContent((prev) => ({
           ...prev,
           [lang]: {
@@ -870,7 +872,8 @@ export function TourEditor({
             description: t.description,
             included: t.included,
             excluded: t.excluded,
-            goodToKnow,
+            goodToKnow: t.goodToKnow,
+            whatToBring: t.requirements,
             importantInfo: t.attention,
             itinerary: t.itinerary ?? [],
           },
@@ -1129,6 +1132,12 @@ export function TourEditor({
             id="excluded"
             value={current.excluded}
             onChange={(v) => setField("excluded", v)}
+          />
+          <ListField
+            label="What to bring"
+            id="whatToBring"
+            value={current.whatToBring}
+            onChange={(v) => setField("whatToBring", v)}
           />
           <ListField
             label="Good to know"
@@ -1489,6 +1498,7 @@ function isLangFilled(c: LangContent): boolean {
       c.included ||
       c.excluded ||
       c.goodToKnow ||
+      c.whatToBring ||
       c.importantInfo ||
       c.itinerary.length > 0,
   )
@@ -1510,6 +1520,7 @@ function toInput(c: LangContent): TourTranslationInput {
     included: c.included,
     excluded: c.excluded,
     goodToKnow: c.goodToKnow,
+    whatToBring: c.whatToBring,
     importantInfo: c.importantInfo,
     itinerary: serializeItinerary(c.itinerary),
   }
@@ -1795,6 +1806,7 @@ function BokunTexts({
       | "included"
       | "excluded"
       | "goodToKnow"
+      | "whatToBring"
       | "importantInfo",
     value: string,
     mode: "replace" | "append",
@@ -1971,9 +1983,8 @@ function BokunTexts({
                   <TextField
                     label="Requirements"
                     value={active.requirements}
-                    useLabel="Add to good to know"
                     onUse={() =>
-                      onApply("goodToKnow", active.requirements, "append")
+                      onApply("whatToBring", active.requirements, "replace")
                     }
                   />
                   <TextField
