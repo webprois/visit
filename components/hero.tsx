@@ -18,11 +18,11 @@ export async function Hero({ experiences }: { experiences: Experience[] }) {
         className="-z-10 object-cover"
         sizes="100vw"
       />
-      {/* Dark overlay to darken the image and improve text contrast. */}
-      <div className="absolute inset-0 -z-10 bg-black/40" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/45 to-background/95" />
       {/* Vignette + corner glow to focus the eye on the copy and blend into the page. */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
+      {/* Dark overlay painted last (still behind content) to darken the image and improve text contrast. */}
+      <div className="absolute inset-0 -z-10 bg-black/40" />
 
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-6 px-4 pb-16 pt-20 md:px-6 md:pb-24 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-1.5 text-sm font-medium text-foreground backdrop-blur">
