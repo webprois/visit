@@ -679,3 +679,70 @@ export async function translateTourContent(
       : null,
   }
 }
+
+/* ---------------- AI short description ---------------- */
+
+export type ExcerptSourceInput = {
+  title?: string | null
+  description?: string | null
+  duration?: string | null
+  difficulty?: string | null
+  groupSize?: string | null
+  location?: string | null
+  categories?: string[]
+}
+
+const excerptSchema = z.object({
+  excerpt: z
+    .string()
+    .describe(
+      "A punchy one- to two-sentence tour summary, under 160 characters",
+    ),
+})
+
+/**
+ * Generate a short, card-friendly description for a tour from its own data
+ * (title, full description, duration, difficulty, group size, location and
+ * categories). Returns a single line of text in the requested language; the
+ * caller decides whether to apply it.
+ */
+export async function generateTourExcerpt(
+  source: ExcerptSourceInput,
+  target: Locale = "en",
+): Promise<string> {
+  await assertAdmin()
+
+  const languageName = LOCALE_LABELS[target]
+
+  const payload = {
+    title: source.title ?? "",
+    description: source.description ?? "",
+    duration: source.duration ?? "",
+    difficulty: source.difficulty ?? "",
+    groupSize: source.groupSize ?? "",
+    location: source.location ?? "",
+    categories: source.categories ?? [],
+  }
+
+  // Nothing meaningful to work from.
+  if (!payload.title && !payload.description && payload.categories.length === 0) {
+    return ""
+  }
+
+  const { output } = await generateText({
+    model: "openai/gpt-5.4-mini",
+    system:
+      `You write short, enticing marketing summaries for an Icelandic ` +
+      `travel/tours website. Given the details of a single tour, write ONE ` +
+      `short description in ${languageName} that would sit on the tour card. ` +
+      `Rules: 1-2 sentences, under 160 characters; lead with what makes the ` +
+      `experience exciting; be concrete using the provided details (place ` +
+      `names, activities, duration) but do NOT invent facts that aren't ` +
+      `supported by the input; keep the tone natural and engaging for ` +
+      `travellers; no quotes, no hashtags, no emoji. Return only the summary.`,
+    prompt: JSON.stringify(payload),
+    output: Output.object({ schema: excerptSchema }),
+  })
+
+  return output.excerpt.trim()
+}

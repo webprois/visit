@@ -44,6 +44,7 @@ import {
   getTourTranslationContent,
   getBokunGallery,
   translateTourContent,
+  generateTourExcerpt,
   type TourTranslationInput,
 } from "@/app/actions/admin"
 import { LocationPicker } from "@/components/admin/location-picker"
@@ -161,12 +162,13 @@ export function TourEditor({
   const [lang, setLang] = useState<Locale>("en")
   const [loadingContent, setLoadingContent] = useState(true)
   const [translating, setTranslating] = useState(false)
+  const [generatingExcerpt, setGeneratingExcerpt] = useState(false)
 
   // Shared (language-independent) settings.
   const [duration, setDuration] = useState(tour.duration)
   const [difficulty, setDifficulty] = useState(tour.difficulty ?? "")
   const [groupSize, setGroupSize] = useState(tour.groupSize ?? "")
-  const [imageUrl, setImageUrl] = useState(tour.image)
+  const [imageUrl] = useState(tour.image)
   // Curated gallery (first item is the hero used on cards/gallery).
   const [gallery, setGallery] = useState<GalleryImage[]>(tour.gallery ?? [])
   const [galleryUploading, setGalleryUploading] = useState(false)
@@ -190,12 +192,11 @@ export function TourEditor({
   })
   const [showOnMap, setShowOnMap] = useState<boolean>(tour.showOnMap ?? true)
 
-  const [uploading, setUploading] = useState(false)
+  const [uploading] = useState(false)
   const [pendingAction, setPendingAction] = useState<
     "save" | "publish" | "unpublish" | null
   >(null)
   const [isPending, startTransition] = useTransition()
-  const fileRef = useRef<HTMLInputElement>(null)
   const galleryFileRef = useRef<HTMLInputElement>(null)
 
   // Editor chrome: active tab, dirty tracking, last-saved time, category search.
@@ -305,6 +306,57 @@ export function TourEditor({
     }
   }
 
+  async function handleGenerateExcerpt() {
+    const source = content[lang]
+    // Fall back to English content/title so we still have something to work from
+    // when editing an empty translation.
+    const title = source.title || content.en.title || tour.title
+    const description =
+      source.description || content.en.description || tour.description || ""
+    const categoryNames = categories
+      .filter((c) => categoryIds.includes(c.id))
+      .map((c) => c.name)
+    const locationName =
+      locations.find((l) => l.id === locationIds[0])?.name ||
+      tour.location ||
+      ""
+
+    if (!title && !description && categoryNames.length === 0) {
+      toast.error("Add a title or description first, then generate.")
+      return
+    }
+
+    setGeneratingExcerpt(true)
+    try {
+      const excerpt = await generateTourExcerpt(
+        {
+          title,
+          description,
+          duration,
+          difficulty,
+          groupSize,
+          location: locationName,
+          categories: categoryNames,
+        },
+        lang,
+      )
+      if (!excerpt) {
+        toast.error("Couldn't generate a description. Try again.")
+        return
+      }
+      markDirty()
+      setContent((prev) => ({
+        ...prev,
+        [lang]: { ...prev[lang], excerpt },
+      }))
+      toast.success("Short description generated. Review, then save.")
+    } catch {
+      toast.error("Generation failed. Please try again.")
+    } finally {
+      setGeneratingExcerpt(false)
+    }
+  }
+
   function toggleCategory(id: number) {
     markDirty()
     setCategoryIds((prev) =>
@@ -317,26 +369,6 @@ export function TourEditor({
     // Single-select: choosing a location replaces the current one; tapping the
     // selected one again clears it.
     setLocationIds((prev) => (prev[0] === id ? [] : [id]))
-  }
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    try {
-      const form = new FormData()
-      form.append("file", file)
-      const res = await fetch("/api/admin/upload", { method: "POST", body: form })
-      if (!res.ok) throw new Error("Upload failed")
-      const { url } = await res.json()
-      markDirty()
-      setImageUrl(url)
-      toast.success("Image uploaded")
-    } catch (err) {
-      toast.error((err as Error).message)
-    } finally {
-      setUploading(false)
-    }
   }
 
   /* ---------------- Gallery management ---------------- */
@@ -484,44 +516,6 @@ export function TourEditor({
   }
 
   const current = content[lang]
-
-  // Hero image (shared across languages).
-  const heroNode = (
-    <div className="flex flex-col gap-2">
-      <Label>Tour image</Label>
-      <div className="group relative aspect-[16/7] w-full overflow-hidden rounded-2xl bg-muted">
-        <Image
-          src={imageUrl || "/placeholder.svg"}
-          alt={content.en.title || tour.title}
-          fill
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 768px"
-        />
-        <div className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 transition-opacity group-hover:opacity-100">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFile}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Upload className="size-4" />
-            )}
-            Replace image
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 
   // Language selector shown on content-editing tabs.
   const languageBar = (
@@ -877,7 +871,6 @@ export function TourEditor({
     case "overview":
       tabContent = (
         <>
-          {heroNode}
           {languageBar}
           <Field label="Title" htmlFor="title">
             <Input
@@ -888,7 +881,25 @@ export function TourEditor({
               placeholder={`Title (${LOCALE_SHORT[lang]})`}
             />
           </Field>
-          <Field label="Short description" htmlFor="excerpt">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="excerpt">Short description</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateExcerpt}
+                disabled={generatingExcerpt || isPending}
+                className="h-7 shrink-0 px-2.5 text-xs"
+              >
+                {generatingExcerpt ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3.5 text-primary" />
+                )}
+                Generate with AI
+              </Button>
+            </div>
             <Textarea
               id="excerpt"
               value={current.excerpt}
@@ -896,7 +907,11 @@ export function TourEditor({
               rows={2}
               placeholder="One or two lines shown on the tour card"
             />
-          </Field>
+            <p className="text-xs text-muted-foreground">
+              Generates a short summary in {LOCALE_LABELS[lang]} from this
+              tour&apos;s details.
+            </p>
+          </div>
         </>
       )
       break
