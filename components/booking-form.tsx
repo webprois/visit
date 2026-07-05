@@ -450,8 +450,6 @@ export function BookingForm({
   const [pickupId, setPickupId] = useState<string>("")
   const [dropoffId, setDropoffId] = useState<string>("")
   const [roomNumber, setRoomNumber] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phoneCountry, setPhoneCountry] = useState("IS")
   const phoneDial =
@@ -485,8 +483,6 @@ export function BookingForm({
   // under each field (instead of the shared banner near the total) so the guest
   // sees exactly which field needs attention.
   const [fieldErrors, setFieldErrors] = useState<{
-    firstName?: string
-    lastName?: string
     email?: string
     phone?: string
   }>({})
