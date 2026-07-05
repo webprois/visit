@@ -841,3 +841,57 @@ export async function generateFullTourContent(
         : null,
   }
 }
+
+const itinerarySchema = z.object({
+  itinerary: z
+    .array(
+      z.object({
+        title: z.string().describe("Short step title"),
+        body: z.string().describe("1-2 sentence step description"),
+      }),
+    )
+    .describe("An ordered itinerary of 3-6 plausible steps for the tour"),
+})
+
+/**
+ * TESTING FEATURE: generate just the itinerary steps for a tour from its basic
+ * details, in the requested language. The model may make reasonable, plausible
+ * assumptions, so the result MUST be reviewed before publishing. Returns the
+ * steps as a JSON string (or null when none were produced).
+ */
+export async function generateTourItinerary(
+  source: FullContentSourceInput,
+  target: Locale = "en",
+): Promise<string | null> {
+  await assertAdmin()
+
+  const languageName = LOCALE_LABELS[target]
+
+  const payload = {
+    title: source.title ?? "",
+    description: source.description ?? "",
+    duration: source.duration ?? "",
+    difficulty: source.difficulty ?? "",
+    groupSize: source.groupSize ?? "",
+    location: source.location ?? "",
+    categories: source.categories ?? [],
+  }
+
+  const { output } = await generateText({
+    model: "openai/gpt-5.4-mini",
+    system:
+      `You write itineraries for an Icelandic travel/tours website. Given the ` +
+      `basic details of a single tour, write a sensible ordered itinerary in ` +
+      `${languageName}. Rules: base it on the provided details (place names, ` +
+      `activities, duration, difficulty); you may make reasonable, plausible ` +
+      `assumptions but keep them realistic and do NOT invent specific prices, ` +
+      `exact times, or brand names that aren't implied; keep each step's body ` +
+      `to 1-2 sentences. Return only the itinerary.`,
+    prompt: JSON.stringify(payload),
+    output: Output.object({ schema: itinerarySchema }),
+  })
+
+  return Array.isArray(output.itinerary) && output.itinerary.length > 0
+    ? JSON.stringify(output.itinerary)
+    : null
+}
