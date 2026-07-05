@@ -22,7 +22,6 @@ export function SiteHeader({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
     { label: dict.nav.allTours, href: "/tours" },
     { label: dict.nav.selfDrive, href: "/self-drive-tours" },
     { label: dict.nav.tailorMade, href: "/tailor-made" },
-    { label: dict.nav.contact, href: "/contact" },
   ]
 
   return (
