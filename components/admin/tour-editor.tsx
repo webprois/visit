@@ -911,8 +911,7 @@ export function TourEditor({
               placeholder="One or two lines shown on the tour card"
             />
             <p className="text-xs text-muted-foreground">
-              Generates a short summary in {LOCALE_LABELS[lang]} from this
-              tour&apos;s details.
+              {`Generates a short summary in ${LOCALE_LABELS[lang]} from this tour's details.`}
             </p>
           </div>
         </>
