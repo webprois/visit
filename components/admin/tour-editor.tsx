@@ -65,6 +65,7 @@ type LangContent = {
   included: string
   excluded: string
   goodToKnow: string
+  importantInfo: string
   /** Itinerary steps, edited as structured rows. */
   itinerary: ItineraryStep[]
 }
@@ -106,6 +107,7 @@ function emptyLang(): LangContent {
     included: "",
     excluded: "",
     goodToKnow: "",
+    importantInfo: "",
     itinerary: [],
   }
 }
@@ -239,6 +241,7 @@ export function TourEditor({
               included: row.included ?? "",
               excluded: row.excluded ?? "",
               goodToKnow: row.goodToKnow ?? "",
+              importantInfo: row.importantInfo ?? "",
               itinerary: parseItinerary(row.itinerary),
             }
           }
@@ -271,7 +274,14 @@ export function TourEditor({
   }, [tab, tour.bokunId])
 
   function setField(
-    field: "title" | "excerpt" | "description" | "included" | "excluded" | "goodToKnow",
+    field:
+      | "title"
+      | "excerpt"
+      | "description"
+      | "included"
+      | "excluded"
+      | "goodToKnow"
+      | "importantInfo",
     value: string,
   ) {
     markDirty()
@@ -309,6 +319,7 @@ export function TourEditor({
           included: result.included ?? "",
           excluded: result.excluded ?? "",
           goodToKnow: result.goodToKnow ?? "",
+          importantInfo: result.importantInfo ?? "",
           itinerary: parseItinerary(result.itinerary),
         },
       }))
@@ -422,6 +433,7 @@ export function TourEditor({
           included: result.included ?? "",
           excluded: result.excluded ?? "",
           goodToKnow: result.goodToKnow ?? "",
+          importantInfo: result.importantInfo ?? "",
           itinerary: parseItinerary(result.itinerary),
         },
       }))
@@ -846,7 +858,7 @@ export function TourEditor({
         toast.success("Applied")
       }}
       onImportAll={(t) => {
-        const goodToKnow = [t.goodToKnow, t.requirements, t.attention]
+        const goodToKnow = [t.goodToKnow, t.requirements]
           .map((s) => s.trim())
           .filter(Boolean)
           .join("\n")
@@ -859,6 +871,7 @@ export function TourEditor({
             included: t.included,
             excluded: t.excluded,
             goodToKnow,
+            importantInfo: t.attention,
             itinerary: t.itinerary ?? [],
           },
         }))
@@ -1123,6 +1136,15 @@ export function TourEditor({
             value={current.goodToKnow}
             onChange={(v) => setField("goodToKnow", v)}
           />
+          <Field label="Important information" htmlFor="importantInfo">
+            <Textarea
+              id="importantInfo"
+              value={current.importantInfo}
+              onChange={(e) => setField("importantInfo", e.target.value)}
+              rows={6}
+              placeholder="Important notes travellers must read (safety, requirements, restrictions). Leave empty to use the original Bokun text. Separate distinct points with a blank line."
+            />
+          </Field>
               <ItineraryField
                 steps={current.itinerary}
                 onChange={setItinerary}
@@ -1467,6 +1489,7 @@ function isLangFilled(c: LangContent): boolean {
       c.included ||
       c.excluded ||
       c.goodToKnow ||
+      c.importantInfo ||
       c.itinerary.length > 0,
   )
 }
@@ -1487,6 +1510,7 @@ function toInput(c: LangContent): TourTranslationInput {
     included: c.included,
     excluded: c.excluded,
     goodToKnow: c.goodToKnow,
+    importantInfo: c.importantInfo,
     itinerary: serializeItinerary(c.itinerary),
   }
 }
@@ -1764,7 +1788,14 @@ function BokunTexts({
   bokunId: string
   activeLangLabel: string
   onApply: (
-    field: "title" | "excerpt" | "description" | "included" | "excluded" | "goodToKnow",
+    field:
+      | "title"
+      | "excerpt"
+      | "description"
+      | "included"
+      | "excluded"
+      | "goodToKnow"
+      | "importantInfo",
     value: string,
     mode: "replace" | "append",
   ) => void
@@ -1948,8 +1979,9 @@ function BokunTexts({
                   <TextField
                     label="Important / attention"
                     value={active.attention}
-                    useLabel="Add to good to know"
-                    onUse={() => onApply("goodToKnow", active.attention, "append")}
+                    onUse={() =>
+                      onApply("importantInfo", active.attention, "replace")
+                    }
                   />
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between gap-2">

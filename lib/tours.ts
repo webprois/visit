@@ -671,6 +671,8 @@ export type FullTour = MergedTour & {
   includedItems: string[]
   excludedItems: string[]
   goodToKnowItems: string[]
+  /** Localized "important information" block; edited wins, else Bokun's attention. */
+  importantInfo: string
   /** Localized itinerary steps; edited content wins, else Bokun's agenda. */
   itinerary: ItineraryStep[]
 }
@@ -707,6 +709,18 @@ export async function getFullTour(
     return fallback
   }
 
+  // Pick a localized free-text field: translation[locale] → translation[en] → fallback.
+  const text = (
+    field: "importantInfo",
+    fallback: string,
+  ): string => {
+    const localized = byLang[locale]?.[field]?.trim()
+    if (localized) return localized
+    const english = byLang.en?.[field]?.trim()
+    if (english) return english
+    return fallback
+  }
+
   // Description priority: localized/merged tour → Bokun detail → excerpt.
   const fullDescription =
     tour.description?.trim() || detail?.description?.trim() || tour.excerpt?.trim() || ""
@@ -735,6 +749,7 @@ export async function getFullTour(
     includedItems: list("included", detail?.included ?? []),
     excludedItems: list("excluded", detail?.excluded ?? []),
     goodToKnowItems: list("goodToKnow", detail?.knowBeforeYouGo ?? []),
+    importantInfo: text("importantInfo", detail?.attention ?? ""),
     itinerary,
   }
 }
