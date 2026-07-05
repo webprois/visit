@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -100,6 +100,51 @@ export function ToursWorkspace({
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
+  // Optimistic status changes made in the editor, applied on top of the server
+  // data so the list + counts update instantly without waiting for a refresh.
+  const [statusOverrides, setStatusOverrides] = useState<
+    Map<string, Partial<Pick<MergedTour, "visible" | "hidden" | "featured">>>
+  >(new Map())
+
+  // Once fresh server data arrives (after router.refresh), drop the optimistic
+  // layer — the new props already include the change.
+  useEffect(() => {
+    setStatusOverrides(new Map())
+  }, [tours])
+
+  const mergedTours = useMemo(
+    () =>
+      statusOverrides.size === 0
+        ? tours
+        : tours.map((t) => {
+            const patch = statusOverrides.get(t.bokunId)
+            return patch ? { ...t, ...patch } : t
+          }),
+    [tours, statusOverrides],
+  )
+
+  function handleStatusChange(
+    bokunId: string,
+    patch: Partial<Pick<MergedTour, "visible" | "hidden" | "featured">>,
+  ) {
+    setStatusOverrides((prev) => {
+      const next = new Map(prev)
+      next.set(bokunId, { ...next.get(bokunId), ...patch })
+      return next
+    })
+  }
+
+  function handleBulkStatusChange(
+    bokunIds: string[],
+    patch: Partial<Pick<MergedTour, "visible" | "hidden" | "featured">>,
+  ) {
+    setStatusOverrides((prev) => {
+      const next = new Map(prev)
+      for (const id of bokunIds) next.set(id, { ...next.get(id), ...patch })
+      return next
+    })
+  }
+
   const stats = useMemo(() => {
     let total = 0
     let published = 0
@@ -108,7 +153,7 @@ export function ToursWorkspace({
     let uncategorized = 0
     let missingContent = 0
     let hidden = 0
-    for (const t of tours) {
+    for (const t of mergedTours) {
       // Hidden tours are counted only in their own bucket and excluded from
       // Total and every other stat.
       if (t.hidden) {
@@ -131,12 +176,12 @@ export function ToursWorkspace({
       missingContent,
       hidden,
     }
-  }, [tours])
+  }, [mergedTours])
 
   // Unique operators (Bokun vendors) present in the synced tours, sorted A→Z.
   const operators = useMemo(() => {
     const map = new Map<string, string>()
-    for (const t of tours) {
+    for (const t of mergedTours) {
       if (t.operatorId != null && t.operator) {
         map.set(String(t.operatorId), t.operator)
       }
@@ -144,11 +189,11 @@ export function ToursWorkspace({
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [tours])
+  }, [mergedTours])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return tours.filter((t) => {
+    return mergedTours.filter((t) => {
       // Hidden tours only appear under the "Hidden" filter; every other view
       // (including "All statuses") excludes them.
       if (statusFilter === "hidden") {
@@ -176,10 +221,10 @@ export function ToursWorkspace({
         return false
       return true
     })
-  }, [tours, query, statusFilter, typeFilter, categoryFilter, operatorFilter])
+  }, [mergedTours, query, statusFilter, typeFilter, categoryFilter, operatorFilter])
 
   const selected =
-    tours.find((t) => t.bokunId === selectedId) ?? null
+    mergedTours.find((t) => t.bokunId === selectedId) ?? null
 
   const checkedIds = useMemo(
     () => filtered.filter((t) => checked.has(t.bokunId)).map((t) => t.bokunId),
@@ -428,12 +473,13 @@ export function ToursWorkspace({
                   size="sm"
                   variant="outline"
                   disabled={isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    handleBulkStatusChange(checkedIds, { visible: true })
                     runBulk(
                       () => bulkSetVisibility(checkedIds, true),
                       "Tours published",
                     )
-                  }
+                  }}
                 >
                   <Eye className="size-4" /> Publish
                 </Button>
@@ -442,12 +488,13 @@ export function ToursWorkspace({
                   size="sm"
                   variant="outline"
                   disabled={isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    handleBulkStatusChange(checkedIds, { visible: false })
                     runBulk(
                       () => bulkSetVisibility(checkedIds, false),
                       "Tours unpublished",
                     )
-                  }
+                  }}
                 >
                   <EyeOff className="size-4" /> Unpublish
                 </Button>
@@ -456,12 +503,13 @@ export function ToursWorkspace({
                   size="sm"
                   variant="outline"
                   disabled={isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    handleBulkStatusChange(checkedIds, { featured: true })
                     runBulk(
                       () => bulkSetFeatured(checkedIds, true),
                       "Tours featured",
                     )
-                  }
+                  }}
                 >
                   <Star className="size-4" /> Feature
                 </Button>
@@ -470,12 +518,13 @@ export function ToursWorkspace({
                   size="sm"
                   variant="outline"
                   disabled={isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    handleBulkStatusChange(checkedIds, { featured: false })
                     runBulk(
                       () => bulkSetFeatured(checkedIds, false),
                       "Tours unfeatured",
                     )
-                  }
+                  }}
                 >
                   <Star className="size-4" /> Unfeature
                 </Button>
@@ -636,6 +685,7 @@ export function ToursWorkspace({
               tour={selected}
               categories={categories}
               locations={locations}
+              onStatusChange={handleStatusChange}
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
