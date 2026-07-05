@@ -214,6 +214,24 @@ const en = {
     tour: "{count} tour",
     tours: "{count} tours",
   },
+  tourTypes: {
+    eyebrow: "Choose your travel style",
+    title: "How do you want to explore Iceland?",
+    subtitle:
+      "Explore Iceland with a selection of tours made by locals, or contact us for a custom made tour.",
+    selfDriveTitle: "Self Drive",
+    selfDriveText:
+      "Iceland is ideal for road trips. Our self-drive packages include a digital travel guide, making exploration easy and stress-free.",
+    multiDayTitle: "Multi Day Group Tours",
+    multiDayText:
+      "Explore Iceland in depth with a selection of multi-day tours, combining iconic sights, hidden gems, and unforgettable adventures.",
+    oneDayTitle: "One Day Group Tours & Activities",
+    oneDayText:
+      "Join day tours in group and explore Iceland from Reykjavík. Or enhance your trip with guided activities across the country.",
+    tailorTitle: "Tailor Made & Private",
+    tailorText:
+      "Whether you seek adventure, comfort, something out of the ordinary, private or budget-friendly options — we can tailor make it.",
+  },
   featured: {
     eyebrow: "Discover our tours",
     title: "Handpicked adventures",
@@ -709,6 +727,24 @@ const es: Dictionary = {
       "Descubre nuestras categorías más populares y sumérgete en experiencias inolvidables por toda la isla.",
     tour: "{count} tour",
     tours: "{count} tours",
+  },
+  tourTypes: {
+    eyebrow: "Elige tu estilo de viaje",
+    title: "¿Cómo quieres explorar Islandia?",
+    subtitle:
+      "Explora Islandia con una selección de tours creados por locales, o contáctanos para un tour a medida.",
+    selfDriveTitle: "Auto-conducido",
+    selfDriveText:
+      "Islandia es ideal para viajes por carretera. Nuestros paquetes de auto-conducido incluyen una guía de viaje digital, haciendo la exploración fácil y sin estrés.",
+    multiDayTitle: "Tours en grupo de varios días",
+    multiDayText:
+      "Explora Islandia en profundidad con una selección de tours de varios días, combinando lugares icónicos, joyas escondidas y aventuras inolvidables.",
+    oneDayTitle: "Tours en grupo de un día y actividades",
+    oneDayText:
+      "Únete a tours de un día en grupo y explora Islandia desde Reikiavik. O mejora tu viaje con actividades guiadas por todo el país.",
+    tailorTitle: "A medida y privados",
+    tailorText:
+      "Ya busques aventura, comodidad, algo fuera de lo común, opciones privadas o económicas — podemos hacerlo a tu medida.",
   },
   featured: {
     eyebrow: "Descubre nuestros tours",
@@ -1211,6 +1247,24 @@ const pt: Dictionary = {
     tour: "{count} tour",
     tours: "{count} tours",
   },
+  tourTypes: {
+    eyebrow: "Escolha o seu estilo de viagem",
+    title: "Como quer explorar a Islândia?",
+    subtitle:
+      "Explore a Islândia com uma seleção de tours criados por locais, ou contacte-nos para um tour personalizado.",
+    selfDriveTitle: "Autoconduzido",
+    selfDriveText:
+      "A Islândia é ideal para viagens de carro. Os nossos pacotes autoconduzidos incluem um guia de viagem digital, tornando a exploração fácil e sem stress.",
+    multiDayTitle: "Tours em grupo de vários dias",
+    multiDayText:
+      "Explore a Islândia em profundidade com uma seleção de tours de vários dias, combinando locais icónicos, joias escondidas e aventuras inesquecíveis.",
+    oneDayTitle: "Tours em grupo de um dia e atividades",
+    oneDayText:
+      "Participe em tours de um dia em grupo e explore a Islândia a partir de Reiquiavique. Ou enriqueça a sua viagem com atividades guiadas por todo o país.",
+    tailorTitle: "Personalizados e privados",
+    tailorText:
+      "Quer procure aventura, conforto, algo fora do comum, opções privadas ou económicas — podemos personalizar tudo.",
+  },
   featured: {
     eyebrow: "Descubra os nossos tours",
     title: "Aventuras selecionadas",
@@ -1711,6 +1765,24 @@ const it: Dictionary = {
       "Sfoglia le nostre categorie più popolari e immergiti in esperienze indimenticabili in tutta l'isola.",
     tour: "{count} tour",
     tours: "{count} tour",
+  },
+  tourTypes: {
+    eyebrow: "Scegli il tuo stile di viaggio",
+    title: "Come vuoi esplorare l'Islanda?",
+    subtitle:
+      "Esplora l'Islanda con una selezione di tour creati da gente del posto, oppure contattaci per un tour su misura.",
+    selfDriveTitle: "In autonomia",
+    selfDriveText:
+      "L'Islanda è ideale per i viaggi su strada. I nostri pacchetti in autonomia includono una guida di viaggio digitale, rendendo l'esplorazione facile e senza stress.",
+    multiDayTitle: "Tour di gruppo di più giorni",
+    multiDayText:
+      "Esplora l'Islanda in profondità con una selezione di tour di più giorni, combinando luoghi iconici, gemme nascoste e avventure indimenticabili.",
+    oneDayTitle: "Tour di gruppo di un giorno e attività",
+    oneDayText:
+      "Partecipa a tour di un giorno in gruppo ed esplora l'Islanda da Reykjavík. Oppure arricchisci il tuo viaggio con attività guidate in tutto il paese.",
+    tailorTitle: "Su misura e privati",
+    tailorText:
+      "Che tu cerchi avventura, comfort, qualcosa di insolito, opzioni private o economiche — possiamo crearlo su misura per te.",
   },
   featured: {
     eyebrow: "Scopri i nostri tour",
