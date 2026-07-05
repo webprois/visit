@@ -465,6 +465,7 @@ export function BookingForm({
   }, [lockedEmail])
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
+  const [promoCode, setPromoCode] = useState("")
   const [error, setError] = useState<string | null>(null)
   // Inline, per-field errors for the confirm-step contact inputs. Shown right
   // under each field (instead of the shared banner near the total) so the guest
@@ -688,6 +689,7 @@ export function BookingForm({
       customerPhone: `${phoneDial} ${phone.trim()}`,
       createAccount: wantsAccount,
       accountPassword: wantsAccount ? accountPassword : undefined,
+      promoCode: promoCode.trim() || undefined,
     }
 
     startTransition(async () => {
@@ -697,6 +699,13 @@ export function BookingForm({
       const res = await startBooking(payload)
       if (!res.ok) {
         setError(res.error)
+        if (res.promoError) {
+          requestAnimationFrame(() => {
+            const el = document.getElementById("booking-promo")
+            el?.scrollIntoView({ behavior: "smooth", block: "center" })
+            el?.focus({ preventScroll: true })
+          })
+        }
         return
       }
       // TEST bypass: server confirmed without payment — go to confirmation.
@@ -1490,6 +1499,22 @@ export function BookingForm({
               </a>
             </div>
               </>
+            )}
+
+            {step === totalSteps && totalPax > 0 && (
+              <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+                <Label htmlFor="booking-promo">{t.promoLabel}</Label>
+                <Input
+                  id="booking-promo"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder={t.promoPlaceholder}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  className="uppercase"
+                />
+                <p className="text-xs text-muted-foreground">{t.promoHint}</p>
+              </div>
             )}
 
             {error && (

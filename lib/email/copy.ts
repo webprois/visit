@@ -16,6 +16,7 @@ export type EmailStrings = {
   dateLabel: string
   guestsLabel: string
   bookingRefLabel: string
+  discountLabel: string // "Discount ({code})" — shown only when a promo applied
   questionsHtml: string // may contain a mailto link
   myAccountLabel: string // footer link to the account area
   footerRights: string
@@ -81,8 +82,9 @@ const en: EmailStrings = {
   hiNoName: "Hi there,",
   tourLabel: "Tour",
   dateLabel: "Date",
-  guestsLabel: "Guests",
-  bookingRefLabel: "Booking reference",
+    guestsLabel: "Guests",
+    bookingRefLabel: "Booking reference",
+    discountLabel: "Discount",
   questionsHtml:
     'Questions? Just reply to this email or contact us at <a href="mailto:info@visit.is">info@visit.is</a>.',
   myAccountLabel: "Go to My account",
@@ -161,8 +163,9 @@ const es: EmailStrings = {
   hiNoName: "Hola:",
   tourLabel: "Tour",
   dateLabel: "Fecha",
-  guestsLabel: "Viajeros",
-  bookingRefLabel: "Referencia de reserva",
+    guestsLabel: "Viajeros",
+    bookingRefLabel: "Referencia de reserva",
+    discountLabel: "Descuento",
   questionsHtml:
     '¿Preguntas? Responde a este correo o escríbenos a <a href="mailto:info@visit.is">info@visit.is</a>.',
   myAccountLabel: "Ir a Mi cuenta",
@@ -240,8 +243,9 @@ const pt: EmailStrings = {
   hiNoName: "Olá,",
   tourLabel: "Tour",
   dateLabel: "Data",
-  guestsLabel: "Viajantes",
-  bookingRefLabel: "Referência da reserva",
+    guestsLabel: "Viajantes",
+    bookingRefLabel: "Referência da reserva",
+    discountLabel: "Desconto",
   questionsHtml:
     'Dúvidas? Basta responder a este e-mail ou contactar-nos em <a href="mailto:info@visit.is">info@visit.is</a>.',
   myAccountLabel: "Ir para A minha conta",
@@ -319,8 +323,9 @@ const it: EmailStrings = {
   hiNoName: "Ciao,",
   tourLabel: "Tour",
   dateLabel: "Data",
-  guestsLabel: "Viaggiatori",
-  bookingRefLabel: "Riferimento prenotazione",
+    guestsLabel: "Viaggiatori",
+    bookingRefLabel: "Riferimento prenotazione",
+    discountLabel: "Sconto",
   questionsHtml:
     'Domande? Rispondi a questa email o scrivici a <a href="mailto:info@visit.is">info@visit.is</a>.',
   myAccountLabel: "Vai al mio account",

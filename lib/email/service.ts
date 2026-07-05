@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { booking, type Booking } from "@/lib/db/schema"
 import { getAppUrl } from "@/lib/app-url"
 import { asLocale, type Locale } from "@/lib/i18n"
+import { formatMoney } from "@/lib/currency"
 import { sendEmail } from "@/lib/email/client"
 import {
   buildConfirmationEmail,
@@ -69,6 +70,7 @@ function toBookingEmailData(row: Booking): BookingEmailData {
   const dateWithTime = row.startTime
     ? `${formatTourDate(row.tourDate, locale)} · ${row.startTime}`
     : formatTourDate(row.tourDate, locale)
+  const discount = row.discountMinor ?? 0
   return {
     locale,
     customerName: row.customerName,
@@ -78,6 +80,9 @@ function toBookingEmailData(row: Booking): BookingEmailData {
     bookingRef: row.bokunConfirmationCode ?? row.id,
     voucherUrl: voucherUrl(row.id),
     manageUrl: manageUrl(),
+    promoCode: row.promoCode ?? null,
+    // Bookings are charged in ISK; show the discount in the same currency.
+    discountDisplay: discount > 0 ? `-${formatMoney(discount, "ISK")}` : null,
   }
 }
 

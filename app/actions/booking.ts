@@ -15,6 +15,7 @@ import {
   priceMandatoryFeesIsk,
   reserveBokunBooking,
   confirmBokunBooking,
+  cancelBokunBooking,
   type SlotSelection,
   type AddonSelection,
 } from "@/lib/bokun"
@@ -48,6 +49,8 @@ export type BookingInput = {
   /** Language the customer is booking in; drives confirmation/reminder emails. */
   locale?: string
   notes?: string
+  /** Optional promo/discount code applied at checkout (validated by Bokun). */
+  promoCode?: string
   /** Opt-in: create a customer account so they can track this booking. */
   createAccount?: boolean
   /** Password for the new account (only used when createAccount is true). */
@@ -57,7 +60,7 @@ export type BookingInput = {
 export type StartBookingResult =
   | { ok: true; form: SecurePayForm }
   | { ok: true; redirectUrl: string }
-  | { ok: false; error: string }
+  | { ok: false; error: string; promoError?: boolean }
 
 /** Build an absolute origin for redirect URLs from the incoming request. */
 async function getOrigin(): Promise<string> {
@@ -115,7 +118,7 @@ type PreparedBooking = {
 }
 type PersistResult =
   | { ok: true; booking: PreparedBooking }
-  | { ok: false; error: string }
+  | { ok: false; error: string; promoError?: boolean }
 
 /**
  * Validate the request, re-price it authoritatively against live Bokun data
@@ -286,9 +289,29 @@ async function persistBooking(
       email: contactEmail,
       phone: input.customerPhone?.trim() || null,
     },
+    promoCode: input.promoCode?.trim() || null,
   })
   if (!reservation.ok) {
     return { ok: false, error: friendlyReserveError(reservation.error) }
+  }
+
+  // A promo code was entered but Bokun applied no discount → the code is invalid,
+  // expired, or not eligible for this tour/date. Release the just-created hold so
+  // it doesn't linger, and tell the customer before any payment is attempted.
+  const promoEntered = input.promoCode?.trim()
+  if (promoEntered && reservation.discountIsk <= 0) {
+    if (reservation.confirmationCode) {
+      await cancelBokunBooking(reservation.confirmationCode, {
+        note: "Auto-released: invalid promo code at checkout",
+      }).catch((err) =>
+        console.log("[v0] promo cancel-hold failed:", (err as Error).message),
+      )
+    }
+    return {
+      ok: false,
+      error: `The discount code "${promoEntered}" isn't valid for this booking.`,
+      promoError: true,
+    }
   }
 
   // Charge Bokun's authoritative activity total (in ISK) rather than our
@@ -307,6 +330,12 @@ async function persistBooking(
     )
   }
   const amountIsk = activityIsk + addonsIsk
+
+  // Bokun's reserved activity total is already net of any promo discount, so
+  // `amountIsk` is the correct (discounted) charge. We store the discount amount
+  // and code purely for display in admin and the confirmation email.
+  const discountIsk = reservation.discountIsk > 0 ? reservation.discountIsk : 0
+  const appliedPromoCode = promoEntered && discountIsk > 0 ? promoEntered : null
 
   // --- Persist a pending booking (internal reconciliation record) ---
   const id = randomUUID()
@@ -332,6 +361,8 @@ async function persistBooking(
     // confirmation/reminder emails go out in the language the customer booked in.
     locale: asLocale(input.locale ?? (await getLocale())),
     notes: input.notes?.trim() || null,
+    promoCode: appliedPromoCode,
+    discountMinor: discountIsk,
     status,
     bokunConfirmationCode: reservation.confirmationCode,
     bokunBookingId: reservation.bookingId,
@@ -400,7 +431,8 @@ export async function startBooking(
   input: BookingInput,
 ): Promise<StartBookingResult> {
   const prep = await persistBooking(input, "pending")
-  if (!prep.ok) return { ok: false, error: prep.error }
+  if (!prep.ok)
+    return { ok: false, error: prep.error, promoError: prep.promoError }
   const { id, amountIsk, tourTitle, date, customerEmail } = prep.booking
 
   // Opt-in account creation. Best-effort; never blocks the payment flow.
@@ -485,7 +517,7 @@ export async function startBooking(
 
 export type CreatePendingResult =
   | { ok: true; bookingId: string; amountIsk: number; currency: "ISK" }
-  | { ok: false; error: string }
+  | { ok: false; error: string; promoError?: boolean }
 
 /**
  * New Teya Hosted Checkout flow: validate + re-price + persist a booking with
@@ -496,7 +528,8 @@ export async function createPendingBooking(
   input: BookingInput,
 ): Promise<CreatePendingResult> {
   const prep = await persistBooking(input, "pending_payment")
-  if (!prep.ok) return { ok: false, error: prep.error }
+  if (!prep.ok)
+    return { ok: false, error: prep.error, promoError: prep.promoError }
 
   // Opt-in account creation. Best-effort; never blocks the payment flow.
   await maybeCreateCustomerAccount(input)

@@ -434,6 +434,9 @@ const en = {
     confirmPay: "Confirm & pay",
     securePayment:
       "Secure payment via Teya. You won't be charged until you confirm.",
+    promoLabel: "Discount code",
+    promoPlaceholder: "Enter code",
+    promoHint: "Have a discount code? Enter it before paying.",
     errChooseDate: "Please choose a date.",
     errAddParticipant: "Please add at least one participant.",
     errMinParticipants: "This tour requires at least {count} participants.",
@@ -925,6 +928,9 @@ const es: Dictionary = {
     confirmPay: "Confirmar y pagar",
     securePayment:
       "Pago seguro con Teya. No se te cobrará hasta que confirmes.",
+    promoLabel: "Código de descuento",
+    promoPlaceholder: "Introduce el código",
+    promoHint: "¿Tienes un código de descuento? Introdúcelo antes de pagar.",
     errChooseDate: "Por favor, elige una fecha.",
     errAddParticipant: "Por favor, añade al menos un participante.",
     errMinParticipants: "Este tour requiere al menos {count} participantes.",
@@ -1416,6 +1422,9 @@ const pt: Dictionary = {
     confirmPay: "Confirmar e pagar",
     securePayment:
       "Pagamento seguro via Teya. Só será cobrado quando confirmar.",
+    promoLabel: "Código de desconto",
+    promoPlaceholder: "Insira o código",
+    promoHint: "Tem um código de desconto? Insira-o antes de pagar.",
     errChooseDate: "Por favor, escolha uma data.",
     errAddParticipant: "Por favor, adicione pelo menos um participante.",
     errMinParticipants: "Este tour requer pelo menos {count} participantes.",
@@ -1907,6 +1916,9 @@ const it: Dictionary = {
     confirmPay: "Conferma e paga",
     securePayment:
       "Pagamento sicuro tramite Teya. Non ti sarà addebitato nulla fino alla conferma.",
+    promoLabel: "Codice sconto",
+    promoPlaceholder: "Inserisci il codice",
+    promoHint: "Hai un codice sconto? Inseriscilo prima di pagare.",
     errChooseDate: "Scegli una data.",
     errAddParticipant: "Aggiungi almeno un partecipante.",
     errMinParticipants: "Questo tour richiede almeno {count} partecipanti.",

@@ -133,6 +133,10 @@ export type BookingEmailData = {
   bookingRef: string
   voucherUrl: string
   manageUrl: string
+  /** Promo code the customer used, when a discount was actually applied. */
+  promoCode?: string | null
+  /** Discount amount already formatted for display (e.g. "-15,000 ISK"). */
+  discountDisplay?: string | null
 }
 
 /** Confirmation email with voucher download link. */
@@ -144,6 +148,12 @@ export function buildConfirmationEmail(data: BookingEmailData): BuiltEmail {
     { label: s.guestsLabel, value: data.guests },
     { label: s.bookingRefLabel, value: data.bookingRef },
   ]
+  if (data.discountDisplay) {
+    const label = data.promoCode
+      ? `${s.discountLabel} (${data.promoCode})`
+      : s.discountLabel
+    rows.push({ label, value: data.discountDisplay })
+  }
   const bodyHtml = [
     paragraph(fmtEmail(s.hi, { name: data.customerName })),
     paragraph(s.confirmIntro),
