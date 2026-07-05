@@ -1559,6 +1559,13 @@ export type ReserveBookingInput = {
   pickupId?: number | null
   dropoffId?: number | null
   contact: ReserveContact
+  /**
+   * Optional promo/discount code, as entered by the customer. Passed to Bokun,
+   * which applies the discount if the code is valid & eligible for this booking.
+   * Bokun silently ignores invalid/ineligible codes (no error), so callers must
+   * detect "no discount applied" via `discountIsk` on the result.
+   */
+  promoCode?: string | null
 }
 
 export type ReserveBookingResult =
@@ -1573,6 +1580,13 @@ export type ReserveBookingResult =
        * Null if it couldn't be read — callers fall back to the computed total.
        */
       activityTotalIsk: number | null
+      /**
+       * Discount (in ISK) that Bokun actually applied from the promo code, if
+       * any. 0 when no code was sent, or when the code was invalid/ineligible
+       * (Bokun ignores such codes without erroring). Read from the reserved
+       * booking so it reflects Bokun's real calculation.
+       */
+      discountIsk: number
     }
   | { ok: false; error: string }
 
@@ -1586,18 +1600,29 @@ type CheckoutSubmitResponse = {
  * availability unit prices (e.g. booking fees, rounding), so we charge exactly
  * this to avoid leaving a remaining balance. Returns null if it can't be read.
  */
-async function fetchReservedTotalIsk(bookingId: number): Promise<number | null> {
+async function fetchReservedTotalIsk(
+  bookingId: number,
+): Promise<{ totalIsk: number | null; discountIsk: number }> {
   try {
-    const data = await bokunRequest<{ totalPrice?: number; currency?: string }>(
-      "GET",
-      `/booking.json/booking/${bookingId}`,
-    )
+    const data = await bokunRequest<{
+      totalPrice?: number
+      currency?: string
+      discountAmount?: number
+      totalDiscount?: number
+    }>("GET", `/booking.json/booking/${bookingId}`)
     const total = data?.totalPrice
-    if (typeof total === "number" && total > 0) return Math.round(total)
+    // Bokun exposes the applied discount as `discountAmount` (some payloads use
+    // `totalDiscount`); take whichever is present and positive.
+    const rawDiscount = data?.discountAmount ?? data?.totalDiscount ?? 0
+    const discountIsk =
+      typeof rawDiscount === "number" && rawDiscount > 0 ? Math.round(rawDiscount) : 0
+    const totalIsk =
+      typeof total === "number" && total > 0 ? Math.round(total) : null
+    return { totalIsk, discountIsk }
   } catch (err) {
     console.log("[v0] fetchReservedTotalIsk failed:", (err as Error).message)
   }
-  return null
+  return { totalIsk: null, discountIsk: 0 }
 }
 
 /**
@@ -1652,6 +1677,11 @@ export async function reserveBokunBooking(
     activityBooking.dropoff = true
     activityBooking.dropoffPlaceId = input.dropoffId
   }
+  // Attach the promo code so Bokun applies the discount at checkout. Bokun
+  // validates & ignores invalid/ineligible codes without erroring, so we detect
+  // whether it actually applied by reading the discount back below.
+  const promoCode = input.promoCode?.trim()
+  if (promoCode) activityBooking.promoCode = promoCode
 
   const mainContactDetails: { questionId: string; values: string[] }[] = [
     { questionId: "firstName", values: [input.contact.firstName] },
@@ -1680,9 +1710,23 @@ export async function reserveBokunBooking(
   console.log(
     `[v0] Bokun RESERVED ${code} (bookingId=${bookingId ?? "?"}) for ${input.contact.email}`,
   )
-  // Read Bokun's authoritative ISK total so we charge the exact amount owed.
-  const activityTotalIsk = bookingId ? await fetchReservedTotalIsk(bookingId) : null
-  return { ok: true, confirmationCode: code, bookingId, activityTotalIsk }
+  // Read Bokun's authoritative ISK total so we charge the exact amount owed,
+  // plus the discount Bokun actually applied from the promo code (if any).
+  const reserved = bookingId
+    ? await fetchReservedTotalIsk(bookingId)
+    : { totalIsk: null, discountIsk: 0 }
+  if (promoCode) {
+    console.log(
+      `[v0] Bokun promo "${promoCode}" on ${code}: discount=${reserved.discountIsk} ISK`,
+    )
+  }
+  return {
+    ok: true,
+    confirmationCode: code,
+    bookingId,
+    activityTotalIsk: reserved.totalIsk,
+    discountIsk: reserved.discountIsk,
+  }
 }
 
 export type ConfirmBokunResult = { ok: true } | { ok: false; error: string }

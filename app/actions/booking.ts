@@ -48,6 +48,8 @@ export type BookingInput = {
   /** Language the customer is booking in; drives confirmation/reminder emails. */
   locale?: string
   notes?: string
+  /** Optional promo/discount code applied at checkout (validated by Bokun). */
+  promoCode?: string
   /** Opt-in: create a customer account so they can track this booking. */
   createAccount?: boolean
   /** Password for the new account (only used when createAccount is true). */
