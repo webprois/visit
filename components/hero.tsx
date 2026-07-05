@@ -18,6 +18,8 @@ export async function Hero({ experiences }: { experiences: Experience[] }) {
         className="-z-10 object-cover"
         sizes="100vw"
       />
+      {/* Dark overlay to darken the image and improve text contrast. */}
+      <div className="absolute inset-0 -z-10 bg-black/40" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/45 to-background/95" />
       {/* Vignette + corner glow to focus the eye on the copy and blend into the page. */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,var(--background)_100%)]" />
