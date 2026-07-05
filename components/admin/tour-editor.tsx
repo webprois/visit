@@ -428,8 +428,13 @@ export function TourEditor({
       toast.success(
         `Draft content generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
       )
-    } catch {
-      toast.error("Generation failed. Please try again.")
+    } catch (err) {
+      console.log("[v0] generate all content error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
     } finally {
       setGeneratingFull(false)
     }
@@ -459,8 +464,13 @@ export function TourEditor({
       toast.success(
         `Itinerary generated for ${LOCALE_LABELS[lang]}. Review, then save.`,
       )
-    } catch {
-      toast.error("Generation failed. Please try again.")
+    } catch (err) {
+      console.log("[v0] generate itinerary error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
     } finally {
       setGeneratingItinerary(false)
     }
