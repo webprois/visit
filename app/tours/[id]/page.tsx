@@ -466,9 +466,24 @@ export default async function TourPage({
                             {dict.detail.whatToBring}
                           </p>
                         </div>
-                        <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
-                          {detail.requirements}
-                        </p>
+                        <ul className="mt-3 flex flex-col gap-2.5">
+                          {detail.requirements
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean)
+                            .map((line, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                              >
+                                <Check
+                                  className="mt-0.5 size-4 shrink-0 text-primary"
+                                  aria-hidden="true"
+                                />
+                                {line}
+                              </li>
+                            ))}
+                        </ul>
                       </div>
                     )}
                     {tour.goodToKnowItems.length > 0 && (
@@ -504,7 +519,7 @@ export default async function TourPage({
                       </div>
                     )}
                     {detail?.attention && (
-                      <div className="rounded-2xl border border-border bg-secondary/40 p-5 sm:col-span-2">
+                      <div className="rounded-2xl border border-border bg-card p-5 sm:col-span-2">
                         <div className="flex items-center gap-2">
                           <HeartPulse
                             className="size-5 text-primary"
@@ -514,9 +529,26 @@ export default async function TourPage({
                             {dict.detail.importantInfo}
                           </p>
                         </div>
-                        <p className="mt-3 whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
-                          {detail.attention}
-                        </p>
+                        <ul className="mt-3 flex flex-col gap-2.5">
+                          {detail.attention
+                            .split(/\n\s*\n/)
+                            .map((block) => block.trim())
+                            .filter(Boolean)
+                            .map((block, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
+                              >
+                                <Check
+                                  className="mt-0.5 size-4 shrink-0 text-primary"
+                                  aria-hidden="true"
+                                />
+                                <span className="whitespace-pre-line text-pretty">
+                                  {block}
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
                       </div>
                     )}
                   </div>
