@@ -396,7 +396,9 @@ export function BookingForm({
   const STEP_LABELS: Record<StepKey, string> = {
     tour: t.stepTour,
     details: t.stepDetails,
-    addons: t.stepAddons,
+    // The third step holds add-ons and/or pickup; label it for whichever it has
+    // (falls back to the pickup label when the tour has no paid add-ons).
+    addons: extras.length > 0 ? t.stepAddons : t.pickup,
     confirm: t.stepConfirm,
   }
   const pickupPlaces = pickup?.pickupPlaces ?? []
@@ -448,8 +450,6 @@ export function BookingForm({
   const [pickupId, setPickupId] = useState<string>("")
   const [dropoffId, setDropoffId] = useState<string>("")
   const [roomNumber, setRoomNumber] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phoneCountry, setPhoneCountry] = useState("IS")
   const phoneDial =
@@ -466,13 +466,23 @@ export function BookingForm({
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [promoCode, setPromoCode] = useState("")
+  // After a valid promo code is applied, we hold the prepared (discounted) Teya
+  // form here and show a review panel so the guest sees the discount before
+  // paying. "Pay now" then submits this exact form — no second Bokun call.
+  const [review, setReview] = useState<{
+    form: { url: string; fields: Record<string, string> }
+    amountIsk: number
+    discountIsk: number
+  } | null>(null)
+  // True only while the "Apply" promo action is in flight. Kept separate from
+  // the shared `pending` transition flag so applying a code doesn't make the
+  // main pay button read "Redirecting…" (they both used to share `pending`).
+  const [applying, setApplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Inline, per-field errors for the confirm-step contact inputs. Shown right
   // under each field (instead of the shared banner near the total) so the guest
   // sees exactly which field needs attention.
   const [fieldErrors, setFieldErrors] = useState<{
-    firstName?: string
-    lastName?: string
     email?: string
     phone?: string
   }>({})
@@ -484,12 +494,12 @@ export function BookingForm({
       return next
     })
   const [step, setStep] = useState(1)
-  // Wizard steps. The add-ons step only appears when the tour has extras, so a
-  // tour without add-ons collapses to a 3-step flow.
-  const stepKeys: StepKey[] =
-    extras.length > 0
-      ? ["tour", "details", "addons", "confirm"]
-      : ["tour", "details", "confirm"]
+  // Wizard steps. The third step groups add-ons AND pickup, so it appears when
+  // the tour has either. A tour with neither collapses to a 3-step flow.
+  const hasExtrasStep = extras.length > 0 || pickupPlaces.length > 0
+  const stepKeys: StepKey[] = hasExtrasStep
+    ? ["tour", "details", "addons", "confirm"]
+    : ["tour", "details", "confirm"]
   const totalSteps = stepKeys.length
   const currentKey = stepKeys[Math.min(step, totalSteps) - 1]
   const [pending, startTransition] = useTransition()
@@ -511,6 +521,14 @@ export function BookingForm({
       : 0
   const total = baseTotal + feesTotal + addonsTotal
 
+  // Any change that affects price or the reserved booking invalidates a prepared
+  // (discounted) Teya form, so drop back to "Confirm & pay" and re-reserve on the
+  // next attempt. Runs only when a dep actually changes, so it never clears the
+  // review in the same tick it is set.
+  useEffect(() => {
+    setReview(null)
+  }, [promoCode, total, slot?.id, email, phone, firstByGuest, lastByGuest])
+
   // One named slot per seat, labeled by pricing category (e.g. "Adult 1").
   const guestSlots = useMemo(() => {
     const slotsOut: { key: string; label: string }[] = []
@@ -525,6 +543,17 @@ export function BookingForm({
     }
     return slotsOut
   }, [lines, qtyByLine])
+
+  // Participant 1 is always the primary contact, so the booking's contact name
+  // is derived from their name fields rather than collected separately. This
+  // means a solo traveller only enters their details once.
+  const primaryGuestKey = guestSlots[0]?.key ?? null
+  const contactFirstName = primaryGuestKey
+    ? (firstByGuest[primaryGuestKey] ?? "")
+    : ""
+  const contactLastName = primaryGuestKey
+    ? (lastByGuest[primaryGuestKey] ?? "")
+    : ""
 
   const selectedPickup = pickupPlaces.find((p) => String(p.id) === pickupId)
   const needsRoomNumber = Boolean(selectedPickup?.askForRoomNumber)
@@ -584,38 +613,33 @@ export function BookingForm({
     el.submit()
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
-    // here, so just advance through the wizard instead of attempting to pay.
-    if (currentKey !== "confirm") {
-      goNext()
-      return
-    }
+  // Validate the confirm step and build the server payload. Returns null (after
+  // surfacing the relevant error) when something is missing, so both "Confirm &
+  // pay" and the promo "Apply" button can share the exact same checks.
+  function validateAndBuildPayload(): BookingInput | null {
     if (!slot) {
       setError(t.errChooseDate)
-      return
+      return null
     }
     if (totalPax <= 0) {
       setError(t.errAddParticipant)
-      return
+      return null
     }
     if (totalPax < slot.minPax) {
       setError(fmt(t.errMinParticipants, { count: slot.minPax }))
-      return
+      return null
     }
     if (!slot.unlimited && totalPax > slot.seats) {
       setError(fmt(t.errSeatsLeft, { count: slot.seats }))
-      return
+      return null
     }
     if (pickupRequired && !selectedPickup) {
       setError(t.errChoosePickup)
-      return
+      return null
     }
     if (needsRoomNumber && !roomNumber.trim()) {
       setError(t.errRoomNumber)
-      return
+      return null
     }
     if (
       guestSlots.some(
@@ -625,36 +649,30 @@ export function BookingForm({
       )
     ) {
       setError(t.errGuestNames)
-      return
+      return null
     }
+    // Contact name comes from participant 1 (the primary contact); the guest
+    // names check above already guarantees it's filled. Only email + phone are
+    // collected separately.
     const contactErrors: typeof fieldErrors = {}
-    if (!firstName.trim()) contactErrors.firstName = t.errYourName
-    if (!lastName.trim()) contactErrors.lastName = t.errYourName
     if (!email.trim()) contactErrors.email = t.errEmail
     if (!phone.trim()) contactErrors.phone = t.errPhone
     if (Object.keys(contactErrors).length > 0) {
       setFieldErrors(contactErrors)
-      // Focus + scroll the first invalid field into view so the inline message
-      // is visible (the fields sit at the top of this step, the button at the
-      // bottom).
-      const firstInvalidId = contactErrors.firstName
-        ? "booking-first-name"
-        : contactErrors.lastName
-          ? "booking-last-name"
-          : contactErrors.email
-            ? "booking-email"
-            : "booking-phone"
+      const firstInvalidId = contactErrors.email
+        ? "booking-email"
+        : "booking-phone"
       requestAnimationFrame(() => {
         const el = document.getElementById(firstInvalidId)
         el?.scrollIntoView({ behavior: "smooth", block: "center" })
         el?.focus({ preventScroll: true })
       })
-      return
+      return null
     }
     const wantsAccount = !session && createAccount
     if (wantsAccount && accountPassword.length < 8) {
       setError(t.errPassword)
-      return
+      return null
     }
 
     const selections = slot.pricedPerPerson
@@ -672,7 +690,7 @@ export function BookingForm({
       name: `${(firstByGuest[g.key] ?? "").trim()} ${(lastByGuest[g.key] ?? "").trim()}`.trim(),
     }))
 
-    const payload: BookingInput = {
+    return {
       bokunId,
       slotId: slot.id,
       date: slot.date,
@@ -684,13 +702,90 @@ export function BookingForm({
       pickupId: selectedPickup ? selectedPickup.id : undefined,
       dropoffId: dropoffId ? Number(dropoffId) : undefined,
       roomNumber: needsRoomNumber ? roomNumber.trim() : undefined,
-      customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      customerName: `${contactFirstName.trim()} ${contactLastName.trim()}`.trim(),
       customerEmail: email,
       customerPhone: `${phoneDial} ${phone.trim()}`,
       createAccount: wantsAccount,
       accountPassword: wantsAccount ? accountPassword : undefined,
       promoCode: promoCode.trim() || undefined,
     }
+  }
+
+  function focusPromoField() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById("booking-promo")
+      el?.scrollIntoView({ behavior: "smooth", block: "center" })
+      el?.focus({ preventScroll: true })
+    })
+  }
+
+  // "Apply" the promo code: reserve against Bokun so we can show the real
+  // discounted price in the form before the guest commits to paying. The
+  // prepared (discounted) Teya form is stashed in `review`, so the later "Pay
+  // now" click reuses it without a second reservation.
+  function onApplyPromo() {
+    setError(null)
+    if (!promoCode.trim()) {
+      focusPromoField()
+      return
+    }
+    const payload = validateAndBuildPayload()
+    if (!payload) return
+
+    setApplying(true)
+    startTransition(async () => {
+      try {
+        const res = await startBooking(payload)
+        if (!res.ok) {
+          setError(res.error)
+          if (res.promoError) focusPromoField()
+          return
+        }
+        // TEST bypass: server confirmed without payment — go to confirmation.
+        if ("redirectUrl" in res) {
+          window.location.href = res.redirectUrl
+          return
+        }
+        if (res.discountIsk > 0) {
+          setReview({
+            form: res.form,
+            amountIsk: res.amountIsk,
+            discountIsk: res.discountIsk,
+          })
+          requestAnimationFrame(() => {
+            document
+              .getElementById("booking-discount-review")
+              ?.scrollIntoView({ behavior: "smooth", block: "center" })
+          })
+          return
+        }
+        // Reserved fine but Bokun applied no discount — treat as an invalid code
+        // rather than silently sending the guest to pay full price.
+        setError(t.promoInvalid)
+        focusPromoField()
+      } finally {
+        setApplying(false)
+      }
+    })
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
+    // here, so just advance through the wizard instead of attempting to pay.
+    if (currentKey !== "confirm") {
+      goNext()
+      return
+    }
+    // Discount already previewed: pay with the prepared (discounted) form and
+    // skip a second reservation.
+    if (review) {
+      submitSecurePayForm(review.form)
+      return
+    }
+    const payload = validateAndBuildPayload()
+    if (!payload) return
 
     startTransition(async () => {
       // 1. Create a pending booking and get a signed Teya SecurePay form
@@ -699,13 +794,7 @@ export function BookingForm({
       const res = await startBooking(payload)
       if (!res.ok) {
         setError(res.error)
-        if (res.promoError) {
-          requestAnimationFrame(() => {
-            const el = document.getElementById("booking-promo")
-            el?.scrollIntoView({ behavior: "smooth", block: "center" })
-            el?.focus({ preventScroll: true })
-          })
-        }
+        if (res.promoError) focusPromoField()
         return
       }
       // TEST bypass: server confirmed without payment — go to confirmation.
@@ -713,7 +802,22 @@ export function BookingForm({
         window.location.href = res.redirectUrl
         return
       }
-      // 2. Auto-submit the signed form to Teya's hosted SecurePay page.
+      // A promo discount was applied: show it for review first. The guest confirms
+      // with "Pay now", which submits this same prepared form (no re-reservation).
+      if (res.discountIsk > 0) {
+        setReview({
+          form: res.form,
+          amountIsk: res.amountIsk,
+          discountIsk: res.discountIsk,
+        })
+        requestAnimationFrame(() => {
+          document
+            .getElementById("booking-discount-review")
+            ?.scrollIntoView({ behavior: "smooth", block: "center" })
+        })
+        return
+      }
+      // 2. Otherwise auto-submit the signed form to Teya's hosted SecurePay page.
       submitSecurePayForm(res.form)
     })
   }
@@ -741,14 +845,6 @@ export function BookingForm({
 
   function validateStep2(): boolean {
     setError(null)
-    if (pickupRequired && !selectedPickup) {
-      setError(t.errChoosePickup)
-      return false
-    }
-    if (needsRoomNumber && !roomNumber.trim()) {
-      setError(t.errRoomNumber)
-      return false
-    }
     if (
       guestSlots.some(
         (g) =>
@@ -759,12 +855,50 @@ export function BookingForm({
       setError(t.errGuestNames)
       return false
     }
+    // Contact email + phone belong to participant 1 (primary contact) and are
+    // now collected on this step, so validate them before advancing.
+    const contactErrors: typeof fieldErrors = {}
+    if (!email.trim()) contactErrors.email = t.errEmail
+    if (!phone.trim()) contactErrors.phone = t.errPhone
+    if (Object.keys(contactErrors).length > 0) {
+      setFieldErrors(contactErrors)
+      const firstInvalidId = contactErrors.email
+        ? "booking-email"
+        : "booking-phone"
+      requestAnimationFrame(() => {
+        const el = document.getElementById(firstInvalidId)
+        el?.scrollIntoView({ behavior: "smooth", block: "center" })
+        el?.focus({ preventScroll: true })
+      })
+      return false
+    }
+    const wantsAccount = !session && createAccount
+    if (wantsAccount && accountPassword.length < 8) {
+      setError(t.errPassword)
+      return false
+    }
+    return true
+  }
+
+  // Add-ons + pickup step. Add-ons are optional, so only the pickup selection
+  // (when required) needs validation before advancing.
+  function validateStep3(): boolean {
+    setError(null)
+    if (pickupRequired && !selectedPickup) {
+      setError(t.errChoosePickup)
+      return false
+    }
+    if (needsRoomNumber && !roomNumber.trim()) {
+      setError(t.errRoomNumber)
+      return false
+    }
     return true
   }
 
   function goNext() {
     if (currentKey === "tour" && !validateStep1()) return
     if (currentKey === "details" && !validateStep2()) return
+    if (currentKey === "addons" && !validateStep3()) return
     setStep((s) => Math.min(totalSteps, s + 1))
   }
 
@@ -1068,7 +1202,7 @@ export function BookingForm({
               </>
             )}
 
-            {/* Step: add-ons */}
+            {/* Step: add-ons & pickup */}
             {currentKey === "addons" && (
               <>
                 {/* Add-ons */}
@@ -1123,13 +1257,8 @@ export function BookingForm({
                 })}
               </div>
             )}
-              </>
-            )}
 
-            {/* Step: details — pickup & participant names */}
-            {currentKey === "details" && (
-              <>
-            {/* Pickup / drop-off */}
+            {/* Pickup / drop-off (grouped with add-ons on this step) */}
             {pickupPlaces.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <div className="flex items-center gap-2">
@@ -1204,18 +1333,29 @@ export function BookingForm({
                 )}
               </div>
             )}
+              </>
+            )}
 
-            {/* Participant names */}
+            {/* Step: details — participant names & primary contact */}
+            {currentKey === "details" && (
+              <>
+            {/* Participants — participant 1 is the primary contact and also
+                supplies the booking's email + phone. */}
             {guestSlots.length > 0 && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">
-                  {guestSlots.length === 1
-                    ? t.participantName
-                    : t.participantNames}
+                  {guestSlots.length === 1 ? t.yourDetails : t.participantNames}
                 </p>
-                {guestSlots.map((g) => (
+                {guestSlots.map((g, gi) => (
                   <div key={g.key} className="flex flex-col gap-1.5">
-                    <Label>{g.label}</Label>
+                    <Label className="flex items-center gap-2">
+                      {guestSlots.length === 1 ? t.contactDetails : g.label}
+                      {gi === 0 && guestSlots.length > 1 && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          {t.primaryContact}
+                        </span>
+                      )}
+                    </Label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         id={`guest-${g.key}-first`}
@@ -1250,137 +1390,95 @@ export function BookingForm({
                         className={FIELD_CLASS}
                       />
                     </div>
+
+                    {/* Primary contact also enters email + phone. */}
+                    {gi === 0 && (
+                      <div className="mt-1 flex flex-col gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="booking-email">{t.email}</Label>
+                          <Input
+                            id="booking-email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                              clearFieldError("email")
+                              setEmail(e.target.value)
+                            }}
+                            required
+                            autoComplete="email"
+                            readOnly={!!lockedEmail}
+                            aria-invalid={!!fieldErrors.email}
+                            aria-describedby={
+                              lockedEmail ? "booking-email-hint" : undefined
+                            }
+                            className={FIELD_CLASS}
+                          />
+                          {fieldErrors.email && (
+                            <p className="text-xs text-destructive">
+                              {fieldErrors.email}
+                            </p>
+                          )}
+                          {lockedEmail && (
+                            <p
+                              id="booking-email-hint"
+                              className="text-xs text-muted-foreground"
+                            >
+                              {t.emailLockedHint}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="booking-phone">{t.phone}</Label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={phoneCountry}
+                              onValueChange={(v) => v && setPhoneCountry(v)}
+                            >
+                              <SelectTrigger
+                                aria-label={t.phoneCountryCode}
+                                className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                              >
+                                <span className="text-sm font-medium tabular-nums">
+                                  {phoneDial}
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PHONE_CODES.map((c) => (
+                                  <SelectItem key={c.iso} value={c.iso}>
+                                    {c.dial} {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              id="booking-phone"
+                              type="tel"
+                              value={phone}
+                              onChange={(e) => {
+                                clearFieldError("phone")
+                                setPhone(e.target.value)
+                              }}
+                              required
+                              autoComplete="tel-national"
+                              placeholder={t.phoneNumber}
+                              aria-invalid={!!fieldErrors.phone}
+                              className={`${FIELD_CLASS} flex-1`}
+                            />
+                          </div>
+                          {fieldErrors.phone && (
+                            <p className="text-xs text-destructive">
+                              {fieldErrors.phone}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-              </>
-            )}
 
-            {/* Step: confirm — contact, summary & pay */}
-            {currentKey === "confirm" && (
-              <>
-            {/* Contact details */}
-            <div className="flex flex-col gap-3 border-t border-border pt-4">
-              <p className="text-sm font-semibold text-foreground">
-                {t.contactDetails}
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-first-name">{t.firstName}</Label>
-                  <Input
-                    id="booking-first-name"
-                    value={firstName}
-                    onChange={(e) => {
-                      clearFieldError("firstName")
-                      setFirstName(e.target.value)
-                    }}
-                    required
-                    autoComplete="given-name"
-                    aria-invalid={!!fieldErrors.firstName}
-                    className={FIELD_CLASS}
-                  />
-                  {fieldErrors.firstName && (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors.firstName}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="booking-last-name">{t.lastName}</Label>
-                  <Input
-                    id="booking-last-name"
-                    value={lastName}
-                    onChange={(e) => {
-                      clearFieldError("lastName")
-                      setLastName(e.target.value)
-                    }}
-                    required
-                    autoComplete="family-name"
-                    aria-invalid={!!fieldErrors.lastName}
-                    className={FIELD_CLASS}
-                  />
-                  {fieldErrors.lastName && (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors.lastName}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-email">{t.email}</Label>
-                <Input
-                  id="booking-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    clearFieldError("email")
-                    setEmail(e.target.value)
-                  }}
-                  required
-                  autoComplete="email"
-                  readOnly={!!lockedEmail}
-                  aria-invalid={!!fieldErrors.email}
-                  aria-describedby={lockedEmail ? "booking-email-hint" : undefined}
-                  className={FIELD_CLASS}
-                />
-                {fieldErrors.email && (
-                  <p className="text-xs text-destructive">{fieldErrors.email}</p>
-                )}
-                {lockedEmail && (
-                  <p
-                    id="booking-email-hint"
-                    className="text-xs text-muted-foreground"
-                  >
-                    {t.emailLockedHint}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="booking-phone">{t.phone}</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={phoneCountry}
-                    onValueChange={(v) => v && setPhoneCountry(v)}
-                  >
-                    <SelectTrigger
-                      aria-label={t.phoneCountryCode}
-                      className="h-11 w-[5.25rem] shrink-0 justify-center gap-1 rounded-xl border-border bg-background/60 px-2 shadow-sm transition-all data-[size=default]:h-11 focus-visible:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-primary/25"
-                    >
-                      <span className="text-sm font-medium tabular-nums">
-                        {phoneDial}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PHONE_CODES.map((c) => (
-                        <SelectItem key={c.iso} value={c.iso}>
-                          {c.dial} {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    id="booking-phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => {
-                      clearFieldError("phone")
-                      setPhone(e.target.value)
-                    }}
-                    required
-                    autoComplete="tel-national"
-                    placeholder={t.phoneNumber}
-                    aria-invalid={!!fieldErrors.phone}
-                    className={`${FIELD_CLASS} flex-1`}
-                  />
-                </div>
-                {fieldErrors.phone && (
-                  <p className="text-xs text-destructive">{fieldErrors.phone}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Optional account creation */}
+            {/* Optional account creation (moved here with contact details). */}
             {!session && (
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <label className="flex items-start gap-3">
@@ -1415,7 +1513,12 @@ export function BookingForm({
                 )}
               </div>
             )}
+              </>
+            )}
 
+            {/* Step: confirm — contact, summary & pay */}
+            {currentKey === "confirm" && (
+              <>
             {/* Order summary */}
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <p className="text-sm font-semibold text-foreground">
@@ -1504,16 +1607,72 @@ export function BookingForm({
             {step === totalSteps && totalPax > 0 && (
               <div className="flex flex-col gap-1.5 border-t border-border pt-4">
                 <Label htmlFor="booking-promo">{t.promoLabel}</Label>
-                <Input
-                  id="booking-promo"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder={t.promoPlaceholder}
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  className="uppercase"
-                />
+                <div className="flex items-start gap-2">
+                  <Input
+                    id="booking-promo"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      // Enter applies the code instead of submitting the whole
+                      // form, but not while an IME is composing.
+                      if (
+                        e.key === "Enter" &&
+                        !e.nativeEvent.isComposing &&
+                        e.keyCode !== 229
+                      ) {
+                        e.preventDefault()
+                        onApplyPromo()
+                      }
+                    }}
+                    placeholder={t.promoPlaceholder}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    className="uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onApplyPromo}
+                    disabled={pending || !promoCode.trim() || Boolean(review)}
+                    className="shrink-0"
+                  >
+                    {applying ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      t.promoApply
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">{t.promoHint}</p>
+              </div>
+            )}
+
+            {review && (
+              <div
+                id="booking-discount-review"
+                className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-4"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Check className="size-4" aria-hidden="true" />
+                  {promoCode
+                    ? `${t.discountApplied} (${promoCode})`
+                    : t.discountApplied}
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{t.promoLabel}</span>
+                  <span className="font-medium text-foreground">
+                    {"\u2212"}
+                    <Price isk={review.discountIsk} />
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {t.newTotal}
+                  </span>
+                  <span className="font-heading text-xl font-extrabold text-foreground">
+                    <Price isk={review.amountIsk} />
+                  </span>
+                </div>
               </div>
             )}
 
@@ -1531,7 +1690,10 @@ export function BookingForm({
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   {totalPax > 0 ? (
-                    <Price isk={total} showIskBelow={step === totalSteps} />
+                    <Price
+                      isk={review ? review.amountIsk : total}
+                      showIskBelow={step === totalSteps}
+                    />
                   ) : startingPriceIsk > 0 ? (
                     <>
                       <Price isk={startingPriceIsk} />
@@ -1577,11 +1739,13 @@ export function BookingForm({
                     disabled={pending || totalPax <= 0}
                     className="flex-1 rounded-full"
                   >
-                    {pending ? (
+                    {pending && !applying ? (
                       <>
                         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         {t.redirecting}
                       </>
+                    ) : review ? (
+                      t.payNow
                     ) : (
                       t.confirmPay
                     )}

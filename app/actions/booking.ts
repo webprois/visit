@@ -58,7 +58,7 @@ export type BookingInput = {
 }
 
 export type StartBookingResult =
-  | { ok: true; form: SecurePayForm }
+  | { ok: true; form: SecurePayForm; amountIsk: number; discountIsk: number }
   | { ok: true; redirectUrl: string }
   | { ok: false; error: string; promoError?: boolean }
 
@@ -112,6 +112,8 @@ async function maybeCreateCustomerAccount(input: BookingInput): Promise<void> {
 type PreparedBooking = {
   id: string
   amountIsk: number
+  /** Discount (ISK) Bokun applied from the promo code; 0 when none. */
+  discountIsk: number
   tourTitle: string
   date: string
   customerEmail: string
@@ -373,6 +375,7 @@ async function persistBooking(
     booking: {
       id,
       amountIsk,
+      discountIsk,
       tourTitle,
       date: input.date,
       customerEmail: contactEmail,
@@ -433,7 +436,8 @@ export async function startBooking(
   const prep = await persistBooking(input, "pending")
   if (!prep.ok)
     return { ok: false, error: prep.error, promoError: prep.promoError }
-  const { id, amountIsk, tourTitle, date, customerEmail } = prep.booking
+  const { id, amountIsk, discountIsk, tourTitle, date, customerEmail } =
+    prep.booking
 
   // Opt-in account creation. Best-effort; never blocks the payment flow.
   await maybeCreateCustomerAccount(input)
@@ -500,7 +504,7 @@ export async function startBooking(
       .update(booking)
       .set({ teyaSessionId: id, updatedAt: new Date() })
       .where(eq(booking.id, id))
-    return { ok: true, form }
+    return { ok: true, form, amountIsk, discountIsk }
   } catch (err) {
     console.log("[v0] startBooking payment error:", (err as Error).message)
     await db
