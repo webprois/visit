@@ -18,14 +18,14 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
     tours && tours.length > 0 ? tours.slice(0, 6) : featuredTours
   const dict = await getServerDict()
   return (
-    <section id="tours" className="bg-secondary/50 py-16 md:py-24">
+    <section id="tours" className="bg-surface-alt py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-10 flex flex-col gap-3 md:mb-12 md:flex-row md:items-end md:justify-between">
+        <div className="mb-10 flex flex-col gap-3 md:mb-14 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
+            <p className="font-heading text-sm font-bold uppercase tracking-wider text-brand">
               {dict.featured.eyebrow}
             </p>
-            <h2 className="mt-2 max-w-xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
+            <h2 className="mt-3 max-w-xl text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
               {dict.featured.title}
             </h2>
           </div>
@@ -45,27 +45,32 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
             <a
               key={tour.id ?? tour.title}
               href={tour.id ? `/tours/${tour.id}` : "/tours"}
-              className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+              className="card-lift group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image
                   src={tour.image || "/placeholder.svg"}
                   alt={tour.title}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                {tour.categoryName ? (
+                  <span className="absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white ring-1 ring-inset ring-white/15 backdrop-blur">
+                    {tour.categoryName}
+                  </span>
+                ) : null}
+                {tour.rating > 0 && (
+                  <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm">
+                    <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                    {tour.rating.toFixed(1)}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-1 flex-col p-5">
-                {tour.rating > 0 && (
-                  <div className="mb-2 flex items-center gap-1 text-sm font-semibold text-foreground">
-                    <Star className="size-4 fill-primary text-primary" aria-hidden="true" />
-                    {tour.rating.toFixed(1)}
-                  </div>
-                )}
-                <h3 className="text-balance font-heading text-lg font-bold leading-snug text-foreground">
+                <h3 className="text-balance font-heading text-lg font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
                   {tour.title}
                 </h3>
 
@@ -84,7 +89,7 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
                   </span>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                <div className="mt-auto flex items-center justify-between border-t border-border pt-5">
                   <div>
                     <span className="text-xs text-muted-foreground">{dict.featured.from}</span>
                     <p className="font-heading text-xl font-extrabold text-foreground">
@@ -94,7 +99,7 @@ export async function FeaturedTours({ tours }: { tours?: FeaturedTour[] }) {
                   <span
                     className={buttonVariants({
                       size: "sm",
-                      className: "rounded-full",
+                      className: "rounded-full transition-transform group-hover:-translate-y-0.5",
                     })}
                   >
                     {dict.featured.viewTour}

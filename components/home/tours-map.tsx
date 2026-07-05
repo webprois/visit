@@ -32,15 +32,15 @@ export function ToursMap({
   if (points.length === 0) return null
 
   return (
-    <section id="map" aria-labelledby="home-map-heading" className="py-16 md:py-24">
+    <section id="map" aria-labelledby="home-map-heading" className="py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="mb-8 max-w-2xl md:mb-10">
-          <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
+          <p className="font-heading text-sm font-bold uppercase tracking-wider text-brand">
             {content.eyebrow}
           </p>
           <h2
             id="home-map-heading"
-            className="mt-2 text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl"
+            className="mt-3 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-5xl"
           >
             {content.title}
           </h2>
@@ -49,7 +49,7 @@ export function ToursMap({
           </p>
         </div>
 
-        <div className="relative isolate z-0 h-[28rem] overflow-hidden rounded-3xl border border-border shadow-sm md:h-[34rem]">
+        <div className="relative isolate z-0 h-[28rem] overflow-hidden rounded-3xl border border-border shadow-lg ring-1 ring-black/5 md:h-[34rem]">
           <HomeMap
             points={points}
             labels={{

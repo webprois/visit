@@ -16,7 +16,7 @@ export async function SiteFooter({
       {/* CTA */}
       {!hideNewsletter && (
         <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-          <div className="flex flex-col items-start gap-6 rounded-3xl bg-secondary p-8 text-foreground md:flex-row md:items-center md:justify-between md:p-12">
+          <div className="flex flex-col items-start gap-6 rounded-3xl border border-border bg-surface-alt p-8 text-foreground shadow-sm ring-1 ring-black/5 md:flex-row md:items-center md:justify-between md:p-12">
             <div>
               <h2 className="text-balance font-heading text-2xl font-extrabold md:text-3xl">
                 {dict.footer.ctaTitle}

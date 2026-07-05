@@ -154,9 +154,9 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
   return (
     <div
       ref={rootRef}
-          className="relative z-40 w-full rounded-2xl bg-card/95 p-4 shadow-xl backdrop-blur md:p-5"
+      className="relative z-40 w-full rounded-3xl border border-border bg-card p-4 shadow-2xl ring-1 ring-black/5 md:p-6"
     >
-      <div className="grid gap-3 md:grid-cols-[1.3fr_1.3fr_1fr_auto]">
+      <div className="grid gap-3 md:grid-cols-[1.3fr_1.3fr_1fr_auto] md:gap-4">
         {/* Experience */}
         <div className="relative flex flex-col gap-1.5">
           <span className="px-1 text-xs font-semibold text-muted-foreground">
@@ -310,7 +310,7 @@ export function TourSearch({ experiences }: { experiences: Experience[] }) {
           <Button
             size="lg"
             onClick={onSearch}
-            className="h-[46px] rounded-xl text-base font-bold md:px-8"
+            className="h-[52px] rounded-xl text-base font-bold shadow-sm transition-transform hover:-translate-y-0.5 md:px-9"
           >
             <Search className="size-5" aria-hidden="true" />
             {dict.search.searchNow}

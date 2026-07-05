@@ -12,7 +12,7 @@ function Stars({ rating }: { rating: number }) {
           key={i}
           className={
             i < Math.round(rating)
-              ? "size-4 fill-primary text-primary"
+              ? "size-4 fill-amber-400 text-amber-400"
               : "size-4 text-muted-foreground/40"
           }
         />
@@ -24,14 +24,14 @@ function Stars({ rating }: { rating: number }) {
 export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
   const dict = await getServerDict()
   return (
-    <section id="reviews" className="bg-secondary/50 py-16 md:py-24">
+    <section id="reviews" className="bg-surface-alt py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-10 flex flex-col gap-4 md:mb-12 md:flex-row md:items-end md:justify-between">
+        <div className="mb-10 flex flex-col gap-4 md:mb-14 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-heading text-sm font-bold uppercase tracking-wider text-primary">
+            <p className="font-heading text-sm font-bold uppercase tracking-wider text-brand">
               {dict.reviews.eyebrow}
             </p>
-            <h2 className="mt-2 max-w-xl text-balance font-heading text-3xl font-extrabold text-foreground md:text-4xl">
+            <h2 className="mt-3 max-w-xl text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
               {dict.reviews.title}
             </h2>
           </div>
@@ -61,7 +61,7 @@ export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
           {data.reviews.map((review, i) => (
             <li
               key={i}
-              className="flex flex-col gap-4 rounded-2xl bg-card p-6 shadow-sm"
+              className="card-lift flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 shadow-sm"
             >
               <Stars rating={review.rating} />
               <p className="flex-1 text-pretty leading-relaxed text-muted-foreground">
@@ -103,7 +103,7 @@ export async function GoogleReviews({ data }: { data: GooglePlaceReviews }) {
               href={data.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-card px-6 py-3 font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 font-medium text-foreground shadow-sm transition-colors hover:bg-secondary"
             >
               <Image
                 src="/brand/google.svg"

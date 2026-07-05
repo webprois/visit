@@ -1,5 +1,7 @@
 import { SiteHeader } from "@/components/site-header"
 import { Hero } from "@/components/hero"
+import { TourSearch } from "@/components/tour-search"
+import { SocialProof } from "@/components/social-proof"
 import { TourCategories } from "@/components/tour-categories"
 import { FeaturedTours } from "@/components/featured-tours"
 import { ToursMap } from "@/components/home/tours-map"
@@ -91,7 +93,12 @@ export default async function Page() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader locale={locale} />
       <main className="flex-1">
-        <Hero experiences={experiences} />
+        <Hero />
+        {/* Floating search card that overlaps the bottom of the hero. */}
+        <div className="relative z-40 mx-auto -mt-24 max-w-6xl px-4 md:-mt-28 md:px-6">
+          <TourSearch experiences={experiences} />
+        </div>
+        <SocialProof />
         <TourCategories categories={categories} />
         <FeaturedTours tours={handpicked} />
         <ToursMap

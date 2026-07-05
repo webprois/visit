@@ -25,6 +25,9 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-surface-alt: var(--surface-alt);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -51,40 +54,45 @@
 
 :root {
   color-scheme: light;
-  --background: #eef1f6;
-  --foreground: #1a2434;
+  /* Premium editorial light theme: clean white page with a soft alternate
+     surface, navy primary, and a blue brand accent used sparingly for pop. */
+  --background: #ffffff;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #1a2434;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #1a2434;
+  --popover-foreground: #0f172a;
   --primary: #1a2434;
   --primary-foreground: #ffffff;
-  --secondary: #e4e9f1;
+  --secondary: #f1f5f9;
   --secondary-foreground: #1a2434;
-  --muted: #e7ecf3;
-  --muted-foreground: #5a6a80;
-  --accent: #e3e7ee;
-  --accent-foreground: #1a2434;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #0c4a6e;
   --destructive: #ec4447;
-  /* Public site is borderless: thin 1px outlines are replaced by filled
-     surfaces, soft rings and shadows. Admin restores a visible border below. */
-  --border: transparent;
-  --input: #d3dbe7;
-  --ring: #1a2434;
+  /* Light mode uses subtle 1px borders (Scandinavian card definition); the
+     dark theme keeps its borderless, filled-surface look below. */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #3b82f6;
+  --brand: #3b82f6;
+  --brand-soft: #e0f2fe;
+  --surface-alt: #f8fafc;
   --chart-1: #ec4447;
-  --chart-2: #1a2434;
+  --chart-2: #3b82f6;
   --chart-3: #41845b;
   --chart-4: #e2a13c;
   --chart-5: #8a7ce0;
   --radius: 0.75rem;
-  --sidebar: #f4f6fa;
-  --sidebar-foreground: #1a2434;
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #0f172a;
   --sidebar-primary: #1a2434;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e4e9f1;
+  --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #1a2434;
-  --sidebar-border: #dbe1ea;
-  --sidebar-ring: #1a2434;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #3b82f6;
 }
 
 /* Legacy dark theme, toggleable via the light/dark switcher (next-themes adds
@@ -110,6 +118,9 @@
   --border: transparent;
   --input: #3a4762;
   --ring: #ec4647;
+  --brand: #ec4647;
+  --brand-soft: #2a1c22;
+  --surface-alt: #182031;
   --chart-1: #ec4647;
   --chart-2: #4a90c2;
   --chart-3: #56b89a;
