@@ -179,7 +179,7 @@ export default async function TourPage({
 
   const hasKnowBefore =
     tour.goodToKnowItems.length > 0 ||
-    Boolean(detail?.requirements) ||
+    tour.whatToBringItems.length > 0 ||
     Boolean(tour.importantInfo)
 
   return (
@@ -448,7 +448,7 @@ export default async function TourPage({
                     {dict.detail.knowBefore}
                   </h2>
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                    {detail?.requirements && (
+                    {tour.whatToBringItems.length > 0 && (
                       <div
                         className={
                           "rounded-2xl border border-border bg-card p-5" +
@@ -467,11 +467,7 @@ export default async function TourPage({
                           </p>
                         </div>
                         <ul className="mt-3 flex flex-col gap-2.5">
-                          {detail.requirements
-                            .split("\n")
-                            .map((line) => line.trim())
-                            .filter(Boolean)
-                            .map((line, i) => (
+                          {tour.whatToBringItems.map((line, i) => (
                               <li
                                 key={i}
                                 className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground"
@@ -490,7 +486,9 @@ export default async function TourPage({
                       <div
                         className={
                           "rounded-2xl border border-border bg-card p-5" +
-                          (!detail?.requirements ? " sm:col-span-2" : "")
+                          (tour.whatToBringItems.length === 0
+                            ? " sm:col-span-2"
+                            : "")
                         }
                       >
                         <div className="flex items-center gap-2">

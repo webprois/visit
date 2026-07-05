@@ -671,6 +671,8 @@ export type FullTour = MergedTour & {
   includedItems: string[]
   excludedItems: string[]
   goodToKnowItems: string[]
+  /** Localized "what to bring" list; edited wins, else Bokun's requirements. */
+  whatToBringItems: string[]
   /** Localized "important information" block; edited wins, else Bokun's attention. */
   importantInfo: string
   /** Localized itinerary steps; edited content wins, else Bokun's agenda. */
@@ -699,7 +701,7 @@ export async function getFullTour(
 
   // Pick a localized list field: translation[locale] → translation[en] → fallback.
   const list = (
-    field: "included" | "excluded" | "goodToKnow",
+    field: "included" | "excluded" | "goodToKnow" | "whatToBring",
     fallback: string[],
   ): string[] => {
     const localized = parseList(byLang[locale]?.[field])
@@ -749,6 +751,7 @@ export async function getFullTour(
     includedItems: list("included", detail?.included ?? []),
     excludedItems: list("excluded", detail?.excluded ?? []),
     goodToKnowItems: list("goodToKnow", detail?.knowBeforeYouGo ?? []),
+    whatToBringItems: list("whatToBring", parseList(detail?.requirements)),
     importantInfo: text("importantInfo", detail?.attention ?? ""),
     itinerary,
   }

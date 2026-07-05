@@ -492,6 +492,7 @@ export type TourTranslationInput = {
   included?: string | null
   excluded?: string | null
   goodToKnow?: string | null
+  whatToBring?: string | null
   importantInfo?: string | null
   /** JSON-encoded array of { title, body } itinerary steps. */
   itinerary?: string | null
@@ -562,6 +563,7 @@ export async function saveTourTranslations(
       included: cleanText(input.included),
       excluded: cleanText(input.excluded),
       goodToKnow: cleanText(input.goodToKnow),
+      whatToBring: cleanText(input.whatToBring),
       importantInfo: cleanText(input.importantInfo),
       itinerary: cleanItinerary(input.itinerary),
     }
@@ -602,6 +604,9 @@ const translationSchema = z.object({
   goodToKnow: z
     .string()
     .describe("Translated 'good to know' list, one item per line"),
+  whatToBring: z
+    .string()
+    .describe("Translated 'what to bring' list, one item per line"),
   importantInfo: z
     .string()
     .describe("Translated 'important information' free-text block"),
@@ -655,6 +660,7 @@ export async function translateTourContent(
     included: source.included ?? "",
     excluded: source.excluded ?? "",
     goodToKnow: source.goodToKnow ?? "",
+    whatToBring: source.whatToBring ?? "",
     importantInfo: source.importantInfo ?? "",
     itinerary: sourceItinerary,
   }
@@ -667,7 +673,7 @@ export async function translateTourContent(
       `Rules: keep the tone natural and engaging for travellers; preserve the ` +
       `meaning and any names of places, tours, and brands; do NOT translate proper ` +
       `nouns that are place names unless they have a well-known local form; for the ` +
-      `list fields (included, excluded, goodToKnow) keep exactly one item per line ` +
+      `list fields (included, excluded, goodToKnow, whatToBring) keep exactly one item per line ` +
       `and the same number of lines; for the itinerary, keep exactly the same number ` +
       `and order of steps; if an input field is empty, return it empty. ` +
       `Return only the translation, no extra commentary.`,
@@ -784,6 +790,11 @@ const fullContentSchema = z.object({
   goodToKnow: z
     .string()
     .describe("Practical 'good to know' notes, one item per line"),
+  whatToBring: z
+    .string()
+    .describe(
+      "What travellers should bring/wear for this tour, one concise item per line",
+    ),
   importantInfo: z
     .string()
     .describe(
