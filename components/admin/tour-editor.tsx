@@ -148,10 +148,17 @@ export function TourEditor({
   tour,
   categories,
   locations,
+  onStatusChange,
 }: {
   tour: MergedTour
   categories: TourCategory[]
   locations: StartingLocation[]
+  /** Notifies the parent list so status changes reflect instantly, without
+   *  waiting for the server round-trip from router.refresh(). */
+  onStatusChange?: (
+    bokunId: string,
+    patch: Partial<Pick<MergedTour, "visible" | "hidden" | "featured">>,
+  ) => void
 }) {
   const router = useRouter()
 
@@ -182,6 +189,8 @@ export function TourEditor({
   const [tourType, setTourType] = useState<string>(tour.tourType)
   const [featured, setFeatured] = useState(tour.featured)
   const [hidden, setHidden] = useState(tour.hidden)
+  // Publish state kept locally so the badge/button update instantly on save.
+  const [visible, setVisible] = useState(tour.visible)
   // Map: ordered route stops (single stop = simple location) and visibility.
   // Seed from stored stops, falling back to a single legacy coordinate.
   const [mapStops, setMapStops] = useState<MapStop[]>(() => {
@@ -450,6 +459,9 @@ export function TourEditor({
 
   function save(visible: boolean, action: "save" | "publish" | "unpublish") {
     setPendingAction(action)
+    // Reflect the new publish state immediately in the editor + parent list.
+    setVisible(visible)
+    onStatusChange?.(tour.bokunId, { visible })
     const en = content.en
     const byLang: Partial<Record<Locale, TourTranslationInput>> = {}
     for (const l of LOCALES) byLang[l] = toInput(content[l])
@@ -498,6 +510,7 @@ export function TourEditor({
   function toggleFeatured() {
     const next = !featured
     setFeatured(next)
+    onStatusChange?.(tour.bokunId, { featured: next })
     startTransition(async () => {
       await setTourFeatured(tour.bokunId, next)
       toast.success(next ? "Marked as featured" : "Removed from featured")
@@ -508,6 +521,7 @@ export function TourEditor({
   function toggleHidden() {
     const next = !hidden
     setHidden(next)
+    onStatusChange?.(tour.bokunId, { hidden: next })
     startTransition(async () => {
       await setTourHidden(tour.bokunId, next)
       toast.success(next ? "Tour hidden" : "Tour restored")
@@ -757,7 +771,7 @@ export function TourEditor({
           Status
         </span>
         <div className="flex items-center justify-between gap-2">
-          <StatusBadge visible={tour.visible} />
+          <StatusBadge visible={visible} />
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -1178,7 +1192,7 @@ export function TourEditor({
       <div className="flex shrink-0 flex-col gap-3 border-b border-border px-6 pt-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <StatusBadge visible={tour.visible} />
+            <StatusBadge visible={visible} />
             <span className="text-sm text-muted-foreground">
               Editing{" "}
               <span className="font-medium text-foreground">{tour.title}</span>
@@ -1251,7 +1265,7 @@ export function TourEditor({
           <Button
             type="button"
             variant="outline"
-            onClick={() => save(tour.visible, "save")}
+            onClick={() => save(visible, "save")}
             disabled={isPending || uploading}
           >
             {pendingAction === "save" ? (
@@ -1261,7 +1275,7 @@ export function TourEditor({
             )}
             Save
           </Button>
-          {tour.visible ? (
+          {visible ? (
             <Button
               type="button"
               variant="outline"
