@@ -1723,7 +1723,16 @@ export function BookingForm({
                   </Button>
                 )}
                 {step < totalSteps ? (
+                  // Distinct `key` from the submit button below: this forces
+                  // React to mount a SEPARATE DOM node for each, instead of
+                  // reusing one <button> and flipping its `type`. Without this,
+                  // clicking "Continue" into the final step synchronously
+                  // mutates this same node to type="submit" before the browser
+                  // evaluates the click's default action, so the form submits on
+                  // its own and reserves a Bokun booking before the guest ever
+                  // presses "Confirm & pay".
                   <Button
+                    key="nav-continue"
                     type="button"
                     size="lg"
                     onClick={goNext}
@@ -1734,6 +1743,7 @@ export function BookingForm({
                   </Button>
                 ) : (
                   <Button
+                    key="nav-submit"
                     type="submit"
                     size="lg"
                     disabled={pending || totalPax <= 0}
