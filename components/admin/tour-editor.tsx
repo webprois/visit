@@ -1308,18 +1308,10 @@ function isLangFilled(c: LangContent): boolean {
   )
 }
 
-/** True only when every core content field is present for a language, so the
- *  status dot can go green. Missing anything keeps it red. */
+/** True when the core content a traveller sees is present for a language, so
+ *  the status dot can go green. Missing any of these keeps it red. */
 function isLangComplete(c: LangContent): boolean {
-  return Boolean(
-    c.title.trim() &&
-      c.excerpt.trim() &&
-      c.description.trim() &&
-      c.included.trim() &&
-      c.excluded.trim() &&
-      c.goodToKnow.trim() &&
-      c.itinerary.length > 0,
-  )
+  return Boolean(c.title.trim() && c.excerpt.trim() && c.description.trim())
 }
 
 /** Convert editor state into the server action's input shape. */
