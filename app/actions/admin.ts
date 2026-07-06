@@ -957,17 +957,25 @@ const FIELD_GUIDANCE: Record<GeneratableField, string> = {
     "Write an engaging full description of 2-4 short paragraphs for the tour " +
     "page. Separate paragraphs with a blank line.",
   included:
-    "Write a concise \"What's included\" list. One short item per line, no " +
-    "bullet characters or numbering.",
+    "Write a \"What's included\" list. This MUST be a list: return 4-8 items, " +
+    "each a short phrase (not a full sentence) on its own line, separated by " +
+    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
+    "or numbering.",
   excluded:
-    "Write a concise \"Not included\" list. One short item per line, no bullet " +
-    "characters or numbering.",
+    "Write a \"Not included\" list. This MUST be a list: return 3-6 items, each " +
+    "a short phrase (not a full sentence) on its own line, separated by " +
+    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
+    "or numbering.",
   goodToKnow:
-    "Write practical \"good to know\" notes for travellers. One short item per " +
-    "line, no bullet characters or numbering.",
+    "Write practical \"good to know\" notes for travellers. This MUST be a " +
+    "list: return 3-6 items, each a short phrase on its own line, separated by " +
+    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
+    "or numbering.",
   whatToBring:
     "Write a \"What to bring\" list of what travellers should bring or wear. " +
-    "One short item per line, no bullet characters or numbering.",
+    "This MUST be a list: return 3-8 items, each a short phrase on its own " +
+    "line, separated by newlines. Do NOT write a paragraph. Do NOT add bullet " +
+    "characters, dashes, or numbering.",
   importantInfo:
     "Write important information travellers must read (safety, requirements, " +
     "restrictions) as a short free-text block. Separate distinct points with a " +
