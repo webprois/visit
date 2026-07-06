@@ -48,6 +48,8 @@ import {
   generateTourExcerpt,
   generateFullTourContent,
   generateTourItinerary,
+  generateTourField,
+  type GeneratableField,
   type TourTranslationInput,
 } from "@/app/actions/admin"
 import { LocationPicker } from "@/components/admin/location-picker"
@@ -177,6 +179,10 @@ export function TourEditor({
   const [generatingExcerpt, setGeneratingExcerpt] = useState(false)
   const [generatingFull, setGeneratingFull] = useState(false)
   const [generatingItinerary, setGeneratingItinerary] = useState(false)
+  // Which individual content field is currently generating with AI, if any.
+  const [generatingField, setGeneratingField] = useState<GeneratableField | null>(
+    null,
+  )
 
   // Shared (language-independent) settings.
   const [duration, setDuration] = useState(tour.duration)
@@ -489,6 +495,43 @@ export function TourEditor({
       )
     } finally {
       setGeneratingItinerary(false)
+    }
+  }
+
+  /**
+   * TESTING FEATURE: generate a single content field (description, list, or
+   * important info) for the active language from the tour's basic details.
+   * Overwrites just that field, so it must be reviewed before publishing.
+   */
+  async function handleGenerateField(field: GeneratableField, label: string) {
+    const source = buildAiSource()
+    if (!source) {
+      toast.error("Add a title or some details first, then generate.")
+      return
+    }
+
+    setGeneratingField(field)
+    try {
+      const value = await generateTourField(source, field, lang)
+      if (!value) {
+        toast.error("Couldn't generate content. Try again.")
+        return
+      }
+      markDirty()
+      setContent((prev) => ({
+        ...prev,
+        [lang]: { ...prev[lang], [field]: value },
+      }))
+      toast.success(`${label} generated for ${LOCALE_LABELS[lang]}. Review, then save.`)
+    } catch (err) {
+      console.log("[v0] generate field error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
+    } finally {
+      setGeneratingField(null)
     }
   }
 
@@ -1039,25 +1082,17 @@ export function TourEditor({
               placeholder={`Title (${LOCALE_SHORT[lang]})`}
             />
           </Field>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="excerpt">Short description</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
+          <Field
+            label="Short description"
+            htmlFor="excerpt"
+            action={
+              <GenerateAiButton
                 onClick={handleGenerateExcerpt}
-                disabled={generatingExcerpt || isPending}
-                className="h-7 shrink-0 px-2.5 text-xs"
-              >
-                {generatingExcerpt ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="size-3.5 text-primary" />
-                )}
-                Generate with AI
-              </Button>
-            </div>
+                generating={generatingExcerpt}
+                disabled={isPending}
+              />
+            }
+          >
             <Textarea
               id="excerpt"
               value={current.excerpt}
@@ -1065,10 +1100,7 @@ export function TourEditor({
               rows={2}
               placeholder="One or two lines shown on the tour card"
             />
-            <p className="text-xs text-muted-foreground">
-              {`Generates a short summary in ${LOCALE_LABELS[lang]} from this tour's details.`}
-            </p>
-          </div>
+          </Field>
           <div className="flex flex-col gap-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -1103,7 +1135,18 @@ export function TourEditor({
               {generatingFull ? "Generating…" : "Generate all content"}
             </Button>
           </div>
-          <Field label="Full description" htmlFor="description">
+          <Field
+            label="Full description"
+            htmlFor="description"
+            action={
+              <GenerateAiButton
+                onClick={() =>
+                  handleGenerateField("description", "Full description")
+                }
+                generating={generatingField === "description"}
+              />
+            }
+          >
             <Textarea
               id="description"
               value={current.description}
@@ -1117,26 +1160,45 @@ export function TourEditor({
             id="included"
             value={current.included}
             onChange={(v) => setField("included", v)}
+            onGenerate={() => handleGenerateField("included", "What's included")}
+            generating={generatingField === "included"}
           />
           <ListField
             label="Not included"
             id="excluded"
             value={current.excluded}
             onChange={(v) => setField("excluded", v)}
+            onGenerate={() => handleGenerateField("excluded", "Not included")}
+            generating={generatingField === "excluded"}
           />
           <ListField
             label="What to bring"
             id="whatToBring"
             value={current.whatToBring}
             onChange={(v) => setField("whatToBring", v)}
+            onGenerate={() => handleGenerateField("whatToBring", "What to bring")}
+            generating={generatingField === "whatToBring"}
           />
           <ListField
             label="Good to know"
             id="goodToKnow"
             value={current.goodToKnow}
             onChange={(v) => setField("goodToKnow", v)}
+            onGenerate={() => handleGenerateField("goodToKnow", "Good to know")}
+            generating={generatingField === "goodToKnow"}
           />
-          <Field label="Important information" htmlFor="importantInfo">
+          <Field
+            label="Important information"
+            htmlFor="importantInfo"
+            action={
+              <GenerateAiButton
+                onClick={() =>
+                  handleGenerateField("importantInfo", "Important information")
+                }
+                generating={generatingField === "importantInfo"}
+              />
+            }
+          >
             <Textarea
               id="importantInfo"
               value={current.importantInfo}
@@ -1517,18 +1579,59 @@ function toInput(c: LangContent): TourTranslationInput {
   }
 }
 
+/**
+ * TESTING FEATURE: shared "Generate with AI" button used across content fields.
+ * Shows a spinner while generating and a "Testing" badge to flag the feature.
+ */
+function GenerateAiButton({
+  onClick,
+  generating,
+  disabled,
+}: {
+  onClick: () => void
+  generating?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      disabled={generating || disabled}
+      className="h-7 shrink-0 px-2.5 text-xs"
+    >
+      {generating ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Sparkles className="size-3.5 text-primary" />
+      )}
+      {generating ? "Generating…" : "Generate with AI"}
+      <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+        Testing
+      </span>
+    </Button>
+  )
+}
+
 function Field({
   label,
   htmlFor,
+  action,
   children,
 }: {
   label: string
   htmlFor?: string
+  /** Optional control (e.g. a Generate with AI button) shown next to the label. */
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={htmlFor}>{label}</Label>
+        {action}
+      </div>
       {children}
     </div>
   )
@@ -1539,20 +1642,30 @@ function ListField({
   id,
   value,
   onChange,
+  onGenerate,
+  generating,
 }: {
   label: string
   id: string
   value: string
   onChange: (v: string) => void
+  /** TESTING FEATURE: generate this list with AI. */
+  onGenerate?: () => void
+  generating?: boolean
 }) {
   const count = value.split("\n").map((l) => l.trim()).filter(Boolean).length
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-        <span className="text-xs text-muted-foreground">
-          {count} {count === 1 ? "item" : "items"}
-        </span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Label htmlFor={id}>{label}</Label>
+          <span className="text-xs text-muted-foreground">
+            {count} {count === 1 ? "item" : "items"}
+          </span>
+        </div>
+        {onGenerate && (
+          <GenerateAiButton onClick={onGenerate} generating={generating} />
+        )}
       </div>
       <Textarea
         id={id}

@@ -939,3 +939,97 @@ export async function generateTourItinerary(
     ? JSON.stringify(output.itinerary)
     : null
 }
+
+/* ---------------- AI single field (testing) ---------------- */
+
+/** Text content fields that can be generated individually with AI. */
+export type GeneratableField =
+  | "description"
+  | "included"
+  | "excluded"
+  | "goodToKnow"
+  | "whatToBring"
+  | "importantInfo"
+
+/** Per-field guidance the model follows when generating a single field. */
+const FIELD_GUIDANCE: Record<GeneratableField, string> = {
+  description:
+    "Write an engaging full description of 2-4 short paragraphs for the tour " +
+    "page. Separate paragraphs with a blank line.",
+  included:
+    "Write a concise \"What's included\" list. One short item per line, no " +
+    "bullet characters or numbering.",
+  excluded:
+    "Write a concise \"Not included\" list. One short item per line, no bullet " +
+    "characters or numbering.",
+  goodToKnow:
+    "Write practical \"good to know\" notes for travellers. One short item per " +
+    "line, no bullet characters or numbering.",
+  whatToBring:
+    "Write a \"What to bring\" list of what travellers should bring or wear. " +
+    "One short item per line, no bullet characters or numbering.",
+  importantInfo:
+    "Write important information travellers must read (safety, requirements, " +
+    "restrictions) as a short free-text block. Separate distinct points with a " +
+    "blank line.",
+}
+
+const fieldSchema = z.object({
+  value: z.string().describe("The generated content for the requested field"),
+})
+
+/**
+ * TESTING FEATURE: generate a single content field for a tour from its basic
+ * details, in the requested language. The model may make reasonable, plausible
+ * assumptions, so the result MUST be reviewed before publishing. Returns the
+ * generated text (empty string when there's nothing to work from).
+ */
+export async function generateTourField(
+  source: FullContentSourceInput,
+  field: GeneratableField,
+  target: Locale = "en",
+): Promise<string> {
+  await assertAdmin()
+
+  const languageName = LOCALE_LABELS[target]
+
+  const payload = {
+    title: source.title ?? "",
+    description: source.description ?? "",
+    duration: source.duration ?? "",
+    difficulty: source.difficulty ?? "",
+    groupSize: source.groupSize ?? "",
+    location: source.location ?? "",
+    categories: source.categories ?? [],
+  }
+
+  if (!payload.title && !payload.description && payload.categories.length === 0) {
+    return ""
+  }
+
+  let output
+  try {
+    ;({ output } = await generateText({
+      model: "openai/gpt-5.4-mini",
+      system:
+        `You write marketing content for an Icelandic travel/tours website. ` +
+        `Given the basic details of a single tour, write content for ONE ` +
+        `specific field in ${languageName}. ${FIELD_GUIDANCE[field]} Rules: keep ` +
+        `the tone natural and engaging for travellers; build on the provided ` +
+        `details (place names, activities, duration, difficulty, group size, ` +
+        `categories); you may make reasonable, plausible assumptions but keep ` +
+        `them realistic and do NOT invent specific prices, exact times, or brand ` +
+        `names that aren't implied; no emoji. Return only the content for this ` +
+        `field.`,
+      prompt: JSON.stringify(payload),
+      output: Output.object({ schema: fieldSchema }),
+    }))
+  } catch (err) {
+    console.error("[v0] generateTourField failed:", err)
+    throw new Error(
+      err instanceof Error ? err.message : "AI content generation failed",
+    )
+  }
+
+  return output?.value?.trim() ?? ""
+}
