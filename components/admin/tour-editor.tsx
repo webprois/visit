@@ -1652,16 +1652,18 @@ const LIST_FIELDS = new Set<GeneratableField>([
 ])
 
 /**
- * Normalize AI output into a clean one-item-per-line list: strip leading bullet
- * characters and numbering, trim each line, and drop empty lines.
- */
-function normalizeList(text: string): string {
+  * Normalize AI output into a clean one-item-per-line list: strip leading bullet
+  * characters and numbering, trim each line, drop empty lines, and ensure each
+  * item ends with a period (unless it already ends with sentence punctuation).
+  */
+> function normalizeList(text: string): string {
   return text
-    .split("\n")
-    .map((line) => line.replace(/^\s*(?:[-*•‣·]|\d+[.)])\s*/, "").trim())
-    .filter(Boolean)
-    .join("\n")
-}
+  .split("\n")
+  .map((line) => line.replace(/^\s*(?:[-*•‣·]|\d+[.)])\s*/, "").trim())
+  .filter(Boolean)
+  .map((line) => (/[.!?…]$/.test(line) ? line : `${line}.`))
+  .join("\n")
+  }
 
 /**
  * TESTING FEATURE: shared "Generate with AI" button used across content fields.

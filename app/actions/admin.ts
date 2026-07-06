@@ -959,23 +959,23 @@ const FIELD_GUIDANCE: Record<GeneratableField, string> = {
   included:
     "Write a \"What's included\" list. This MUST be a list: return 4-8 items, " +
     "each a short phrase (not a full sentence) on its own line, separated by " +
-    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
-    "or numbering.",
+    "newlines. End every item with a period. Do NOT write a paragraph. Do NOT " +
+    "add bullet characters, dashes, or numbering.",
   excluded:
     "Write a \"Not included\" list. This MUST be a list: return 3-6 items, each " +
     "a short phrase (not a full sentence) on its own line, separated by " +
-    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
-    "or numbering.",
+    "newlines. End every item with a period. Do NOT write a paragraph. Do NOT " +
+    "add bullet characters, dashes, or numbering.",
   goodToKnow:
     "Write practical \"good to know\" notes for travellers. This MUST be a " +
     "list: return 3-6 items, each a short phrase on its own line, separated by " +
-    "newlines. Do NOT write a paragraph. Do NOT add bullet characters, dashes, " +
-    "or numbering.",
+    "newlines. End every item with a period. Do NOT write a paragraph. Do NOT " +
+    "add bullet characters, dashes, or numbering.",
   whatToBring:
     "Write a \"What to bring\" list of what travellers should bring or wear. " +
     "This MUST be a list: return 3-8 items, each a short phrase on its own " +
-    "line, separated by newlines. Do NOT write a paragraph. Do NOT add bullet " +
-    "characters, dashes, or numbering.",
+    "line, separated by newlines. End every item with a period. Do NOT write a " +
+    "paragraph. Do NOT add bullet characters, dashes, or numbering.",
   importantInfo:
     "Write important information travellers must read (safety, requirements, " +
     "restrictions) as a short free-text block. Separate distinct points with a " +
