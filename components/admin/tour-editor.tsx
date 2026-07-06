@@ -34,6 +34,7 @@ import {
   Plus,
   Search,
   Globe,
+  Undo2,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -183,6 +184,9 @@ export function TourEditor({
   const [generatingField, setGeneratingField] = useState<GeneratableField | null>(
     null,
   )
+  // Snapshots of a field's value from right before AI overwrote it, so the user
+  // can undo a single AI generation. Keyed by `${locale}:${field}`.
+  const [undoSnapshots, setUndoSnapshots] = useState<Record<string, string>>({})
 
   // Shared (language-independent) settings.
   const [duration, setDuration] = useState(tour.duration)
@@ -297,6 +301,47 @@ export function TourEditor({
       ...prev,
       [lang]: { ...prev[lang], [field]: value },
     }))
+    // A manual edit invalidates any pending AI undo for this field.
+    clearUndoSnapshot(field)
+  }
+
+  /** Store the pre-generation value of a field so it can be undone. */
+  function saveUndoSnapshot(field: string, previous: string) {
+    setUndoSnapshots((prev) => ({ ...prev, [`${lang}:${field}`]: previous }))
+  }
+
+  /** Drop the undo snapshot for a field (after undo or a manual edit). */
+  function clearUndoSnapshot(field: string) {
+    setUndoSnapshots((prev) => {
+      const key = `${lang}:${field}`
+      if (!(key in prev)) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
+  /** Restore a field to its value from just before the last AI generation. */
+  function handleUndoField(
+    field:
+      | "excerpt"
+      | "description"
+      | "included"
+      | "excluded"
+      | "goodToKnow"
+      | "whatToBring"
+      | "importantInfo",
+  ) {
+    const key = `${lang}:${field}`
+    const previous = undoSnapshots[key]
+    if (previous === undefined) return
+    markDirty()
+    setContent((prev) => ({
+      ...prev,
+      [lang]: { ...prev[lang], [field]: previous },
+    }))
+    clearUndoSnapshot(field)
+    toast.success("Reverted to the previous text.")
   }
 
   function setItinerary(steps: ItineraryStep[]) {
@@ -378,6 +423,7 @@ export function TourEditor({
         toast.error("Couldn't generate a description. Try again.")
         return
       }
+      saveUndoSnapshot("excerpt", source.excerpt)
       markDirty()
       setContent((prev) => ({
         ...prev,
@@ -512,11 +558,15 @@ export function TourEditor({
 
     setGeneratingField(field)
     try {
-      const value = await generateTourField(source, field, lang)
-      if (!value) {
+      const raw = await generateTourField(source, field, lang)
+      if (!raw) {
         toast.error("Couldn't generate content. Try again.")
         return
       }
+      // List fields must stay one-item-per-line, so strip any bullets or
+      // numbering the model might add and drop blank lines.
+      const value = LIST_FIELDS.has(field) ? normalizeList(raw) : raw
+      saveUndoSnapshot(field, content[lang][field] ?? "")
       markDirty()
       setContent((prev) => ({
         ...prev,
@@ -1090,6 +1140,8 @@ export function TourEditor({
                 onClick={handleGenerateExcerpt}
                 generating={generatingExcerpt}
                 disabled={isPending}
+                onUndo={() => handleUndoField("excerpt")}
+                canUndo={undoSnapshots[`${lang}:excerpt`] !== undefined}
               />
             }
           >
@@ -1144,6 +1196,8 @@ export function TourEditor({
                   handleGenerateField("description", "Full description")
                 }
                 generating={generatingField === "description"}
+                onUndo={() => handleUndoField("description")}
+                canUndo={undoSnapshots[`${lang}:description`] !== undefined}
               />
             }
           >
@@ -1160,24 +1214,40 @@ export function TourEditor({
             id="included"
             value={current.included}
             onChange={(v) => setField("included", v)}
+            onGenerate={() => handleGenerateField("included", "What's included")}
+            generating={generatingField === "included"}
+            onUndo={() => handleUndoField("included")}
+            canUndo={undoSnapshots[`${lang}:included`] !== undefined}
           />
           <ListField
             label="Not included"
             id="excluded"
             value={current.excluded}
             onChange={(v) => setField("excluded", v)}
+            onGenerate={() => handleGenerateField("excluded", "Not included")}
+            generating={generatingField === "excluded"}
+            onUndo={() => handleUndoField("excluded")}
+            canUndo={undoSnapshots[`${lang}:excluded`] !== undefined}
           />
           <ListField
             label="What to bring"
             id="whatToBring"
             value={current.whatToBring}
             onChange={(v) => setField("whatToBring", v)}
+            onGenerate={() => handleGenerateField("whatToBring", "What to bring")}
+            generating={generatingField === "whatToBring"}
+            onUndo={() => handleUndoField("whatToBring")}
+            canUndo={undoSnapshots[`${lang}:whatToBring`] !== undefined}
           />
           <ListField
             label="Good to know"
             id="goodToKnow"
             value={current.goodToKnow}
             onChange={(v) => setField("goodToKnow", v)}
+            onGenerate={() => handleGenerateField("goodToKnow", "Good to know")}
+            generating={generatingField === "goodToKnow"}
+            onUndo={() => handleUndoField("goodToKnow")}
+            canUndo={undoSnapshots[`${lang}:goodToKnow`] !== undefined}
           />
           <Field
             label="Important information"
@@ -1188,6 +1258,8 @@ export function TourEditor({
                   handleGenerateField("importantInfo", "Important information")
                 }
                 generating={generatingField === "importantInfo"}
+                onUndo={() => handleUndoField("importantInfo")}
+                canUndo={undoSnapshots[`${lang}:importantInfo`] !== undefined}
               />
             }
           >
@@ -1571,38 +1643,79 @@ function toInput(c: LangContent): TourTranslationInput {
   }
 }
 
+/** Content fields that are edited/stored as one-item-per-line lists. */
+const LIST_FIELDS = new Set<GeneratableField>([
+  "included",
+  "excluded",
+  "goodToKnow",
+  "whatToBring",
+])
+
+/**
+ * Normalize AI output into a clean one-item-per-line list: strip leading bullet
+ * characters and numbering, trim each line, and drop empty lines.
+ */
+function normalizeList(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^\s*(?:[-*•‣·]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean)
+    .join("\n")
+}
+
 /**
  * TESTING FEATURE: shared "Generate with AI" button used across content fields.
  * Shows a spinner while generating and a "Testing" badge to flag the feature.
+ * When an AI generation can be reverted, an inline Undo button is shown.
  */
 function GenerateAiButton({
   onClick,
   generating,
   disabled,
+  onUndo,
+  canUndo,
 }: {
   onClick: () => void
   generating?: boolean
   disabled?: boolean
+  /** TESTING FEATURE: revert the last AI generation for this field. */
+  onUndo?: () => void
+  canUndo?: boolean
 }) {
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={onClick}
-      disabled={generating || disabled}
-      className="h-7 shrink-0 px-2.5 text-xs"
-    >
-      {generating ? (
-        <Loader2 className="size-3.5 animate-spin" />
-      ) : (
-        <Sparkles className="size-3.5 text-primary" />
+    <div className="flex shrink-0 items-center gap-1.5">
+      {canUndo && onUndo && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onUndo}
+          disabled={generating}
+          className="h-7 px-2 text-xs text-muted-foreground"
+        >
+          <Undo2 className="size-3.5" />
+          Undo
+        </Button>
       )}
-      {generating ? "Generating…" : "Generate with AI"}
-      <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
-        Testing
-      </span>
-    </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={generating || disabled}
+        className="h-7 px-2.5 text-xs"
+      >
+        {generating ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Sparkles className="size-3.5 text-primary" />
+        )}
+        {generating ? "Generating…" : "Generate with AI"}
+        <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+          Testing
+        </span>
+      </Button>
+    </div>
   )
 }
 
@@ -1636,6 +1749,8 @@ function ListField({
   onChange,
   onGenerate,
   generating,
+  onUndo,
+  canUndo,
 }: {
   label: string
   id: string
@@ -1644,6 +1759,8 @@ function ListField({
   /** TESTING FEATURE: generate this list with AI. */
   onGenerate?: () => void
   generating?: boolean
+  onUndo?: () => void
+  canUndo?: boolean
 }) {
   const count = value.split("\n").map((l) => l.trim()).filter(Boolean).length
   return (
@@ -1656,7 +1773,12 @@ function ListField({
           </span>
         </div>
         {onGenerate && (
-          <GenerateAiButton onClick={onGenerate} generating={generating} />
+          <GenerateAiButton
+            onClick={onGenerate}
+            generating={generating}
+            onUndo={onUndo}
+            canUndo={canUndo}
+          />
         )}
       </div>
       <Textarea
