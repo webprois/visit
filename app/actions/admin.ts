@@ -721,42 +721,51 @@ const excerptSchema = z.object({
 export async function generateTourExcerpt(
   source: ExcerptSourceInput,
   target: Locale = "en",
-): Promise<string> {
-  await assertAdmin()
+): Promise<AiResult<string>> {
+  try {
+    await assertAdmin()
 
-  const languageName = LOCALE_LABELS[target]
+    const languageName = LOCALE_LABELS[target]
 
-  const payload = {
-    title: source.title ?? "",
-    description: source.description ?? "",
-    duration: source.duration ?? "",
-    difficulty: source.difficulty ?? "",
-    groupSize: source.groupSize ?? "",
-    location: source.location ?? "",
-    categories: source.categories ?? [],
+    const payload = {
+      title: source.title ?? "",
+      description: source.description ?? "",
+      duration: source.duration ?? "",
+      difficulty: source.difficulty ?? "",
+      groupSize: source.groupSize ?? "",
+      location: source.location ?? "",
+      categories: source.categories ?? [],
+    }
+
+    // Nothing meaningful to work from.
+    if (
+      !payload.title &&
+      !payload.description &&
+      payload.categories.length === 0
+    ) {
+      return { ok: true, data: "" }
+    }
+
+    const { output } = await generateText({
+      model: "openai/gpt-5.4-mini",
+      system:
+        `You write short, enticing marketing summaries for an Icelandic ` +
+        `travel/tours website. Given the details of a single tour, write ONE ` +
+        `short description in ${languageName} that would sit on the tour card. ` +
+        `Rules: 1-2 sentences, under 160 characters; lead with what makes the ` +
+        `experience exciting; be concrete using the provided details (place ` +
+        `names, activities, duration) but do NOT invent facts that aren't ` +
+        `supported by the input; keep the tone natural and engaging for ` +
+        `travellers; no quotes, no hashtags, no emoji. Return only the summary.`,
+      prompt: JSON.stringify(payload),
+      output: Output.object({ schema: excerptSchema }),
+    })
+
+    return { ok: true, data: output.excerpt.trim() }
+  } catch (err) {
+    console.error("[v0] generateTourExcerpt failed:", err)
+    return { ok: false, error: aiErrorMessage(err) }
   }
-
-  // Nothing meaningful to work from.
-  if (!payload.title && !payload.description && payload.categories.length === 0) {
-    return ""
-  }
-
-  const { output } = await generateText({
-    model: "openai/gpt-5.4-mini",
-    system:
-      `You write short, enticing marketing summaries for an Icelandic ` +
-      `travel/tours website. Given the details of a single tour, write ONE ` +
-      `short description in ${languageName} that would sit on the tour card. ` +
-      `Rules: 1-2 sentences, under 160 characters; lead with what makes the ` +
-      `experience exciting; be concrete using the provided details (place ` +
-      `names, activities, duration) but do NOT invent facts that aren't ` +
-      `supported by the input; keep the tone natural and engaging for ` +
-      `travellers; no quotes, no hashtags, no emoji. Return only the summary.`,
-    prompt: JSON.stringify(payload),
-    output: Output.object({ schema: excerptSchema }),
-  })
-
-  return output.excerpt.trim()
 }
 
 /* ---------------- AI full content (testing) ---------------- */
@@ -823,24 +832,23 @@ const fullContentSchema = z.object({
 export async function generateFullTourContent(
   source: FullContentSourceInput,
   target: Locale = "en",
-): Promise<TourTranslationInput> {
-  await assertAdmin()
-
-  const languageName = LOCALE_LABELS[target]
-
-  const payload = {
-    title: source.title ?? "",
-    description: source.description ?? "",
-    duration: source.duration ?? "",
-    difficulty: source.difficulty ?? "",
-    groupSize: source.groupSize ?? "",
-    location: source.location ?? "",
-    categories: source.categories ?? [],
-  }
-
-  let output
+): Promise<AiResult<TourTranslationInput>> {
   try {
-    ;({ output } = await generateText({
+    await assertAdmin()
+
+    const languageName = LOCALE_LABELS[target]
+
+    const payload = {
+      title: source.title ?? "",
+      description: source.description ?? "",
+      duration: source.duration ?? "",
+      difficulty: source.difficulty ?? "",
+      groupSize: source.groupSize ?? "",
+      location: source.location ?? "",
+      categories: source.categories ?? [],
+    }
+
+    const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
       system:
         `You write complete marketing content for an Icelandic travel/tours ` +
@@ -856,25 +864,26 @@ export async function generateFullTourContent(
         `subject. Return only the content.`,
       prompt: JSON.stringify(payload),
       output: Output.object({ schema: fullContentSchema }),
-    }))
+    })
+
+    if (!output) {
+      return { ok: false, error: "AI did not return any content" }
+    }
+
+    const { itinerary, ...rest } = output
+    return {
+      ok: true,
+      data: {
+        ...rest,
+        itinerary:
+          Array.isArray(itinerary) && itinerary.length > 0
+            ? JSON.stringify(itinerary)
+            : null,
+      },
+    }
   } catch (err) {
     console.error("[v0] generateFullTourContent failed:", err)
-    throw new Error(
-      err instanceof Error ? err.message : "AI content generation failed",
-    )
-  }
-
-  if (!output) {
-    throw new Error("AI did not return any content")
-  }
-
-  const { itinerary, ...rest } = output
-  return {
-    ...rest,
-    itinerary:
-      Array.isArray(itinerary) && itinerary.length > 0
-        ? JSON.stringify(itinerary)
-        : null,
+    return { ok: false, error: aiErrorMessage(err) }
   }
 }
 
@@ -898,24 +907,23 @@ const itinerarySchema = z.object({
 export async function generateTourItinerary(
   source: FullContentSourceInput,
   target: Locale = "en",
-): Promise<string | null> {
-  await assertAdmin()
-
-  const languageName = LOCALE_LABELS[target]
-
-  const payload = {
-    title: source.title ?? "",
-    description: source.description ?? "",
-    duration: source.duration ?? "",
-    difficulty: source.difficulty ?? "",
-    groupSize: source.groupSize ?? "",
-    location: source.location ?? "",
-    categories: source.categories ?? [],
-  }
-
-  let output
+): Promise<AiResult<string | null>> {
   try {
-    ;({ output } = await generateText({
+    await assertAdmin()
+
+    const languageName = LOCALE_LABELS[target]
+
+    const payload = {
+      title: source.title ?? "",
+      description: source.description ?? "",
+      duration: source.duration ?? "",
+      difficulty: source.difficulty ?? "",
+      groupSize: source.groupSize ?? "",
+      location: source.location ?? "",
+      categories: source.categories ?? [],
+    }
+
+    const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
       system:
         `You write itineraries for an Icelandic travel/tours website. Given the ` +
@@ -927,17 +935,17 @@ export async function generateTourItinerary(
         `to 1-2 sentences. Return only the itinerary.`,
       prompt: JSON.stringify(payload),
       output: Output.object({ schema: itinerarySchema }),
-    }))
+    })
+
+    const value =
+      output && Array.isArray(output.itinerary) && output.itinerary.length > 0
+        ? JSON.stringify(output.itinerary)
+        : null
+    return { ok: true, data: value }
   } catch (err) {
     console.error("[v0] generateTourItinerary failed:", err)
-    throw new Error(
-      err instanceof Error ? err.message : "AI itinerary generation failed",
-    )
+    return { ok: false, error: aiErrorMessage(err) }
   }
-
-  return output && Array.isArray(output.itinerary) && output.itinerary.length > 0
-    ? JSON.stringify(output.itinerary)
-    : null
 }
 
 /* ---------------- AI single field (testing) ---------------- */
@@ -987,6 +995,23 @@ const fieldSchema = z.object({
 })
 
 /**
+ * Discriminated result for AI generation actions. We RETURN errors instead of
+ * throwing because Next.js redacts thrown Server Action errors in production
+ * builds (replacing them with a generic "Server Components render" message).
+ * Returning the message keeps the real cause visible to the admin UI.
+ */
+export type AiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string }
+
+/** Turn any caught value into a readable message for the admin UI. */
+function aiErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === "string" && err) return err
+  return "AI generation failed. Please try again."
+}
+
+/**
  * TESTING FEATURE: generate a single content field for a tour from its basic
  * details, in the requested language. The model may make reasonable, plausible
  * assumptions, so the result MUST be reviewed before publishing. Returns the
@@ -996,28 +1021,31 @@ export async function generateTourField(
   source: FullContentSourceInput,
   field: GeneratableField,
   target: Locale = "en",
-): Promise<string> {
-  await assertAdmin()
-
-  const languageName = LOCALE_LABELS[target]
-
-  const payload = {
-    title: source.title ?? "",
-    description: source.description ?? "",
-    duration: source.duration ?? "",
-    difficulty: source.difficulty ?? "",
-    groupSize: source.groupSize ?? "",
-    location: source.location ?? "",
-    categories: source.categories ?? [],
-  }
-
-  if (!payload.title && !payload.description && payload.categories.length === 0) {
-    return ""
-  }
-
-  let output
+): Promise<AiResult<string>> {
   try {
-    ;({ output } = await generateText({
+    await assertAdmin()
+
+    const languageName = LOCALE_LABELS[target]
+
+    const payload = {
+      title: source.title ?? "",
+      description: source.description ?? "",
+      duration: source.duration ?? "",
+      difficulty: source.difficulty ?? "",
+      groupSize: source.groupSize ?? "",
+      location: source.location ?? "",
+      categories: source.categories ?? [],
+    }
+
+    if (
+      !payload.title &&
+      !payload.description &&
+      payload.categories.length === 0
+    ) {
+      return { ok: true, data: "" }
+    }
+
+    const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
       system:
         `You write marketing content for an Icelandic travel/tours website. ` +
@@ -1031,13 +1059,11 @@ export async function generateTourField(
         `field.`,
       prompt: JSON.stringify(payload),
       output: Output.object({ schema: fieldSchema }),
-    }))
+    })
+
+    return { ok: true, data: output?.value?.trim() ?? "" }
   } catch (err) {
     console.error("[v0] generateTourField failed:", err)
-    throw new Error(
-      err instanceof Error ? err.message : "AI content generation failed",
-    )
+    return { ok: false, error: aiErrorMessage(err) }
   }
-
-  return output?.value?.trim() ?? ""
 }

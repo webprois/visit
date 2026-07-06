@@ -407,7 +407,7 @@ export function TourEditor({
 
     setGeneratingExcerpt(true)
     try {
-      const excerpt = await generateTourExcerpt(
+      const result = await generateTourExcerpt(
         {
           title,
           description,
@@ -419,6 +419,11 @@ export function TourEditor({
         },
         lang,
       )
+      if (!result.ok) {
+        toast.error(`Generation failed: ${result.error}`)
+        return
+      }
+      const excerpt = result.data
       if (!excerpt) {
         toast.error("Couldn't generate a description. Try again.")
         return
@@ -430,8 +435,13 @@ export function TourEditor({
         [lang]: { ...prev[lang], excerpt },
       }))
       toast.success("Short description generated. Review, then save.")
-    } catch {
-      toast.error("Generation failed. Please try again.")
+    } catch (err) {
+      console.log("[v0] generate excerpt error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
     } finally {
       setGeneratingExcerpt(false)
     }
@@ -478,19 +488,24 @@ export function TourEditor({
     setGeneratingFull(true)
     try {
       const result = await generateFullTourContent(source, lang)
+      if (!result.ok) {
+        toast.error(`Generation failed: ${result.error}`)
+        return
+      }
+      const data = result.data
       markDirty()
       setContent((prev) => ({
         ...prev,
         [lang]: {
-          title: result.title ?? "",
-          excerpt: result.excerpt ?? "",
-          description: result.description ?? "",
-          included: result.included ?? "",
-          excluded: result.excluded ?? "",
-          goodToKnow: result.goodToKnow ?? "",
-          whatToBring: result.whatToBring ?? "",
-          importantInfo: result.importantInfo ?? "",
-          itinerary: parseItinerary(result.itinerary),
+          title: data.title ?? "",
+          excerpt: data.excerpt ?? "",
+          description: data.description ?? "",
+          included: data.included ?? "",
+          excluded: data.excluded ?? "",
+          goodToKnow: data.goodToKnow ?? "",
+          whatToBring: data.whatToBring ?? "",
+          importantInfo: data.importantInfo ?? "",
+          itinerary: parseItinerary(data.itinerary),
         },
       }))
       toast.success(
@@ -523,7 +538,11 @@ export function TourEditor({
     setGeneratingItinerary(true)
     try {
       const result = await generateTourItinerary(source, lang)
-      const steps = parseItinerary(result)
+      if (!result.ok) {
+        toast.error(`Generation failed: ${result.error}`)
+        return
+      }
+      const steps = parseItinerary(result.data)
       if (steps.length === 0) {
         toast.error("No itinerary could be generated. Please try again.")
         return
@@ -558,7 +577,12 @@ export function TourEditor({
 
     setGeneratingField(field)
     try {
-      const raw = await generateTourField(source, field, lang)
+      const result = await generateTourField(source, field, lang)
+      if (!result.ok) {
+        toast.error(`Generation failed: ${result.error}`)
+        return
+      }
+      const raw = result.data
       if (!raw) {
         toast.error("Couldn't generate content. Try again.")
         return
