@@ -82,7 +82,6 @@ const TOUR_TYPE_LABELS: Record<string, string> = {
 }
 
 type EditorTab =
-  | "overview"
   | "content"
   | "categories"
   | "locations"
@@ -91,7 +90,6 @@ type EditorTab =
   | "seo"
 
 const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
-  { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
   { id: "categories", label: "Categories" },
   { id: "locations", label: "Starting Location" },
@@ -218,7 +216,7 @@ export function TourEditor({
   const galleryFileRef = useRef<HTMLInputElement>(null)
 
   // Editor chrome: active tab, dirty tracking, last-saved time, category search.
-  const [tab, setTab] = useState<EditorTab>("overview")
+  const [tab, setTab] = useState<EditorTab>("content")
   const [dirty, setDirty] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [categorySearch, setCategorySearch] = useState("")
@@ -1012,7 +1010,23 @@ export function TourEditor({
 
   let tabContent: React.ReactNode = null
   switch (tab) {
-    case "overview":
+    case "map":
+      tabContent = (
+        <LocationPicker
+          stops={mapStops}
+          showOnMap={showOnMap}
+          onChangeStops={(next) => {
+            markDirty()
+            setMapStops(next)
+          }}
+          onToggleShow={(value) => {
+            markDirty()
+            setShowOnMap(value)
+          }}
+        />
+      )
+      break
+    case "content":
       tabContent = (
         <>
           {languageBar}
@@ -1055,29 +1069,6 @@ export function TourEditor({
               {`Generates a short summary in ${LOCALE_LABELS[lang]} from this tour's details.`}
             </p>
           </div>
-        </>
-      )
-      break
-    case "map":
-      tabContent = (
-        <LocationPicker
-          stops={mapStops}
-          showOnMap={showOnMap}
-          onChangeStops={(next) => {
-            markDirty()
-            setMapStops(next)
-          }}
-          onToggleShow={(value) => {
-            markDirty()
-            setShowOnMap(value)
-          }}
-        />
-      )
-      break
-    case "content":
-      tabContent = (
-        <>
-          {languageBar}
           <div className="flex flex-col gap-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
