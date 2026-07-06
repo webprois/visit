@@ -9,6 +9,10 @@ import { AdminShell } from "@/components/admin/admin-shell"
 import type { AdminSection } from "@/components/admin/admin-sidebar"
 
 export const dynamic = "force-dynamic"
+// AI content generation server actions run from this route; give them enough
+// headroom so longer generations (full description, full content) don't hit the
+// default serverless timeout.
+export const maxDuration = 60
 
 export default async function AdminPage({
   searchParams,
