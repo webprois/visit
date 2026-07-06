@@ -1160,32 +1160,24 @@ export function TourEditor({
             id="included"
             value={current.included}
             onChange={(v) => setField("included", v)}
-            onGenerate={() => handleGenerateField("included", "What's included")}
-            generating={generatingField === "included"}
           />
           <ListField
             label="Not included"
             id="excluded"
             value={current.excluded}
             onChange={(v) => setField("excluded", v)}
-            onGenerate={() => handleGenerateField("excluded", "Not included")}
-            generating={generatingField === "excluded"}
           />
           <ListField
             label="What to bring"
             id="whatToBring"
             value={current.whatToBring}
             onChange={(v) => setField("whatToBring", v)}
-            onGenerate={() => handleGenerateField("whatToBring", "What to bring")}
-            generating={generatingField === "whatToBring"}
           />
           <ListField
             label="Good to know"
             id="goodToKnow"
             value={current.goodToKnow}
             onChange={(v) => setField("goodToKnow", v)}
-            onGenerate={() => handleGenerateField("goodToKnow", "Good to know")}
-            generating={generatingField === "goodToKnow"}
           />
           <Field
             label="Important information"
