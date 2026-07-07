@@ -95,6 +95,9 @@ export function ToursWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(
     tours[0]?.bokunId ?? null,
   )
+  // On small screens the list and editor are shown one at a time
+  // (master-detail). The editor only opens after an explicit tap.
+  const [mobileEditorOpen, setMobileEditorOpen] = useState(false)
   // Multi-select for bulk actions (set of bokunIds).
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [bulkCategory, setBulkCategory] = useState<string>("")
@@ -274,8 +277,12 @@ export function ToursWorkspace({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Page header */}
-      <div className="flex shrink-0 flex-col gap-3 border-b border-border px-6 py-4">
+      {/* Page header (hidden on mobile while the editor is open to give the form room) */}
+      <div
+        className={`shrink-0 flex-col gap-3 border-b border-border px-6 py-4 ${
+          mobileEditorOpen ? "hidden lg:flex" : "flex"
+        }`}
+      >
         <div>
           <h1 className="font-heading text-xl font-bold text-foreground">Tours</h1>
           <p className="text-xs text-muted-foreground">
@@ -333,8 +340,12 @@ export function ToursWorkspace({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Left: list panel */}
-        <div className="flex w-full shrink-0 flex-col border-b border-border lg:h-full lg:w-[380px] lg:border-b-0 lg:border-r">
+        {/* Left: list panel (hidden on mobile while the editor is open) */}
+        <div
+          className={`w-full shrink-0 flex-col border-b border-border lg:h-full lg:w-[380px] lg:border-b-0 lg:border-r ${
+            mobileEditorOpen ? "hidden lg:flex" : "flex"
+          }`}
+        >
           <div className="flex flex-col gap-3 border-b border-border p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -596,7 +607,7 @@ export function ToursWorkspace({
           )}
 
           {/* Scrollable tour list */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-lg:max-h-[40vh]">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-16 text-center">
                 <Compass className="size-8 text-muted-foreground/40" aria-hidden="true" />
@@ -633,7 +644,10 @@ export function ToursWorkspace({
                         </label>
                         <button
                           type="button"
-                          onClick={() => setSelectedId(tour.bokunId)}
+                          onClick={() => {
+                            setSelectedId(tour.bokunId)
+                            setMobileEditorOpen(true)
+                          }}
                           aria-current={isActive ? "true" : undefined}
                           className="flex min-w-0 flex-1 items-center gap-3 text-left"
                         >
@@ -678,8 +692,27 @@ export function ToursWorkspace({
           </div>
         </div>
 
-        {/* Right: editor */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Right: editor (full screen on mobile, opened from the list) */}
+        <div
+          className={`min-h-0 min-w-0 flex-1 flex-col ${
+            mobileEditorOpen ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          {selected && (
+            <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileEditorOpen(false)}
+                className="inline-flex items-center gap-1.5 rounded-lg py-1 pr-2 text-sm font-semibold text-foreground hover:text-primary"
+              >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+                All tours
+              </button>
+              <span className="min-w-0 flex-1 truncate text-right text-xs text-muted-foreground">
+                {selected.title}
+              </span>
+            </div>
+          )}
           {selected ? (
             <TourEditor
               key={selected.bokunId}
