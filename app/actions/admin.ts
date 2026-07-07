@@ -10,6 +10,7 @@ import {
   tourStartingLocation,
   tourTranslation,
   type TourTranslation as TourTranslationRow,
+  type MapStop,
 } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath, revalidateTag } from "next/cache"
@@ -23,6 +24,11 @@ import { translateTexts } from "@/lib/translate"
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n"
 import { generateText, Output } from "ai"
 import { z } from "zod"
+import {
+  geocodeIceland,
+  geocodeIcelandSequential,
+  type GeocodeHit,
+} from "@/lib/geocode"
 
 function slugify(name: string): string {
   return name
@@ -820,7 +826,7 @@ export async function generateTourExcerpt(
   }
 }
 
-/* ---------------- AI full content (testing) ---------------- */
+/* ---------------- AI full content ---------------- */
 
 export type FullContentSourceInput = {
   bokunId?: string | null
@@ -875,7 +881,7 @@ const fullContentSchema = z.object({
 })
 
 /**
- * TESTING FEATURE: generate a full draft of every content field for a tour
+ * Generate a full draft of every content field for a tour
  * (title, excerpt, description, included, excluded, good to know, itinerary)
  * from its basic details, in the requested language. The model is allowed to
  * make reasonable, plausible assumptions to produce a complete draft, so the
@@ -958,7 +964,7 @@ const itinerarySchema = z.object({
 })
 
 /**
- * TESTING FEATURE: generate just the itinerary steps for a tour from its basic
+ * Generate just the itinerary steps for a tour from its basic
  * details, in the requested language. The model may make reasonable, plausible
  * assumptions, so the result MUST be reviewed before publishing. Returns the
  * steps as a JSON string (or null when none were produced).
@@ -1014,7 +1020,7 @@ export async function generateTourItinerary(
   }
 }
 
-/* ---------------- AI single field (testing) ---------------- */
+/* ---------------- AI single field ---------------- */
 
 /** Text content fields that can be generated individually with AI. */
 export type GeneratableField =
@@ -1085,7 +1091,7 @@ function aiErrorMessage(err: unknown): string {
 }
 
 /**
- * TESTING FEATURE: generate a single content field for a tour from its basic
+ * Generate a single content field for a tour from its basic
  * details, in the requested language. The model may make reasonable, plausible
  * assumptions, so the result MUST be reviewed before publishing. Returns the
  * generated text (empty string when there's nothing to work from).
@@ -1143,6 +1149,159 @@ export async function generateTourField(
     return { ok: true, data: output?.value?.trim() ?? "" }
   } catch (err) {
     console.error("[v0] generateTourField failed:", err)
+    return { ok: false, error: aiErrorMessage(err) }
+  }
+}
+
+/* ---------------- AI map stops (testing) ---------------- */
+
+export type TourStopsSourceInput = {
+  bokunId?: string | null
+  title?: string | null
+  description?: string | null
+  location?: string | null
+  /** Itinerary step titles, in order, when the editor already has them. */
+  itinerary?: string[]
+}
+
+const stopsSchema = z.object({
+  stops: z
+    .array(
+      z.object({
+        name: z
+          .string()
+          .describe(
+            "Short display label for the stop, e.g. 'Þingvellir National Park'",
+          ),
+        query: z
+          .string()
+          .describe(
+            "A precise, geocodable place name in Iceland for this stop, " +
+              "including region if helpful, e.g. 'Gullfoss waterfall, Iceland'",
+          ),
+      }),
+    )
+    .describe("Ordered list of stops along the tour route, start to finish"),
+})
+
+/**
+ * Extract an ordered list of route stops for a tour from its content and its
+ * original Bokun data, then geocode each one to real coordinates within
+ * Iceland. Returns MapStop[] the admin can review on the map before saving.
+ *
+ * The AI only decides which named places make up the route and their order;
+ * the coordinates always come from the geocoder, so pins land on the real
+ * location rather than an AI-guessed latitude/longitude.
+ */
+export async function generateTourStops(
+  source: TourStopsSourceInput,
+): Promise<AiResult<MapStop[]>> {
+  try {
+    await assertAdmin()
+
+    const bokunSource = await buildBokunReference(source.bokunId)
+
+    const payload = {
+      title: source.title ?? "",
+      description: source.description ?? "",
+      location: source.location ?? "",
+      itinerary: source.itinerary ?? [],
+      bokunSource,
+    }
+
+    if (
+      !payload.title &&
+      !payload.description &&
+      !payload.location &&
+      payload.itinerary.length === 0 &&
+      !bokunSource
+    ) {
+      return {
+        ok: false,
+        error: "Add a title, description, or itinerary first, then generate.",
+      }
+    }
+
+    const { output } = await generateText({
+      model: "openai/gpt-5.4-mini",
+      system:
+        `You map out the physical route of an Icelandic tour. Given a tour's ` +
+        `details, itinerary, and original Bokun data, identify the real, named ` +
+        `places the tour visits, in the order they are visited (start to end). ` +
+        BOKUN_SOURCE_RULES +
+        `Rules: only include actual, mappable places in Iceland (natural ` +
+        `landmarks, towns, sites, attractions) — never vague items like "lunch" ` +
+        `or "pickup"; do NOT invent stops that aren't supported by the input; ` +
+        `for each stop give a concise display name and a precise, geocodable ` +
+        `query ending in ", Iceland"; keep the list focused (typically 2-8 ` +
+        `stops); if the tour clearly visits a single place, return just that ` +
+        `one. Return only the stops.`,
+      prompt: JSON.stringify(payload),
+      output: Output.object({ schema: stopsSchema }),
+    })
+
+    const proposed = output?.stops ?? []
+    if (proposed.length === 0) {
+      return { ok: false, error: "No mappable stops could be identified." }
+    }
+
+    // Coordinates come from the geocoder, not the model. Drop any that can't
+    // be resolved so we never place a pin on a guessed location.
+    const hits = await geocodeIcelandSequential(proposed.map((s) => s.query))
+    const stops: MapStop[] = []
+    proposed.forEach((s, i) => {
+      const hit = hits[i]
+      if (hit) stops.push({ name: s.name.trim(), lat: hit.lat, lng: hit.lng })
+    })
+
+    if (stops.length === 0) {
+      return {
+        ok: false,
+        error:
+          "Couldn't find coordinates for the identified stops. Try adding them by address instead.",
+      }
+    }
+
+    return { ok: true, data: stops }
+  } catch (err) {
+    console.error("[v0] generateTourStops failed:", err)
+    return { ok: false, error: aiErrorMessage(err) }
+  }
+}
+
+/**
+ * Geocode a single free-text address or place name (within Iceland) into a
+ * map stop the admin can add to a tour's route.
+ */
+export async function geocodePlace(
+  query: string,
+): Promise<AiResult<MapStop>> {
+  try {
+    await assertAdmin()
+
+    const q = query.trim()
+    if (!q) return { ok: false, error: "Enter an address or place name." }
+
+    let hit: GeocodeHit | null = null
+    try {
+      hit = await geocodeIceland(q)
+    } catch (err) {
+      console.error("[v0] geocodePlace lookup failed:", err)
+      return { ok: false, error: "Address lookup failed. Please try again." }
+    }
+
+    if (!hit) {
+      return {
+        ok: false,
+        error: `No location found in Iceland for "${q}".`,
+      }
+    }
+
+    // Use the typed query as the stop label; it's usually cleaner than the
+    // geocoder's long formatted address.
+    return { ok: true, data: { name: q, lat: hit.lat, lng: hit.lng } }
+  } catch (err) {
+    console.error("[v0] geocodePlace failed:", err)
     return { ok: false, error: aiErrorMessage(err) }
   }
 }
