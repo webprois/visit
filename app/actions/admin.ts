@@ -1018,6 +1018,7 @@ export async function generateTourItinerary(
 
 /** Text content fields that can be generated individually with AI. */
 export type GeneratableField =
+  | "title"
   | "description"
   | "included"
   | "excluded"
@@ -1027,6 +1028,12 @@ export type GeneratableField =
 
 /** Per-field guidance the model follows when generating a single field. */
 const FIELD_GUIDANCE: Record<GeneratableField, string> = {
+  title:
+    "Write ONE clear, catchy tour title of at most 60 characters. Lead with " +
+    "the main attraction or activity, use title case, and do NOT wrap it in " +
+    "quotes or end it with a period. If a current title is provided in the " +
+    "input, treat it as the working title and improve it while keeping the " +
+    "same subject.",
   description:
     "Write an engaging full description of 2-4 short paragraphs for the tour " +
     "page. Separate paragraphs with a blank line.",

@@ -324,6 +324,7 @@ export function TourEditor({
   /** Restore a field to its value from just before the last AI generation. */
   function handleUndoField(
     field:
+      | "title"
       | "excerpt"
       | "description"
       | "included"
@@ -1183,7 +1184,18 @@ export function TourEditor({
               {generatingFull ? "Generating…" : "Generate all content"}
             </Button>
           </div>
-          <Field label="Title" htmlFor="title">
+          <Field
+            label="Title"
+            htmlFor="title"
+            action={
+              <GenerateAiButton
+                onClick={() => handleGenerateField("title", "Title")}
+                generating={generatingField === "title"}
+                onUndo={() => handleUndoField("title")}
+                canUndo={undoSnapshots[`${lang}:title`] !== undefined}
+              />
+            }
+          >
             <Input
               id="title"
               value={current.title}
