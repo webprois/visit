@@ -820,7 +820,7 @@ export async function generateTourExcerpt(
   }
 }
 
-/* ---------------- AI full content (testing) ---------------- */
+/* ---------------- AI full content ---------------- */
 
 export type FullContentSourceInput = {
   bokunId?: string | null
@@ -875,7 +875,7 @@ const fullContentSchema = z.object({
 })
 
 /**
- * TESTING FEATURE: generate a full draft of every content field for a tour
+ * Generate a full draft of every content field for a tour
  * (title, excerpt, description, included, excluded, good to know, itinerary)
  * from its basic details, in the requested language. The model is allowed to
  * make reasonable, plausible assumptions to produce a complete draft, so the
@@ -958,7 +958,7 @@ const itinerarySchema = z.object({
 })
 
 /**
- * TESTING FEATURE: generate just the itinerary steps for a tour from its basic
+ * Generate just the itinerary steps for a tour from its basic
  * details, in the requested language. The model may make reasonable, plausible
  * assumptions, so the result MUST be reviewed before publishing. Returns the
  * steps as a JSON string (or null when none were produced).
@@ -1014,7 +1014,7 @@ export async function generateTourItinerary(
   }
 }
 
-/* ---------------- AI single field (testing) ---------------- */
+/* ---------------- AI single field ---------------- */
 
 /** Text content fields that can be generated individually with AI. */
 export type GeneratableField =
@@ -1085,7 +1085,7 @@ function aiErrorMessage(err: unknown): string {
 }
 
 /**
- * TESTING FEATURE: generate a single content field for a tour from its basic
+ * Generate a single content field for a tour from its basic
  * details, in the requested language. The model may make reasonable, plausible
  * assumptions, so the result MUST be reviewed before publishing. Returns the
  * generated text (empty string when there's nothing to work from).

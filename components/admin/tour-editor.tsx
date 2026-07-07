@@ -449,7 +449,7 @@ export function TourEditor({
   }
 
   /**
-   * TESTING FEATURE: fill in every content field for the active language with an
+   * Fill in every content field for the active language with an
    * AI-generated draft based on the tour's basic details. Overwrites the current
    * language's content, so it must be reviewed before publishing.
    */
@@ -526,7 +526,7 @@ export function TourEditor({
   }
 
   /**
-   * TESTING FEATURE: generate just the itinerary steps for the active language
+   * Generate just the itinerary steps for the active language
    * from the tour's basic details. Overwrites the current itinerary, so it must
    * be reviewed before publishing.
    */
@@ -566,7 +566,7 @@ export function TourEditor({
   }
 
   /**
-   * TESTING FEATURE: generate a single content field (description, list, or
+   * Generate a single content field (description, list, or
    * important info) for the active language from the tour's basic details.
    * Overwrites just that field, so it must be reviewed before publishing.
    */
@@ -1687,9 +1687,9 @@ function normalizeList(text: string): string {
 }
 
 /**
- * TESTING FEATURE: shared "Generate with AI" button used across content fields.
- * Shows a spinner while generating and a "Testing" badge to flag the feature.
- * When an AI generation can be reverted, an inline Undo button is shown.
+ * Shared "Generate with AI" button used across content fields. Shows a
+ * spinner while generating. When an AI generation can be reverted, an inline
+ * Undo button is shown.
  */
 function GenerateAiButton({
   onClick,
@@ -1701,7 +1701,7 @@ function GenerateAiButton({
   onClick: () => void
   generating?: boolean
   disabled?: boolean
-  /** TESTING FEATURE: revert the last AI generation for this field. */
+  /** Revert the last AI generation for this field. */
   onUndo?: () => void
   canUndo?: boolean
 }) {
@@ -1734,9 +1734,6 @@ function GenerateAiButton({
           <Sparkles className="size-3.5 text-primary" />
         )}
         {generating ? "Generating…" : "Generate with AI"}
-        <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
-          Testing
-        </span>
       </Button>
     </div>
   )
@@ -1779,7 +1776,7 @@ function ListField({
   id: string
   value: string
   onChange: (v: string) => void
-  /** TESTING FEATURE: generate this list with AI. */
+  /** Generate this list with AI. */
   onGenerate?: () => void
   generating?: boolean
   onUndo?: () => void
@@ -1823,7 +1820,7 @@ function ItineraryField({
 }: {
   steps: ItineraryStep[]
   onChange: (steps: ItineraryStep[]) => void
-  /** TESTING FEATURE: generate the itinerary with AI. */
+  /** Generate the itinerary with AI. */
   onGenerate?: () => void
   generating?: boolean
 }) {
@@ -1867,9 +1864,6 @@ function ItineraryField({
               <Sparkles className="size-4 text-primary" />
             )}
             {generating ? "Generating…" : "Generate with AI"}
-            <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
-              Testing
-            </span>
           </Button>
         )}
       </div>
