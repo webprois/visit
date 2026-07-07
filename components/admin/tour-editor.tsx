@@ -1812,7 +1812,7 @@ function GenerateAiButton({
         ) : (
           <Sparkles className="size-3.5 text-primary" />
         )}
-        {generating ? "Generating…" : "Generate with AI"}
+        {generating ? "Generating…" : "Generate"}
       </Button>
     </div>
   )
@@ -1942,7 +1942,7 @@ function ItineraryField({
             ) : (
               <Sparkles className="size-4 text-primary" />
             )}
-            {generating ? "Generating…" : "Generate with AI"}
+            {generating ? "Generating…" : "Generate"}
           </Button>
         )}
       </div>
