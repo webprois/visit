@@ -95,7 +95,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="admin-surface flex h-svh overflow-hidden bg-background">
+    <div className="admin-surface flex h-svh flex-col overflow-hidden bg-background md:flex-row">
       <AdminSidebar
         active={section}
         onNavigate={handleNavigate}

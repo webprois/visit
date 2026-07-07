@@ -156,7 +156,7 @@ export function BookingsWorkspace({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex shrink-0 flex-col gap-3 border-b border-border px-6 py-4">
+      <div className="flex shrink-0 flex-col gap-3 border-b border-border px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="font-heading text-xl font-bold text-foreground">Bookings</h1>
@@ -214,7 +214,7 @@ export function BookingsWorkspace({
       ) : (
         <>
       {/* Filter bar */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-6 py-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-3 sm:px-6">
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -228,7 +228,7 @@ export function BookingsWorkspace({
           value={filters.confirmationCode}
           onChange={(e) => update({ confirmationCode: e.target.value })}
           placeholder="Confirmation code"
-          className="w-[180px]"
+          className="w-full sm:w-[180px]"
         />
         <Select value={filters.status} onValueChange={(v) => update({ status: v ?? "CONFIRMED" })}>
           <SelectTrigger className="w-[150px]">
@@ -242,13 +242,13 @@ export function BookingsWorkspace({
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1.5">
+        <div className="flex w-full items-center gap-1.5 sm:w-auto">
           <label className="text-xs text-muted-foreground">Travel</label>
           <Input
             type="date"
             value={filters.travelFrom}
             onChange={(e) => update({ travelFrom: e.target.value })}
-            className="w-[150px]"
+            className="min-w-0 flex-1 sm:w-[150px] sm:flex-none"
             aria-label="Travel date from"
           />
           <span className="text-muted-foreground">–</span>
@@ -256,7 +256,7 @@ export function BookingsWorkspace({
             type="date"
             value={filters.travelTo}
             onChange={(e) => update({ travelTo: e.target.value })}
-            className="w-[150px]"
+            className="min-w-0 flex-1 sm:w-[150px] sm:flex-none"
             aria-label="Travel date to"
           />
         </div>
@@ -292,7 +292,52 @@ export function BookingsWorkspace({
             <p className="text-sm text-muted-foreground">No bookings match these filters.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse text-sm">
+          <>
+          {/* Mobile: booking cards (the table needs more width than a phone has) */}
+          <ul className="flex flex-col gap-2 p-3 md:hidden">
+            {visible.map((b) => (
+              <li key={b.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(b)}
+                  className="flex w-full flex-col gap-1.5 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-secondary/50"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-medium text-foreground">
+                      {b.confirmationCode}
+                    </span>
+                    <span
+                      className={
+                        "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold " +
+                        statusTone(b.status)
+                      }
+                    >
+                      {b.status}
+                    </span>
+                  </div>
+                  <span className="line-clamp-1 text-sm font-medium text-foreground">
+                    {b.productTitle}
+                  </span>
+                  <span className="line-clamp-1 text-xs text-muted-foreground">
+                    {b.customerName}
+                    {b.customerEmail ? ` · ${b.customerEmail}` : ""}
+                  </span>
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {fmtDate(b.travelDateTime ?? b.travelDate)}
+                      {b.startTime ? ` · ${b.startTime}` : ""} · {b.totalParticipants} pax
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {fmtMoney(b.totalPrice, b.currency)}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop: full table */}
+          <table className="hidden w-full border-collapse text-sm md:table">
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-6 py-3 font-semibold">Confirmation</th>
@@ -353,11 +398,12 @@ export function BookingsWorkspace({
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
 
       {/* Pagination */}
-      <div className="flex shrink-0 items-center justify-between border-t border-border px-6 py-3 text-sm">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm sm:px-6">
         <span className="text-muted-foreground">
           Page {filters.page} of {totalPages}
           {text && ` · ${visible.length} shown after filter`}
