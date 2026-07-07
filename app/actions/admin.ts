@@ -692,9 +692,56 @@ export async function translateTourContent(
   }
 }
 
+/* ---------------- Bokun source data for AI ---------------- */
+
+/**
+ * Fetch the original Bokun content for a tour and shape it into a compact
+ * reference object the AI prompts can use as their factual source. Returns
+ * null when the tour has no Bokun detail (or the fetch fails) so generation
+ * gracefully falls back to the admin-entered fields only.
+ */
+async function buildBokunReference(bokunId?: string | null) {
+  if (!bokunId) return null
+  try {
+    const d = await fetchTourDetail(bokunId)
+    if (!d) return null
+    return {
+      description: d.description || "",
+      included: d.included,
+      excluded: d.excluded,
+      requirements: d.requirements || "",
+      attention: d.attention || "",
+      knowBeforeYouGo: d.knowBeforeYouGo,
+      itinerary: d.itinerary,
+      durationText: d.durationText ?? "",
+      difficulty: d.difficulty ?? "",
+      minAge: d.minAge,
+      minPerBooking: d.minPerBooking,
+      maxPerBooking: d.maxPerBooking,
+      location: d.location ?? "",
+      cancellationHours: d.cancellationHours,
+      hasPickup: d.hasPickup,
+    }
+  } catch (err) {
+    console.error("[v0] buildBokunReference failed:", err)
+    return null
+  }
+}
+
+/** Shared prompt rules for how the model must treat the Bokun source data. */
+const BOKUN_SOURCE_RULES =
+  `The input may contain a "bokunSource" object holding the ORIGINAL operator ` +
+  `data for this tour from the Bokun booking system (description, inclusions, ` +
+  `requirements, itinerary, duration, age limits, pickup, cancellation policy). ` +
+  `When present, treat it as the authoritative factual source: base all facts ` +
+  `on it, never contradict it, and prefer its specifics over guessing. Rewrite ` +
+  `and polish the wording rather than copying it verbatim. When it is absent, ` +
+  `fall back to the other provided details. `
+
 /* ---------------- AI short description ---------------- */
 
 export type ExcerptSourceInput = {
+  bokunId?: string | null
   title?: string | null
   description?: string | null
   duration?: string | null
@@ -727,6 +774,8 @@ export async function generateTourExcerpt(
 
     const languageName = LOCALE_LABELS[target]
 
+    const bokunSource = await buildBokunReference(source.bokunId)
+
     const payload = {
       title: source.title ?? "",
       description: source.description ?? "",
@@ -735,13 +784,15 @@ export async function generateTourExcerpt(
       groupSize: source.groupSize ?? "",
       location: source.location ?? "",
       categories: source.categories ?? [],
+      bokunSource,
     }
 
     // Nothing meaningful to work from.
     if (
       !payload.title &&
       !payload.description &&
-      payload.categories.length === 0
+      payload.categories.length === 0 &&
+      !bokunSource
     ) {
       return { ok: true, data: "" }
     }
@@ -752,6 +803,7 @@ export async function generateTourExcerpt(
         `You write short, enticing marketing summaries for an Icelandic ` +
         `travel/tours website. Given the details of a single tour, write ONE ` +
         `short description in ${languageName} that would sit on the tour card. ` +
+        BOKUN_SOURCE_RULES +
         `Rules: 1-2 sentences, under 160 characters; lead with what makes the ` +
         `experience exciting; be concrete using the provided details (place ` +
         `names, activities, duration) but do NOT invent facts that aren't ` +
@@ -771,6 +823,7 @@ export async function generateTourExcerpt(
 /* ---------------- AI full content (testing) ---------------- */
 
 export type FullContentSourceInput = {
+  bokunId?: string | null
   title?: string | null
   description?: string | null
   duration?: string | null
@@ -838,6 +891,8 @@ export async function generateFullTourContent(
 
     const languageName = LOCALE_LABELS[target]
 
+    const bokunSource = await buildBokunReference(source.bokunId)
+
     const payload = {
       title: source.title ?? "",
       description: source.description ?? "",
@@ -846,20 +901,24 @@ export async function generateFullTourContent(
       groupSize: source.groupSize ?? "",
       location: source.location ?? "",
       categories: source.categories ?? [],
+      bokunSource,
     }
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
       system:
         `You write complete marketing content for an Icelandic travel/tours ` +
-        `website. Given the basic details of a single tour, write a full draft ` +
-        `of ALL content fields in ${languageName}. Rules: keep the tone natural ` +
+        `website. Given the details of a single tour, write a full draft ` +
+        `of ALL content fields in ${languageName}. ` +
+        BOKUN_SOURCE_RULES +
+        `Rules: keep the tone natural ` +
         `and engaging for travellers; build on the provided details (place ` +
         `names, activities, duration, difficulty, group size, categories); you ` +
-        `may make reasonable, plausible assumptions to fill gaps, but keep them ` +
-        `realistic for this kind of tour and do NOT invent specific prices, exact ` +
-        `times, or brand names that aren't implied; for the list fields keep one ` +
-        `concise item per line; make the itinerary a sensible ordered sequence. ` +
+        `may make reasonable, plausible assumptions to fill small gaps, but keep ` +
+        `them realistic for this kind of tour and do NOT invent specific prices, ` +
+        `exact times, or brand names that aren't implied; for the list fields keep ` +
+        `one concise item per line; make the itinerary a sensible ordered sequence ` +
+        `(follow the bokunSource itinerary when it exists). ` +
         `If a provided title already exists, you may refine it but keep the same ` +
         `subject. Return only the content.`,
       prompt: JSON.stringify(payload),
@@ -913,6 +972,8 @@ export async function generateTourItinerary(
 
     const languageName = LOCALE_LABELS[target]
 
+    const bokunSource = await buildBokunReference(source.bokunId)
+
     const payload = {
       title: source.title ?? "",
       description: source.description ?? "",
@@ -921,14 +982,19 @@ export async function generateTourItinerary(
       groupSize: source.groupSize ?? "",
       location: source.location ?? "",
       categories: source.categories ?? [],
+      bokunSource,
     }
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
       system:
         `You write itineraries for an Icelandic travel/tours website. Given the ` +
-        `basic details of a single tour, write a sensible ordered itinerary in ` +
-        `${languageName}. Rules: base it on the provided details (place names, ` +
+        `details of a single tour, write a sensible ordered itinerary in ` +
+        `${languageName}. ` +
+        BOKUN_SOURCE_RULES +
+        `When the bokunSource has an itinerary, follow its steps and order, ` +
+        `rewriting each step's wording to be clear and engaging. ` +
+        `Rules: base everything on the provided details (place names, ` +
         `activities, duration, difficulty); you may make reasonable, plausible ` +
         `assumptions but keep them realistic and do NOT invent specific prices, ` +
         `exact times, or brand names that aren't implied; keep each step's body ` +
@@ -1027,6 +1093,8 @@ export async function generateTourField(
 
     const languageName = LOCALE_LABELS[target]
 
+    const bokunSource = await buildBokunReference(source.bokunId)
+
     const payload = {
       title: source.title ?? "",
       description: source.description ?? "",
@@ -1035,12 +1103,14 @@ export async function generateTourField(
       groupSize: source.groupSize ?? "",
       location: source.location ?? "",
       categories: source.categories ?? [],
+      bokunSource,
     }
 
     if (
       !payload.title &&
       !payload.description &&
-      payload.categories.length === 0
+      payload.categories.length === 0 &&
+      !bokunSource
     ) {
       return { ok: true, data: "" }
     }
@@ -1049,8 +1119,10 @@ export async function generateTourField(
       model: "openai/gpt-5.4-mini",
       system:
         `You write marketing content for an Icelandic travel/tours website. ` +
-        `Given the basic details of a single tour, write content for ONE ` +
-        `specific field in ${languageName}. ${FIELD_GUIDANCE[field]} Rules: keep ` +
+        `Given the details of a single tour, write content for ONE ` +
+        `specific field in ${languageName}. ${FIELD_GUIDANCE[field]} ` +
+        BOKUN_SOURCE_RULES +
+        `Rules: keep ` +
         `the tone natural and engaging for travellers; build on the provided ` +
         `details (place names, activities, duration, difficulty, group size, ` +
         `categories); you may make reasonable, plausible assumptions but keep ` +

@@ -409,6 +409,7 @@ export function TourEditor({
     try {
       const result = await generateTourExcerpt(
         {
+          bokunId: tour.bokunId,
           title,
           description,
           duration,
@@ -468,6 +469,7 @@ export function TourEditor({
     if (!title && !description && categoryNames.length === 0) return null
 
     return {
+      bokunId: tour.bokunId,
       title,
       description,
       duration,
