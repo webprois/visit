@@ -49,6 +49,8 @@ import {
   generateFullTourContent,
   generateTourItinerary,
   generateTourField,
+  generateTourStops,
+  geocodePlace,
   type GeneratableField,
   type TourTranslationInput,
 } from "@/app/actions/admin"
@@ -179,6 +181,8 @@ export function TourEditor({
   const [generatingExcerpt, setGeneratingExcerpt] = useState(false)
   const [generatingFull, setGeneratingFull] = useState(false)
   const [generatingItinerary, setGeneratingItinerary] = useState(false)
+  // Whether the AI is currently working out the tour's map stops.
+  const [generatingStops, setGeneratingStops] = useState(false)
   // Which individual content field is currently generating with AI, if any.
   const [generatingField, setGeneratingField] = useState<GeneratableField | null>(
     null,
@@ -562,6 +566,78 @@ export function TourEditor({
       )
     } finally {
       setGeneratingItinerary(false)
+    }
+  }
+
+  /**
+   * Work out the tour's map route with AI: identify the ordered places it
+   * visits (from the content, itinerary, and Bokun data) and geocode them to
+   * real coordinates, replacing the current stops. Reviewed before saving.
+   */
+  async function handleGenerateStops() {
+    const src = content[lang]
+    const title = src.title || content.en.title || tour.title
+    const description =
+      src.description || content.en.description || tour.description || ""
+    const locationName =
+      locations.find((l) => l.id === locationIds[0])?.name ||
+      tour.location ||
+      ""
+    const steps = (
+      src.itinerary.length ? src.itinerary : content.en.itinerary
+    )
+      .map((s) => s.title)
+      .filter(Boolean)
+
+    setGeneratingStops(true)
+    try {
+      const result = await generateTourStops({
+        bokunId: tour.bokunId,
+        title,
+        description,
+        location: locationName,
+        itinerary: steps,
+      })
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      markDirty()
+      setMapStops(result.data)
+      if (!showOnMap) setShowOnMap(true)
+      const n = result.data.length
+      toast.success(
+        `Added ${n} stop${n === 1 ? "" : "s"}. Review on the map, then save.`,
+      )
+    } catch (err) {
+      console.log("[v0] generate stops error:", err)
+      toast.error(
+        err instanceof Error && err.message
+          ? `Generation failed: ${err.message}`
+          : "Generation failed. Please try again.",
+      )
+    } finally {
+      setGeneratingStops(false)
+    }
+  }
+
+  /**
+   * Geocode a free-text address / place name and append it as a stop. Returns
+   * an error message for the picker to show inline, or null on success.
+   */
+  async function handleAddAddress(query: string): Promise<string | null> {
+    try {
+      const result = await geocodePlace(query)
+      if (!result.ok) return result.error
+      markDirty()
+      setMapStops((prev) => [...prev, result.data])
+      if (!showOnMap) setShowOnMap(true)
+      return null
+    } catch (err) {
+      console.log("[v0] geocode address error:", err)
+      return err instanceof Error && err.message
+        ? err.message
+        : "Lookup failed. Please try again."
     }
   }
 
@@ -1142,6 +1218,9 @@ export function TourEditor({
             markDirty()
             setShowOnMap(value)
           }}
+          onGenerateStops={handleGenerateStops}
+          generatingStops={generatingStops}
+          onAddAddress={handleAddAddress}
         />
       )
       break
