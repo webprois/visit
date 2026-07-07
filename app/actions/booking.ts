@@ -58,9 +58,24 @@ export type BookingInput = {
 }
 
 export type StartBookingResult =
-  | { ok: true; form: SecurePayForm; amountIsk: number; discountIsk: number }
+  | {
+      ok: true
+      // A reserved booking ready to pay. `form` is the Teya SecurePay form to
+      // POST; it's absent under the test payment bypass (Teya isn't configured),
+      // in which case the client finalizes via `finalizeTestBooking`.
+      form?: SecurePayForm
+      amountIsk: number
+      discountIsk: number
+      bookingId: string
+      bypass: boolean
+    }
   | { ok: true; redirectUrl: string }
   | { ok: false; error: string; promoError?: boolean }
+
+/** Result of finalizing a reserved booking under the TEST payment bypass. */
+export type FinalizeTestBookingResult =
+  | { ok: true; redirectUrl: string }
+  | { ok: false; error: string }
 
 /** Build an absolute origin for redirect URLs from the incoming request. */
 async function getOrigin(): Promise<string> {
@@ -427,12 +442,66 @@ function friendlyReserveError(raw: string | null): string {
 }
 
 /**
+ * TEST ONLY: is the payment bypass enabled? Enabled with
+ * BOOKING_TEST_BYPASS_PAYMENT=1 (also accepts "true"/"yes"). When on, bookings
+ * are confirmed without going through Teya.
+ */
+function isPaymentBypassEnabled(): boolean {
+  const raw = (process.env.BOOKING_TEST_BYPASS_PAYMENT ?? "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .toLowerCase()
+  return raw === "1" || raw === "true" || raw === "yes"
+}
+
+/**
+ * TEST ONLY: mark a still-pending booking paid and confirm its Bokun
+ * reservation directly (no payment). Shared by the immediate bypass path and
+ * the promo-review "Pay now" path so both behave identically.
+ */
+async function confirmBypassBooking(id: string): Promise<void> {
+  console.log(`[v0] TEST BYPASS: confirming booking ${id} without payment`)
+  const claimed = await db
+    .update(booking)
+    .set({
+      status: "paid",
+      teyaReference: "TEST-BYPASS",
+      updatedAt: new Date(),
+    })
+    .where(and(eq(booking.id, id), eq(booking.status, "pending")))
+    .returning({
+      code: booking.bokunConfirmationCode,
+      amount: booking.amountMinor,
+      currency: booking.currency,
+    })
+  if (claimed.length > 0 && claimed[0].code) {
+    const confirmed = await confirmBokunBooking(claimed[0].code, {
+      amount: claimed[0].amount,
+      currency: claimed[0].currency,
+      transactionId: "TEST-BYPASS",
+    })
+    if (!confirmed.ok) {
+      console.error(
+        `[v0] TEST BYPASS: Bokun confirm FAILED (${claimed[0].code}): ${confirmed.error}`,
+      )
+    }
+  }
+}
+
+/**
  * Legacy SecurePay flow: persist a pending booking and build a signed Teya
  * SecurePay form for the client to auto-submit (POST) to the hosted page.
+ *
+ * When `options.preview` is true (the promo "Apply" step), we ONLY reserve the
+ * booking so we can read the Bokun-applied discount for review — we never
+ * confirm or take payment. This is important under the test payment bypass:
+ * without it, applying a coupon would silently complete the order.
  */
 export async function startBooking(
   input: BookingInput,
+  options?: { preview?: boolean },
 ): Promise<StartBookingResult> {
+  const preview = options?.preview ?? false
   const prep = await persistBooking(input, "pending")
   if (!prep.ok)
     return { ok: false, error: prep.error, promoError: prep.promoError }
@@ -443,48 +512,28 @@ export async function startBooking(
   await maybeCreateCustomerAccount(input)
 
   const origin = await getOrigin()
+  const bypassPayment = isPaymentBypassEnabled()
+  console.log(
+    `[v0] startBooking preview=${preview} bypass=${bypassPayment} booking=${id}`,
+  )
 
   // --- TEST ONLY: skip Teya and push the booking straight through ---
-  // Enabled with BOOKING_TEST_BYPASS_PAYMENT=1. Marks the booking paid and
-  // confirms the Bokun reservation directly, then sends the user to the normal
-  // confirmation page. Remove the env var to restore real payments.
-  const bypassRaw = (process.env.BOOKING_TEST_BYPASS_PAYMENT ?? "")
-    .trim()
-    .replace(/^['"]|['"]$/g, "")
-    .toLowerCase()
-  const bypassPayment = bypassRaw === "1" || bypassRaw === "true" || bypassRaw === "yes"
-  console.log(`[v0] payment bypass flag raw="${bypassRaw}" active=${bypassPayment}`)
-  if (bypassPayment) {
-    console.log(`[v0] TEST BYPASS: confirming booking ${id} without payment`)
-    const claimed = await db
-      .update(booking)
-      .set({
-        status: "paid",
-        teyaReference: "TEST-BYPASS",
-        updatedAt: new Date(),
-      })
-      .where(and(eq(booking.id, id), eq(booking.status, "pending")))
-      .returning({
-        code: booking.bokunConfirmationCode,
-        amount: booking.amountMinor,
-        currency: booking.currency,
-      })
-    if (claimed.length > 0 && claimed[0].code) {
-      const confirmed = await confirmBokunBooking(claimed[0].code, {
-        amount: claimed[0].amount,
-        currency: claimed[0].currency,
-        transactionId: "TEST-BYPASS",
-      })
-      if (!confirmed.ok) {
-        console.error(
-          `[v0] TEST BYPASS: Bokun confirm FAILED (${claimed[0].code}): ${confirmed.error}`,
-        )
-      }
-    }
+  // Only on a real pay attempt (never during a promo preview). Marks the
+  // booking paid, confirms the Bokun reservation, and returns the confirmation
+  // page URL. Remove BOOKING_TEST_BYPASS_PAYMENT to restore real payments.
+  if (bypassPayment && !preview) {
+    await confirmBypassBooking(id)
     return {
       ok: true,
       redirectUrl: `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`,
     }
+  }
+
+  // Preview under the bypass: Teya isn't configured, so return the reserved
+  // booking (with discount) but no form. "Pay now" finalizes via
+  // finalizeTestBooking.
+  if (preview && bypassPayment) {
+    return { ok: true, amountIsk, discountIsk, bookingId: id, bypass: true }
   }
 
   const returnBase = `${origin}/tours/${input.bokunId}/booking/return?booking=${id}`
@@ -504,7 +553,7 @@ export async function startBooking(
       .update(booking)
       .set({ teyaSessionId: id, updatedAt: new Date() })
       .where(eq(booking.id, id))
-    return { ok: true, form, amountIsk, discountIsk }
+    return { ok: true, form, amountIsk, discountIsk, bookingId: id, bypass: false }
   } catch (err) {
     console.log("[v0] startBooking payment error:", (err as Error).message)
     await db
@@ -516,6 +565,26 @@ export async function startBooking(
       error:
         "We couldn't start the payment. Please try again or contact us to book.",
     }
+  }
+}
+
+/**
+ * TEST ONLY: finalize a booking that was reserved during a promo preview under
+ * the payment bypass. Called by "Pay now" so the guest explicitly confirms
+ * after reviewing the discount, instead of the order completing on "Apply".
+ */
+export async function finalizeTestBooking(
+  bookingId: string,
+  bokunId: string,
+): Promise<FinalizeTestBookingResult> {
+  if (!isPaymentBypassEnabled()) {
+    return { ok: false, error: "Payment bypass is disabled." }
+  }
+  await confirmBypassBooking(bookingId)
+  const origin = await getOrigin()
+  return {
+    ok: true,
+    redirectUrl: `${origin}/tours/${bokunId}/booking/return?booking=${bookingId}`,
   }
 }
 
