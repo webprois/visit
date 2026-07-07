@@ -16,7 +16,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { MapPin, Search, Plus, X, Loader2, Trash2, Save } from "lucide-react"
+import {
+  MapPin,
+  Search,
+  Plus,
+  X,
+  Loader2,
+  Trash2,
+  Save,
+  ArrowLeft,
+} from "lucide-react"
 import { toast } from "sonner"
 import {
   createStartingLocation,
@@ -37,6 +46,8 @@ export function LocationsWorkspace({
   const [selectedId, setSelectedId] = useState<number | null>(
     locations[0]?.id ?? null,
   )
+  // On small screens the list and detail are shown one at a time.
+  const [mobileEditorOpen, setMobileEditorOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState("")
@@ -110,8 +121,12 @@ export function LocationsWorkspace({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Left: location list */}
-        <div className="flex w-full shrink-0 flex-col border-b border-border lg:h-full lg:w-[380px] lg:border-b-0 lg:border-r">
+        {/* Left: location list (hidden on mobile while the detail is open) */}
+        <div
+          className={`w-full shrink-0 flex-col border-b border-border lg:h-full lg:w-[380px] lg:border-b-0 lg:border-r ${
+            mobileEditorOpen ? "hidden lg:flex" : "flex"
+          }`}
+        >
           <div className="flex flex-col gap-3 border-b border-border p-4">
             <p className="text-xs text-muted-foreground">
               Create and manage starting locations here. Assign them to tours
@@ -159,7 +174,7 @@ export function LocationsWorkspace({
               </Button>
             )}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-lg:max-h-[40vh]">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {locations.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-16 text-center">
                 <MapPin
@@ -182,7 +197,10 @@ export function LocationsWorkspace({
                     <li key={loc.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedId(loc.id)}
+                        onClick={() => {
+                          setSelectedId(loc.id)
+                          setMobileEditorOpen(true)
+                        }}
                         aria-current={isActive ? "true" : undefined}
                         className={
                           "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors " +
@@ -214,8 +232,27 @@ export function LocationsWorkspace({
           </div>
         </div>
 
-        {/* Right: selected location editor + its tours */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Right: selected location editor + its tours (full screen on mobile) */}
+        <div
+          className={`min-h-0 min-w-0 flex-1 flex-col ${
+            mobileEditorOpen ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          {selected && (
+            <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileEditorOpen(false)}
+                className="inline-flex items-center gap-1.5 rounded-lg py-1 pr-2 text-sm font-semibold text-foreground hover:text-primary"
+              >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+                All locations
+              </button>
+              <span className="min-w-0 flex-1 truncate text-right text-xs text-muted-foreground">
+                {selected.name}
+              </span>
+            </div>
+          )}
           {selected ? (
             <LocationDetail
               key={selected.id}
@@ -227,6 +264,7 @@ export function LocationsWorkspace({
               onSaved={() => router.refresh()}
               onDeleted={() => {
                 setSelectedId(null)
+                setMobileEditorOpen(false)
                 router.refresh()
               }}
             />
@@ -300,7 +338,7 @@ function LocationDetail({
     <div className="flex h-full min-h-0 flex-col">
       {/* Editable header */}
       <div className="flex shrink-0 flex-col gap-3 border-b border-border p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <MapPin className="size-5 text-primary" aria-hidden="true" />
           <Input
             value={name}
@@ -393,7 +431,7 @@ function LocationDetail({
             {tours.map((tour, i) => (
               <li
                 key={tour.id ?? i}
-                className="flex items-center gap-3 rounded-xl border border-border p-2.5"
+                className="flex min-w-0 items-center gap-3 rounded-xl border border-border p-2.5"
               >
                 <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                   {tour.image ? (
