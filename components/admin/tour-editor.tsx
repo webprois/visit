@@ -26,7 +26,6 @@ import {
   Send,
   FileText,
   Sparkles,
-  FlaskConical,
   Download,
   MapPin,
   ChevronUp,
@@ -1149,32 +1148,16 @@ export function TourEditor({
     case "content":
       tabContent = (
         <>
-          {languageBar}
-          <div className="flex flex-col gap-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                <FlaskConical className="size-4.5" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    Fill all content with AI
-                  </span>
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                    Testing
-                  </span>
-                </div>
-                <p className="max-w-prose text-xs leading-relaxed text-muted-foreground">
-                  {`Generates a full draft (description, lists, and itinerary) in ${LOCALE_LABELS[lang]} based on this tour's original Bokun data. It overwrites the current content, so always review before publishing.`}
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">{languageBar}</div>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               className="shrink-0"
               onClick={handleGenerateAllContent}
               disabled={generatingFull}
+              title={`Generates a full draft in ${LOCALE_LABELS[lang]} from this tour's original Bokun data. Overwrites the current content — review before publishing.`}
             >
               {generatingFull ? (
                 <Loader2 className="size-4 animate-spin" />
