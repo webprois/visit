@@ -58,7 +58,7 @@ export function DashboardShell({
   }
 
   return (
-    <div className="admin-surface flex h-svh overflow-hidden bg-background">
+    <div className="admin-surface flex h-svh flex-col overflow-hidden bg-background md:flex-row">
       <AdminSidebar
         active="overview"
         onNavigate={handleNavigate}
