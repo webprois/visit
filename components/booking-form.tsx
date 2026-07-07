@@ -34,7 +34,11 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
-import { startBooking, type BookingInput } from "@/app/actions/booking"
+import {
+  startBooking,
+  finalizeTestBooking,
+  type BookingInput,
+} from "@/app/actions/booking"
 import { useDict, useLocale } from "@/components/i18n-provider"
 import { fmt } from "@/lib/translations"
 import { authClient } from "@/lib/auth-client"
@@ -466,13 +470,16 @@ export function BookingForm({
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
   const [promoCode, setPromoCode] = useState("")
-  // After a valid promo code is applied, we hold the prepared (discounted) Teya
-  // form here and show a review panel so the guest sees the discount before
-  // paying. "Pay now" then submits this exact form — no second Bokun call.
+  // After a valid promo code is applied, we hold the prepared (discounted)
+  // reserved booking here and show a review panel so the guest sees the discount
+  // before paying. "Pay now" then either submits the prepared Teya form or, under
+  // the test payment bypass, finalizes the reserved booking — no second Bokun call.
   const [review, setReview] = useState<{
-    form: { url: string; fields: Record<string, string> }
+    form?: { url: string; fields: Record<string, string> }
     amountIsk: number
     discountIsk: number
+    bookingId: string
+    bypass: boolean
   } | null>(null)
   // True only while the "Apply" promo action is in flight. Kept separate from
   // the shared `pending` transition flag so applying a code doesn't make the
@@ -735,13 +742,15 @@ export function BookingForm({
     setApplying(true)
     startTransition(async () => {
       try {
-        const res = await startBooking(payload)
+        // preview: reserve only to read the discount. Never confirms the order,
+        // even under the test payment bypass — the guest pays via "Pay now".
+        const res = await startBooking(payload, { preview: true })
         if (!res.ok) {
           setError(res.error)
           if (res.promoError) focusPromoField()
           return
         }
-        // TEST bypass: server confirmed without payment — go to confirmation.
+        // Safety net: a preview should never return a redirect, but honor it.
         if ("redirectUrl" in res) {
           window.location.href = res.redirectUrl
           return
@@ -751,6 +760,8 @@ export function BookingForm({
             form: res.form,
             amountIsk: res.amountIsk,
             discountIsk: res.discountIsk,
+            bookingId: res.bookingId,
+            bypass: res.bypass,
           })
           requestAnimationFrame(() => {
             document
@@ -778,10 +789,24 @@ export function BookingForm({
       goNext()
       return
     }
-    // Discount already previewed: pay with the prepared (discounted) form and
-    // skip a second reservation.
+    // Discount already previewed: finalize the reserved booking. Under the test
+    // payment bypass we confirm it now; otherwise submit the prepared Teya form.
+    // Either way there's no second Bokun reservation.
     if (review) {
-      submitSecurePayForm(review.form)
+      if (review.bypass) {
+        startTransition(async () => {
+          const res = await finalizeTestBooking(review.bookingId, bokunId)
+          if (!res.ok) {
+            setError(res.error)
+            return
+          }
+          window.location.href = res.redirectUrl
+        })
+        return
+      }
+      if (review.form) {
+        submitSecurePayForm(review.form)
+      }
       return
     }
     const payload = validateAndBuildPayload()
@@ -803,12 +828,14 @@ export function BookingForm({
         return
       }
       // A promo discount was applied: show it for review first. The guest confirms
-      // with "Pay now", which submits this same prepared form (no re-reservation).
+      // with "Pay now", which reuses this reserved booking (no re-reservation).
       if (res.discountIsk > 0) {
         setReview({
           form: res.form,
           amountIsk: res.amountIsk,
           discountIsk: res.discountIsk,
+          bookingId: res.bookingId,
+          bypass: res.bypass,
         })
         requestAnimationFrame(() => {
           document
@@ -818,7 +845,9 @@ export function BookingForm({
         return
       }
       // 2. Otherwise auto-submit the signed form to Teya's hosted SecurePay page.
-      submitSecurePayForm(res.form)
+      if (res.form) {
+        submitSecurePayForm(res.form)
+      }
     })
   }
 
