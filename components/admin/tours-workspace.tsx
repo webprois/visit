@@ -22,6 +22,7 @@ import {
   Tag,
   X,
   Loader2,
+  ArrowLeft,
 } from "lucide-react"
 import { TourEditor } from "./tour-editor"
 import {
