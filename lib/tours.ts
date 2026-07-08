@@ -261,6 +261,8 @@ export type MergedTour = Tour & {
   gallery: GalleryImage[]
   difficulty: string | null
   groupSize: string | null
+  /** Admin-entered supplier SKU / product code (null when unset). */
+  supplierSku: string | null
   /** Primary category (first assigned), used for the card badge. */
   categoryId: number | null
   categoryName: string | null
@@ -407,6 +409,7 @@ export async function getMergedTours(
       gallery: parseGallery(o?.gallery),
       difficulty: o?.difficulty ?? null,
       groupSize: o?.groupSize ?? null,
+      supplierSku: o?.supplierSku?.trim() || null,
       // Tours are unpublished (draft) by default. A tour only becomes visible
       // on the public site once an admin explicitly publishes it, so anything
       // newly synced from Bokun stays hidden until reviewed.

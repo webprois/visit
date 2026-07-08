@@ -590,6 +590,13 @@ export default async function TourPage({
                   satelliteLabel={dict.map.satelliteView}
                 />
               )}
+
+              {/* Supplier product reference — intentionally low-key. */}
+              {tour.supplierSku && (
+                <p className="text-[11px] text-muted-foreground/60">
+                  {`Product code: ${tour.supplierSku}`}
+                </p>
+              )}
             </div>
 
             {/* Right: booking panel + reassurance cards */}
