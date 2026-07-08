@@ -675,7 +675,8 @@ export function ToursWorkspace({
                           <div className="mt-1 flex items-center gap-2">
                             <StatusDot visible={tour.visible} />
                             <span className="truncate text-xs text-muted-foreground">
-                              {tour.categoryName ?? "Uncategorized"}
+                              {tour.operator?.trim() || "No supplier"}
+                              {tour.supplierSku ? ` · ${tour.supplierSku}` : ""}
                             </span>
                           </div>
                           <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">

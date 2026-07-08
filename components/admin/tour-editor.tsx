@@ -201,6 +201,9 @@ export function TourEditor({
   const [duration, setDuration] = useState(tour.duration)
   const [difficulty, setDifficulty] = useState(tour.difficulty ?? "")
   const [groupSize, setGroupSize] = useState(tour.groupSize ?? "")
+  // Supplier SKU / product code (admin-entered). The supplier name itself comes
+  // from Bokun (tour.operator) and is read-only.
+  const [supplierSku, setSupplierSku] = useState(tour.supplierSku ?? "")
   const [imageUrl] = useState(tour.image)
   // Curated gallery (first item is the hero used on cards/gallery).
   const [gallery, setGallery] = useState<GalleryImage[]>(tour.gallery ?? [])
@@ -813,6 +816,7 @@ export function TourEditor({
         duration,
         difficulty,
         groupSize,
+        supplierSku,
         imageUrl: heroUrl,
         gallery,
         categoryIds,
@@ -1095,6 +1099,36 @@ export function TourEditor({
   const settingsPanel = (
     <div className="flex flex-col gap-5 p-5">
       <span className="text-sm font-semibold text-foreground">Tour settings</span>
+
+      {/* Supplier (read-only, from Bokun's vendor) + admin-entered SKU. */}
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/40 p-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Supplier
+          </span>
+          <span className="truncate text-sm font-medium text-foreground">
+            {tour.operator?.trim() || "—"}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="supplierSku"
+            className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Supplier SKU
+          </label>
+          <Input
+            id="supplierSku"
+            value={supplierSku}
+            onChange={(e) => {
+              markDirty()
+              setSupplierSku(e.target.value)
+            }}
+            placeholder="Supplier's product code"
+            className="h-10"
+          />
+        </div>
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
