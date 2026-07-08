@@ -73,6 +73,10 @@ type LangContent = {
   importantInfo: string
   /** Itinerary steps, edited as structured rows. */
   itinerary: ItineraryStep[]
+  /** SEO meta title override (empty = fall back to the tour title). */
+  metaTitle: string
+  /** SEO meta description override (empty = fall back to the excerpt). */
+  metaDescription: string
 }
 
 type ContentByLang = Record<Locale, LangContent>
@@ -99,7 +103,7 @@ const EDITOR_TABS: { id: EditorTab; label: string; soon?: boolean }[] = [
   { id: "locations", label: "Starting Location" },
   { id: "images", label: "Images" },
   { id: "map", label: "Map" },
-  { id: "seo", label: "SEO", soon: true },
+  { id: "seo", label: "SEO" },
 ]
 
 function emptyLang(): LangContent {
@@ -113,6 +117,8 @@ function emptyLang(): LangContent {
     whatToBring: "",
     importantInfo: "",
     itinerary: [],
+    metaTitle: "",
+    metaDescription: "",
   }
 }
 
@@ -257,6 +263,8 @@ export function TourEditor({
               whatToBring: row.whatToBring ?? "",
               importantInfo: row.importantInfo ?? "",
               itinerary: parseItinerary(row.itinerary),
+              metaTitle: row.metaTitle ?? "",
+              metaDescription: row.metaDescription ?? "",
             }
           }
           return next
@@ -296,7 +304,9 @@ export function TourEditor({
       | "excluded"
       | "goodToKnow"
       | "whatToBring"
-      | "importantInfo",
+      | "importantInfo"
+      | "metaTitle"
+      | "metaDescription",
     value: string,
   ) {
     markDirty()
@@ -1203,6 +1213,147 @@ export function TourEditor({
     </div>
   )
 
+  // SEO tab: per-language meta title + description with live previews. The
+  // previews mirror the public fallback chain (meta → this language's content
+  // → English → tour default) so the admin sees exactly what search engines
+  // and social cards will show.
+  const seoTitleFallback =
+    current.title.trim() || content.en.title.trim() || tour.title
+  const seoDescFallback =
+    current.excerpt.trim() ||
+    content.en.excerpt.trim() ||
+    tour.excerpt?.trim() ||
+    current.description.trim() ||
+    content.en.description.trim() ||
+    ""
+  const previewTitle =
+    current.metaTitle.trim() || `${seoTitleFallback} | Visit.is`
+  const previewDesc = current.metaDescription.trim() || seoDescFallback
+  const previewHero = gallery[0]?.url || imageUrl
+  const previewUrl = `visit.is/tours/${tour.bokunId}`
+  const titleLen = current.metaTitle.trim().length
+  const descLen = current.metaDescription.trim().length
+
+  const seoNode = (
+    <div className="flex flex-col gap-6">
+      {languageBar}
+
+      <Field
+        label="Meta title"
+        htmlFor="metaTitle"
+        action={
+          <span
+            className={
+              "text-xs tabular-nums " +
+              (titleLen > 60 ? "text-destructive" : "text-muted-foreground")
+            }
+          >
+            {titleLen}/60
+          </span>
+        }
+      >
+        <Input
+          id="metaTitle"
+          value={current.metaTitle}
+          onChange={(e) => setField("metaTitle", e.target.value)}
+          className="h-11 text-base"
+          placeholder={`${seoTitleFallback} | Visit.is`}
+        />
+        <p className="text-xs text-muted-foreground">
+          The clickable headline in search results. Leave empty to use the tour
+          title. Aim for under 60 characters.
+        </p>
+      </Field>
+
+      <Field
+        label="Meta description"
+        htmlFor="metaDescription"
+        action={
+          <span
+            className={
+              "text-xs tabular-nums " +
+              (descLen > 160 ? "text-destructive" : "text-muted-foreground")
+            }
+          >
+            {descLen}/160
+          </span>
+        }
+      >
+        <Textarea
+          id="metaDescription"
+          value={current.metaDescription}
+          onChange={(e) => setField("metaDescription", e.target.value)}
+          rows={3}
+          className="text-base"
+          placeholder={seoDescFallback || "Short summary shown under the title in search results."}
+        />
+        <p className="text-xs text-muted-foreground">
+          The summary under the title in search results. Leave empty to use the
+          short description. Aim for 120&ndash;160 characters.
+        </p>
+      </Field>
+
+      {/* Google-style search result preview */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Search className="size-3.5" aria-hidden="true" />
+          Search result preview
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="truncate text-xs text-muted-foreground">{previewUrl}</p>
+          <p className="mt-1 truncate text-lg font-medium text-primary">
+            {previewTitle}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+            {previewDesc ||
+              "Add a description above so search engines show a summary here."}
+          </p>
+        </div>
+      </div>
+
+      {/* Social share (Open Graph) card preview */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Globe className="size-3.5" aria-hidden="true" />
+          Social share preview
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          {previewHero ? (
+            <div className="relative aspect-[1.91/1] w-full bg-secondary">
+              <Image
+                src={previewHero || "/placeholder.svg"}
+                alt={seoTitleFallback}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 640px"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="flex aspect-[1.91/1] w-full items-center justify-center bg-secondary text-sm text-muted-foreground">
+              Add an image on the Images tab to set the share picture
+            </div>
+          )}
+          <div className="flex flex-col gap-0.5 border-t border-border p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              visit.is
+            </p>
+            <p className="truncate text-sm font-semibold text-foreground">
+              {previewTitle}
+            </p>
+            <p className="line-clamp-2 text-xs text-muted-foreground">
+              {previewDesc}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Facebook, X, WhatsApp and others show this card when the tour is
+          shared. The image is the tour&apos;s hero photo from the Images tab.
+        </p>
+      </div>
+    </div>
+  )
+
   let tabContent: React.ReactNode = null
   switch (tab) {
     case "map":
@@ -1574,13 +1725,7 @@ export function TourEditor({
       )
       break
     case "seo":
-      tabContent = (
-        <ComingSoon
-          icon={Globe}
-          title="SEO settings"
-          desc="Custom URL slug, meta title and description, and social share previews. Coming in the next phase."
-        />
-      )
+      tabContent = seoNode
       break
   }
 
@@ -1740,6 +1885,8 @@ function toInput(c: LangContent): TourTranslationInput {
     whatToBring: c.whatToBring,
     importantInfo: c.importantInfo,
     itinerary: serializeItinerary(c.itinerary),
+    metaTitle: c.metaTitle,
+    metaDescription: c.metaDescription,
   }
 }
 
@@ -2076,31 +2223,6 @@ function SaveStatus({
     )
   }
   return null
-}
-
-function ComingSoon({
-  icon: Icon,
-  title,
-  desc,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  desc: string
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center">
-      <Icon className="size-8 text-muted-foreground" />
-      <div className="flex flex-col gap-1">
-        <p className="text-base font-semibold text-foreground">{title}</p>
-        <p className="max-w-sm text-pretty text-sm text-muted-foreground">
-          {desc}
-        </p>
-      </div>
-      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase text-muted-foreground">
-        Coming soon
-      </span>
-    </div>
-  )
 }
 
 function BokunTexts({

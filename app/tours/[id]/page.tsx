@@ -50,12 +50,37 @@ export async function generateMetadata({
   const locale = await getLocale()
   const tour = await getFullTour(id, locale)
   if (!tour) return { title: "Tour not found | Visit.is" }
+
+  // Admin-set SEO meta wins; otherwise derive sensible defaults from content.
+  const title = tour.metaTitle?.trim() || `${tour.title} | Visit.is`
+  const description =
+    tour.metaDescription?.trim() ||
+    tour.excerpt?.trim() ||
+    tour.fullDescription.slice(0, 155) ||
+    `Book ${tour.title} in ${tour.location}. ${tour.duration} adventure with Visit.is.`
+  // The hero image (curated gallery hero → override → Bokun) is the share image.
+  const image = tour.image
+  const canonical = `/tours/${id}`
+
   return {
-    title: `${tour.title} | Visit.is`,
-    description:
-      tour.excerpt?.trim() ||
-      tour.fullDescription.slice(0, 155) ||
-      `Book ${tour.title} in ${tour.location}. ${tour.duration} adventure with Visit.is.`,
+    metadataBase: new URL("https://visit.is"),
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      siteName: "Visit.is",
+      title,
+      description,
+      url: canonical,
+      ...(image ? { images: [{ url: image, alt: tour.title }] } : {}),
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   }
 }
 
