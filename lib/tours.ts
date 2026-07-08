@@ -677,6 +677,10 @@ export type FullTour = MergedTour & {
   importantInfo: string
   /** Localized itinerary steps; edited content wins, else Bokun's agenda. */
   itinerary: ItineraryStep[]
+  /** SEO meta title override for the active locale (empty when unset). */
+  metaTitle: string
+  /** SEO meta description override for the active locale (empty when unset). */
+  metaDescription: string
 }
 
 /**
@@ -713,7 +717,7 @@ export async function getFullTour(
 
   // Pick a localized free-text field: translation[locale] → translation[en] → fallback.
   const text = (
-    field: "importantInfo",
+    field: "importantInfo" | "metaTitle" | "metaDescription",
     fallback: string,
   ): string => {
     const localized = byLang[locale]?.[field]?.trim()
@@ -754,6 +758,8 @@ export async function getFullTour(
     whatToBringItems: list("whatToBring", parseList(detail?.requirements)),
     importantInfo: text("importantInfo", detail?.attention ?? ""),
     itinerary,
+    metaTitle: text("metaTitle", ""),
+    metaDescription: text("metaDescription", ""),
   }
 }
 

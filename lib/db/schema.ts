@@ -147,6 +147,10 @@ export const tourTranslation = pgTable(
     importantInfo: text("importantInfo"),
     // Itinerary steps stored as a JSON array of { title, body }.
     itinerary: text("itinerary"),
+    // SEO: custom meta title and description for this language. When empty the
+    // public page falls back to the tour title / excerpt.
+    metaTitle: text("metaTitle"),
+    metaDescription: text("metaDescription"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
   (t) => ({

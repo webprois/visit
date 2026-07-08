@@ -502,6 +502,10 @@ export type TourTranslationInput = {
   importantInfo?: string | null
   /** JSON-encoded array of { title, body } itinerary steps. */
   itinerary?: string | null
+  /** SEO meta title override for this language (falls back to the tour title). */
+  metaTitle?: string | null
+  /** SEO meta description override (falls back to the excerpt/description). */
+  metaDescription?: string | null
 }
 
 function cleanText(value?: string | null): string | null {
@@ -572,6 +576,8 @@ export async function saveTourTranslations(
       whatToBring: cleanText(input.whatToBring),
       importantInfo: cleanText(input.importantInfo),
       itinerary: cleanItinerary(input.itinerary),
+      metaTitle: cleanText(input.metaTitle),
+      metaDescription: cleanText(input.metaDescription),
     }
     await db
       .insert(tourTranslation)
