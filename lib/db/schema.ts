@@ -94,9 +94,6 @@ export const tourOverride = pgTable("tour_override", {
   duration: text("duration"),
   difficulty: text("difficulty"),
   groupSize: text("groupSize"),
-  // Admin-entered supplier SKU / product code. The supplier itself comes from
-  // Bokun (the vendor/operator); this is the code that supplier uses for the tour.
-  supplierSku: text("supplierSku"),
   imageUrl: text("imageUrl"),
   // Curated, ordered gallery as JSON: [{ url, alt }]. When set, this replaces
   // the Bokun gallery on the public tour page. The hero (imageUrl) is shown

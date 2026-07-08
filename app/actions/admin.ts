@@ -163,8 +163,6 @@ export type TourOverrideInput = {
   duration?: string | null
   difficulty?: string | null
   groupSize?: string | null
-  /** Admin-entered supplier SKU / product code. */
-  supplierSku?: string | null
   imageUrl?: string | null
   /**
    * Curated, ordered gallery. When provided (even as an empty array) the
@@ -250,7 +248,6 @@ export async function saveTourOverride(bokunId: string, input: TourOverrideInput
     duration: input.duration?.trim() || null,
     difficulty: input.difficulty?.trim() || null,
     groupSize: input.groupSize?.trim() || null,
-    supplierSku: input.supplierSku?.trim() || null,
     imageUrl: input.imageUrl?.trim() || null,
     ...(gallerySet ?? {}),
     // Keep the legacy single-category column in sync with the first selection.
