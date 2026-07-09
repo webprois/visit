@@ -24,6 +24,12 @@ export type MyTrip = {
   currency: Currency
   /** Normalized lifecycle status for the badge. */
   status: "upcoming" | "completed" | "cancelled" | "pending"
+  /**
+   * Free-cancellation window (hours before departure) for this booking, frozen
+   * from the tour's policy at booking time. `0` = free anytime up to departure;
+   * older bookings with no stored policy fall back to the legacy 72h default.
+   */
+  freeCancelHours: number
 }
 
 /** Who to load trips for. A signed-in customer always has both. */
@@ -131,6 +137,8 @@ export async function getMyTrips(owner: MyTripsOwner): Promise<MyTrip[]> {
         amount: Math.round(row.amountMinor),
         currency: asCurrency(row.currency),
         status: deriveStatus(row, travelDate, liveStatus),
+        // 0 (free anytime) is meaningful, so only fall back when truly absent.
+        freeCancelHours: row.cancellationCutoffHours ?? 72,
       }
     }),
   )

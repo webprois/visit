@@ -381,6 +381,10 @@ async function persistBooking(
     promoCode: appliedPromoCode,
     discountMinor: discountIsk,
     status,
+    // Freeze the tour's free-cancellation window (hours before departure) from
+    // the live Bokun policy, so cancellations are judged against the terms the
+    // customer accepted. Null → the legacy 72h default applies at cancel time.
+    cancellationCutoffHours: slot.cancellationCutoffHours,
     bokunConfirmationCode: reservation.confirmationCode,
     bokunBookingId: reservation.bookingId,
   })
