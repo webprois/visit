@@ -14,20 +14,23 @@ import {
 } from "@/lib/email/service"
 
 /**
- * Customer-facing cancellation. Two outcomes, decided by how far out the tour is:
+ * Customer-facing cancellation. Two outcomes, decided by how far out the tour
+ * is relative to the tour's own free-cancellation window (frozen onto the
+ * booking at booking time as `cancellationCutoffHours`; older bookings without
+ * it fall back to the legacy 72h default):
  *
- *  - 72h+ before departure  → free cancellation: cancel in Bokun (with refund),
+ *  - at/before the window  → free cancellation: cancel in Bokun (with refund),
  *    mark the booking cancelled, email a confirmation. Returns { cancelled }.
- *  - under 72h              → create a pending cancellation request for staff to
- *    review against the policy (20% / no refund), email an acknowledgement.
+ *  - inside the window      → create a pending cancellation request for staff to
+ *    review against the policy (fee / no refund), email an acknowledgement.
  *    Returns { requested }. No Bokun cancel happens yet.
  *
  * All email is best-effort. The action is idempotent: an already-cancelled
  * booking or one with an open request is refused.
  */
 
-/** Free-cancellation window, in hours, before departure. */
-const FREE_CANCEL_HOURS = 72
+/** Fallback free-cancellation window (hours) for bookings with no stored policy. */
+const DEFAULT_FREE_CANCEL_HOURS = 72
 
 export type CancelResult =
   | { ok: true; outcome: "cancelled" }
@@ -125,8 +128,12 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
   const hoursUntilTour =
     depMs === null ? Number.POSITIVE_INFINITY : (depMs - Date.now()) / 3_600_000
 
-  // --- Under 72h: create a staff-review request (once) ---
-  if (hoursUntilTour < FREE_CANCEL_HOURS) {
+  // This tour's own free-cancellation window, frozen at booking time. Older
+  // bookings (null) keep the legacy 72h behaviour.
+  const freeHours = row.cancellationCutoffHours ?? DEFAULT_FREE_CANCEL_HOURS
+
+  // --- Inside the free window: create a staff-review request (once) ---
+  if (hoursUntilTour < freeHours) {
     const existing = await db
       .select({ id: cancellationRequest.id })
       .from(cancellationRequest)
@@ -176,10 +183,10 @@ export async function cancelOrRequest(bookingId: string): Promise<CancelResult> 
     }
   }
 
-  // --- 72h+: free, immediate cancellation with refund ---
+  // --- At/before the free window: free, immediate cancellation with refund ---
   if (row.bokunConfirmationCode) {
     const res = await cancelBokunBooking(row.bokunConfirmationCode, {
-      note: "Cancelled by customer (72h+ before departure, free per policy)",
+      note: `Cancelled by customer (>= ${freeHours}h before departure, free per policy)`,
       notify: false,
       refund: true,
     })

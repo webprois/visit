@@ -469,6 +469,8 @@ export function BookingForm({
   }, [lockedEmail])
   const [createAccount, setCreateAccount] = useState(false)
   const [accountPassword, setAccountPassword] = useState("")
+  // Guest must explicitly accept the tour's cancellation terms before paying.
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   // After a valid promo code is applied, we hold the prepared (discounted)
   // reserved booking here and show a review panel so the guest sees the discount
@@ -783,10 +785,16 @@ export function BookingForm({
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    // On steps 1–2 the submit button isn't shown; an Enter keypress still lands
+    // On steps 1��2 the submit button isn't shown; an Enter keypress still lands
     // here, so just advance through the wizard instead of attempting to pay.
     if (currentKey !== "confirm") {
       goNext()
+      return
+    }
+    // Cancellation terms must be explicitly accepted before any reservation or
+    // payment step runs.
+    if (!acceptedTerms) {
+      setError(t.acceptTermsError)
       return
     }
     // Discount already previewed: finalize the reserved booking. Under the test
@@ -1619,16 +1627,35 @@ export function BookingForm({
               )}
             </div>
 
-            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-              <p>{t.cancellationPolicy}</p>
-              <a
-                href={TERMS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                {t.seeFullTerms}
-              </a>
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                {/* Per-tour cancellation terms from Bokun, with the standard
+                    policy as a fallback when the rate omits them. */}
+                <p className="text-sm font-medium text-foreground">
+                  {slot?.cancellation || t.cancellationPolicy}
+                </p>
+                <a
+                  href={TERMS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  {t.seeFullTerms}
+                </a>
+              </div>
+              <label className="flex items-start gap-3">
+                <Checkbox
+                  checked={acceptedTerms}
+                  onCheckedChange={(v) => {
+                    setAcceptedTerms(v === true)
+                    if (v === true) setError(null)
+                  }}
+                  className="mt-0.5"
+                />
+                <span className="text-sm font-medium text-foreground">
+                  {t.acceptTerms}
+                </span>
+              </label>
             </div>
               </>
             )}
@@ -1775,7 +1802,7 @@ export function BookingForm({
                     key="nav-submit"
                     type="submit"
                     size="lg"
-                    disabled={pending || totalPax <= 0}
+                    disabled={pending || totalPax <= 0 || !acceptedTerms}
                     className="flex-1 rounded-full"
                   >
                     {pending && !applying ? (

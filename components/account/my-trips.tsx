@@ -100,6 +100,7 @@ function TripCard({ trip, locale }: { trip: MyTrip; locale: Locale }) {
               bookingId={trip.bookingId}
               travelDate={trip.travelDate}
               unpaid={trip.status === "pending"}
+              freeCancelHours={trip.freeCancelHours}
               locale={locale}
             />
           )}

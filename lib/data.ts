@@ -16,8 +16,6 @@ export type Tour = {
   /** Bokun vendor/operator that runs the tour. */
   operatorId?: number | null
   operator?: string | null
-  /** Supplier product code / SKU, straight from Bokun (activity externalId). */
-  supplierSku?: string | null
   /** Raw Bokun activity category codes, e.g. ["NATURE", "GLACIER_HIKING"]. */
   bokunCategories?: string[]
   /** Starting-point coordinates from Bokun's Google place (null when unknown). */

@@ -20,18 +20,23 @@ import { cancelOrRequest } from "@/app/actions/cancellation"
 /**
  * Customer-facing "Cancel booking" control shown on upcoming trips. Whether the
  * cancellation is free/instant or needs a staff request is decided server-side
- * by the 72h policy; this component just relays the outcome via a toast.
+ * by each tour's own free-cancellation window; this component just relays the
+ * outcome via a toast and previews the likely path in the confirm dialog. The
+ * window (in hours) comes from `freeCancelHours` and is interpolated into the
+ * copy via the `{hours}` placeholder.
  */
 
 type Copy = {
   trigger: string
-  title: string
-  /** Shown when the tour is 72h+ away (free, instant). */
+  /** `{hours}` is replaced with the tour's free-cancellation window. */
   bodyFree: string
-  /** Shown when the tour is under 72h away (request needed). */
+  /** Shown when the tour is free to cancel anytime up to departure. */
+  bodyFreeAnytime: string
+  /** Shown when inside the window (request needed). `{hours}` interpolated. */
   bodyRequest: string
   /** Shown when the booking is unpaid (free, instant, no fee). */
   bodyUnpaid: string
+  title: string
   keep: string
   confirm: string
   cancelled: string
@@ -44,9 +49,11 @@ const COPY: Record<Locale, Copy> = {
     trigger: "Cancel booking",
     title: "Cancel this booking?",
     bodyFree:
-      "You're more than 72 hours before departure, so this cancellation is free and will be processed right away. You'll get a confirmation email.",
+      "You're more than {hours} hours before departure, so this cancellation is free and will be processed right away. You'll get a confirmation email.",
+    bodyFreeAnytime:
+      "This tour can be cancelled free of charge any time before departure, so this cancellation will be processed right away. You'll get a confirmation email.",
     bodyRequest:
-      "You're within 72 hours of departure. Per our policy a fee may apply, so this will be sent to our team as a cancellation request. We'll email you once it's reviewed.",
+      "You're within {hours} hours of departure. Per this tour's cancellation terms a fee may apply, so this will be sent to our team as a cancellation request. We'll email you once it's reviewed.",
     bodyUnpaid:
       "This booking hasn't been paid yet, so you can cancel it right away at no charge.",
     keep: "Keep booking",
@@ -59,9 +66,11 @@ const COPY: Record<Locale, Copy> = {
     trigger: "Cancelar reserva",
     title: "¿Cancelar esta reserva?",
     bodyFree:
-      "Faltan más de 72 horas para la salida, así que esta cancelación es gratuita y se procesará de inmediato. Recibirás un correo de confirmación.",
+      "Faltan más de {hours} horas para la salida, así que esta cancelación es gratuita y se procesará de inmediato. Recibirás un correo de confirmación.",
+    bodyFreeAnytime:
+      "Este tour se puede cancelar gratis en cualquier momento antes de la salida, así que esta cancelación se procesará de inmediato. Recibirás un correo de confirmación.",
     bodyRequest:
-      "Faltan menos de 72 horas para la salida. Según nuestra política puede aplicarse un cargo, por lo que esto se enviará a nuestro equipo como solicitud de cancelación. Te avisaremos por correo cuando se revise.",
+      "Faltan menos de {hours} horas para la salida. Según los términos de cancelación de este tour puede aplicarse un cargo, por lo que esto se enviará a nuestro equipo como solicitud de cancelación. Te avisaremos por correo cuando se revise.",
     bodyUnpaid:
       "Esta reserva aún no se ha pagado, así que puedes cancelarla de inmediato sin ningún cargo.",
     keep: "Mantener reserva",
@@ -76,9 +85,11 @@ const COPY: Record<Locale, Copy> = {
     trigger: "Cancelar reserva",
     title: "Cancelar esta reserva?",
     bodyFree:
-      "Faltam mais de 72 horas para a partida, por isso este cancelamento é gratuito e será processado de imediato. Receberás um e-mail de confirmação.",
+      "Faltam mais de {hours} horas para a partida, por isso este cancelamento é gratuito e será processado de imediato. Receberás um e-mail de confirmação.",
+    bodyFreeAnytime:
+      "Este tour pode ser cancelado gratuitamente a qualquer momento antes da partida, por isso este cancelamento será processado de imediato. Receberás um e-mail de confirmação.",
     bodyRequest:
-      "Faltam menos de 72 horas para a partida. De acordo com a nossa política, pode aplicar-se uma taxa, por isso isto será enviado à nossa equipa como pedido de cancelamento. Avisamos-te por e-mail assim que for analisado.",
+      "Faltam menos de {hours} horas para a partida. De acordo com os termos de cancelamento deste tour, pode aplicar-se uma taxa, por isso isto será enviado à nossa equipa como pedido de cancelamento. Avisamos-te por e-mail assim que for analisado.",
     bodyUnpaid:
       "Esta reserva ainda não foi paga, por isso podes cancelá-la de imediato sem qualquer custo.",
     keep: "Manter reserva",
@@ -93,9 +104,11 @@ const COPY: Record<Locale, Copy> = {
     trigger: "Annulla prenotazione",
     title: "Annullare questa prenotazione?",
     bodyFree:
-      "Mancano più di 72 ore alla partenza, quindi questo annullamento è gratuito e verrà elaborato subito. Riceverai un'email di conferma.",
+      "Mancano più di {hours} ore alla partenza, quindi questo annullamento è gratuito e verrà elaborato subito. Riceverai un'email di conferma.",
+    bodyFreeAnytime:
+      "Questo tour può essere annullato gratuitamente in qualsiasi momento prima della partenza, quindi questo annullamento verrà elaborato subito. Riceverai un'email di conferma.",
     bodyRequest:
-      "Mancano meno di 72 ore alla partenza. Secondo la nostra politica potrebbe essere applicata una penale, quindi questa verrà inviata al nostro team come richiesta di annullamento. Ti avviseremo via email una volta esaminata.",
+      "Mancano meno di {hours} ore alla partenza. Secondo i termini di annullamento di questo tour potrebbe essere applicata una penale, quindi questa verrà inviata al nostro team come richiesta di annullamento. Ti avviseremo via email una volta esaminata.",
     bodyUnpaid:
       "Questa prenotazione non è ancora stata pagata, quindi puoi annullarla subito senza alcun costo.",
     keep: "Mantieni prenotazione",
@@ -112,6 +125,7 @@ export function CancelTripButton({
   bookingId,
   travelDate,
   unpaid = false,
+  freeCancelHours = 72,
   locale,
 }: {
   bookingId: string
@@ -119,6 +133,11 @@ export function CancelTripButton({
   travelDate: number | null
   /** True for bookings that haven't been paid yet (free, instant cancel). */
   unpaid?: boolean
+  /**
+   * This tour's free-cancellation window in hours (0 = free anytime). Drives
+   * the confirm-dialog preview; the authoritative decision is server-side.
+   */
+  freeCancelHours?: number
   locale: Locale
 }) {
   const t = COPY[locale] ?? COPY.en
@@ -126,14 +145,23 @@ export function CancelTripButton({
   const [pending, startTransition] = useTransition()
 
   // Best-effort client-side hint for which message to show. The real decision
-  // is made server-side. Unpaid bookings are always free/instant regardless of
-  // the 72h window since no payment (and therefore no fee) is involved.
-  const within72h =
+  // is made server-side. Unpaid bookings are always free/instant since no
+  // payment (and therefore no fee) is involved. A 0-hour window means the tour
+  // is free to cancel anytime up to departure.
+  const withinWindow =
     !unpaid &&
+    freeCancelHours > 0 &&
     travelDate !== null &&
-    travelDate - Date.now() < 72 * 3_600_000
+    travelDate - Date.now() < freeCancelHours * 3_600_000
 
-  const body = unpaid ? t.bodyUnpaid : within72h ? t.bodyRequest : t.bodyFree
+  const hoursLabel = String(freeCancelHours)
+  const body = unpaid
+    ? t.bodyUnpaid
+    : withinWindow
+      ? t.bodyRequest.replace("{hours}", hoursLabel)
+      : freeCancelHours <= 0
+        ? t.bodyFreeAnytime
+        : t.bodyFree.replace("{hours}", hoursLabel)
 
   function onConfirm() {
     startTransition(async () => {

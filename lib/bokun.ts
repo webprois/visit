@@ -77,8 +77,6 @@ type BokunActivity = {
   keyPhoto?: BokunPhoto
   photos?: BokunPhoto[]
   vendor?: { id?: number; title?: string }
-  /** Supplier's own product code / SKU (Bokun's activity externalId). */
-  externalId?: string
 }
 
 type BokunSearchResponse = { items?: BokunActivity[]; totalHits?: number }
@@ -139,7 +137,6 @@ function mapActivity(activity: BokunActivity): Tour {
     tag: pickTag(activity.activityCategories),
     operatorId: activity.vendor?.id ?? null,
     operator: activity.vendor?.title?.trim() || null,
-    supplierSku: activity.externalId?.trim() || null,
     bokunCategories: activity.activityCategories ?? [],
     lat: activity.googlePlace?.geoLocationCenter?.lat ?? null,
     lng: activity.googlePlace?.geoLocationCenter?.lng ?? null,
@@ -567,6 +564,13 @@ export type BookableSlot = {
   lines: SlotPriceLine[]
   /** Human-readable cancellation summary, e.g. "Free cancellation up to 48h before". */
   cancellation: string
+  /**
+   * Free-cancellation window in hours before departure, derived from the same
+   * policy as `cancellation`. `0` = free anytime up to departure, `N` = free
+   * until N hours before, `null` = no free window found (caller decides the
+   * fallback). Frozen onto the booking so later Bokun changes don't move it.
+   */
+  cancellationCutoffHours: number | null
 }
 
 type BokunMoney = { amount?: number; currency?: string }
@@ -617,20 +621,48 @@ type BokunPricingCategory = {
   defaultCategory?: boolean
 }
 
-/** Summarise a cancellation policy into one short sentence. */
+/**
+ * Numeric free-cancellation window (hours before departure) for a policy.
+ * Returns:
+ *  - `0`    → free anytime up to departure (no charge tiers, or ~999-day
+ *             placeholder cutoff),
+ *  - `N`    → free only if cancelled more than N hours before departure,
+ *  - `null` → no policy / window could be determined.
+ *
+ * Free cancellation requires being *before every charging tier*, so the window
+ * is the LARGEST cutoff among rules that actually charge a fee — not the free
+ * (charge === 0) rule, which in Bokun is just a ~999-day catch-all placeholder.
+ * Example: rules [24h→100%, 48h→50%, 23976h→0%] means a fee applies inside 48h,
+ * so the free window is 48h (not "anytime"). This is frozen onto the booking so
+ * the terms the customer accepted are the ones enforced at cancellation time.
+ */
+function cancellationCutoffHours(
+  policy?: BokunCancellationPolicy,
+): number | null {
+  if (!policy) return null
+  // A simple policy states the free cutoff directly.
+  if (policy.simpleCutoffHours != null && isFinite(policy.simpleCutoffHours)) {
+    const c = policy.simpleCutoffHours
+    return c > 24 * 30 ? 0 : Math.max(0, Math.round(c))
+  }
+  const rules = policy.penaltyRules ?? []
+  const charged = rules.filter(
+    (r) => (r.charge ?? 0) > 0 && Number.isFinite(r.cutoffHours),
+  )
+  // No charging tiers at all → free whenever (if the policy had any rules).
+  if (charged.length === 0) return rules.length > 0 ? 0 : null
+  const maxCharged = Math.max(...charged.map((r) => r.cutoffHours as number))
+  if (!isFinite(maxCharged)) return null
+  // Implausibly large cutoff (placeholder) means "free anytime".
+  if (maxCharged > 24 * 30) return 0
+  return Math.max(0, Math.round(maxCharged))
+}
+
+/** Summarise a cancellation policy into one short sentence for display. */
 function cancellationText(policy?: BokunCancellationPolicy): string {
-  if (!policy) return ""
-  // Find the latest cutoff (hours before start) that still allows a full refund.
-  const freeRules = (policy.penaltyRules ?? []).filter((r) => r.charge === 0)
-  const cutoff =
-    policy.simpleCutoffHours ??
-    (freeRules.length
-      ? Math.min(...freeRules.map((r) => r.cutoffHours ?? Infinity))
-      : null)
-  if (!cutoff || !isFinite(cutoff)) return ""
-  // Implausibly large cutoffs (e.g. Bokun's ~999-day placeholder) really just
-  // mean "free cancellation anytime" — don't surface a misleading day count.
-  if (cutoff > 24 * 30) return "Free cancellation"
+  const cutoff = cancellationCutoffHours(policy)
+  if (cutoff === null) return ""
+  if (cutoff === 0) return "Free cancellation"
   const label = cutoff % 24 === 0 ? `${cutoff / 24} days` : `${cutoff}h`
   return `Free cancellation up to ${label} before`
 }
@@ -739,6 +771,7 @@ async function fetchBookableSlotsUncached(
       flatPriceIsk,
       lines,
       cancellation: cancellationText(rate.cancellationPolicy),
+      cancellationCutoffHours: cancellationCutoffHours(rate.cancellationPolicy),
     })
   }
   return slots

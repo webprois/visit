@@ -266,6 +266,12 @@ export const booking = pgTable("booking", {
   // Set when each reminder has been sent so the daily cron is idempotent.
   reminderWeekSentAt: timestamp("reminder_week_sent_at", { withTimezone: true }),
   reminderDaySentAt: timestamp("reminder_day_sent_at", { withTimezone: true }),
+  // Free-cancellation window (hours before departure) frozen from the tour's
+  // Bokun cancellation policy at booking time, so later Bokun changes don't move
+  // the goalposts on terms the customer already accepted. 0 = free anytime up to
+  // departure, N = free until N hours before, null = unknown (falls back to the
+  // legacy 72h default when a cancellation is processed).
+  cancellationCutoffHours: integer("cancellation_cutoff_hours"),
   // Set when the booking is cancelled (by the customer within policy, or by an
   // approved cancellation request). Distinct from status for auditability.
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

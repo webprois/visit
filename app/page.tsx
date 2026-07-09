@@ -66,6 +66,7 @@ export default async function Page() {
         galleryUrls.length > 0 ? galleryUrls : t.image ? [t.image] : []
       return {
         id: t.id as number,
+        slug: t.slug,
         title: t.title,
         lat: t.lat as number,
         lng: t.lng as number,

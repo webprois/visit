@@ -444,6 +444,8 @@ const en = {
     cancellationPolicy:
       "Free cancellation up to 72 hours before departure. 20% fee within 48 to 72 hours; no refund within 48 hours.",
     seeFullTerms: "See full cancellation terms",
+    acceptTerms: "I have read and accept the cancellation terms.",
+    acceptTermsError: "Please accept the cancellation terms to continue.",
     total: "Total",
     from: "From",
     perPersonSuffix: "/ person",
@@ -963,6 +965,8 @@ const es: Dictionary = {
     cancellationPolicy:
       "Cancelación gratuita hasta 72 horas antes de la salida. 20% de cargo entre 48 y 72 horas; sin reembolso dentro de las 48 horas.",
     seeFullTerms: "Ver términos de cancelación completos",
+    acceptTerms: "He leído y acepto los términos de cancelación.",
+    acceptTermsError: "Acepta los términos de cancelación para continuar.",
     total: "Total",
     from: "Desde",
     perPersonSuffix: "/ persona",
@@ -1070,7 +1074,7 @@ const pt: Dictionary = {
       "Tours, hotéis e carro alugado incluídos. Voos não incluídos.",
     selectTitle: "Escolha o seu tour de carro",
     selectText:
-      "Dê uma olhada nos nossos tours de carro recomendados, nos quais somos especializados, para um número definido de dias. Para outras durações, entre em contacto pelo nosso formulário sob medida. Os tours de carro são recomendados entre março e novembro no máximo; se planeia visitar a Islândia fora deste período, recomendamos um tour em grupo para evitar condições de condução difíceis.",
+      "Dê uma olhada nos nossos tours de carro recomendados, nos quais somos especializados, para um número definido de dias. Para outras durações, entre em contacto pelo nosso formulário sob medida. Os tours de carro s��o recomendados entre março e novembro no máximo; se planeia visitar a Islândia fora deste período, recomendamos um tour em grupo para evitar condições de condução difíceis.",
     servicesLabel: "Serviços incluídos",
     choosePackage: "Escolha o seu pacote: 5, 7 ou 10 dias",
     estimate: "Estimativa:",
@@ -1482,6 +1486,8 @@ const pt: Dictionary = {
     cancellationPolicy:
       "Cancelamento gratuito até 72 horas antes da partida. Taxa de 20% entre 48 e 72 horas; sem reembolso dentro de 48 horas.",
     seeFullTerms: "Ver termos de cancelamento completos",
+    acceptTerms: "Li e aceito os termos de cancelamento.",
+    acceptTermsError: "Aceite os termos de cancelamento para continuar.",
     total: "Total",
     from: "Desde",
     perPersonSuffix: "/ pessoa",
@@ -2001,6 +2007,8 @@ const it: Dictionary = {
     cancellationPolicy:
       "Cancellazione gratuita fino a 72 ore prima della partenza. Penale del 20% tra 48 e 72 ore; nessun rimborso entro 48 ore.",
     seeFullTerms: "Vedi i termini di cancellazione completi",
+    acceptTerms: "Ho letto e accetto i termini di cancellazione.",
+    acceptTermsError: "Accetta i termini di cancellazione per continuare.",
     total: "Totale",
     from: "Da",
     perPersonSuffix: "/ persona",

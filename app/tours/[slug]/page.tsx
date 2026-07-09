@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import Image from "next/image"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -44,11 +44,11 @@ export const dynamic = "force-dynamic"
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-  const { id } = await params
+  const { slug } = await params
   const locale = await getLocale()
-  const tour = await getFullTour(id, locale)
+  const tour = await getFullTour(slug, locale)
   if (!tour) return { title: "Tour not found | Visit.is" }
 
   // Admin-set SEO meta wins; otherwise derive sensible defaults from content.
@@ -60,7 +60,7 @@ export async function generateMetadata({
     `Book ${tour.title} in ${tour.location}. ${tour.duration} adventure with Visit.is.`
   // The hero image (curated gallery hero → override → Bokun) is the share image.
   const image = tour.image
-  const canonical = `/tours/${id}`
+  const canonical = `/tours/${tour.slug}`
 
   return {
     metadataBase: new URL("https://visit.is"),
@@ -87,13 +87,17 @@ export async function generateMetadata({
 export default async function TourPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }) {
-  const { id } = await params
+  const { slug } = await params
   const locale = await getLocale()
   const dict = getDictionary(locale)
-  const tour = await getFullTour(id, locale)
+  const tour = await getFullTour(slug, locale)
   if (!tour) notFound()
+
+  // Canonicalize: if reached via the raw Bokun id (or a stale slug), 301 to the
+  // tour's canonical slug URL so search engines see a single address.
+  if (tour.slug !== slug) permanentRedirect(`/tours/${tour.slug}`)
 
   const related = await getRelatedTours(tour, 3, locale)
   const detail = tour.detail
@@ -591,12 +595,10 @@ export default async function TourPage({
                 />
               )}
 
-              {/* Supplier product reference — intentionally low-key. */}
-              {tour.supplierSku && (
-                <p className="text-[11px] text-muted-foreground/60">
-                  {`Product code: ${tour.supplierSku}`}
-                </p>
-              )}
+              {/* Tour reference — intentionally low-key. */}
+              <p className="text-[11px] text-muted-foreground/60">
+                {`Tour ID: ${tour.bokunId}`}
+              </p>
             </div>
 
             {/* Right: booking panel + reassurance cards */}
@@ -679,7 +681,7 @@ export default async function TourPage({
                 {related.map((t) => (
                   <a
                     key={t.bokunId}
-                    href={`/tours/${t.bokunId}`}
+                    href={`/tours/${t.slug}`}
                     className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg"
                   >
                     <div className="relative aspect-[16/10] overflow-hidden">
