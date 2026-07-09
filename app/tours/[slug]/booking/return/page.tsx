@@ -23,10 +23,10 @@ export default async function BookingReturnPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
   searchParams: Promise<Record<string, string | undefined>>
 }) {
-  const { id } = await params
+  const { slug } = await params
   const sp = await searchParams
   const [locale, dict] = await Promise.all([getLocale(), getServerDict()])
   const t = dict.payment
@@ -114,7 +114,7 @@ export default async function BookingReturnPage({
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             {failed && (
               <Link
-                href={`/tours/${id}`}
+                href={`/tours/${slug}`}
                 className={buttonVariants({ size: "lg" })}
               >
                 {t.tryAgain}

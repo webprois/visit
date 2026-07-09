@@ -1020,7 +1020,7 @@ export function ToursBrowser({
             {filtered.map((tour) => (
               <a
                 key={tour.bokunId}
-                href={`/tours/${tour.bokunId}`}
+                href={`/tours/${tour.slug}`}
                 className="card-lift group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
               >
                 <div className="relative aspect-[16/10] overflow-hidden">

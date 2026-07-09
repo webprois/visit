@@ -77,8 +77,6 @@ type BokunActivity = {
   keyPhoto?: BokunPhoto
   photos?: BokunPhoto[]
   vendor?: { id?: number; title?: string }
-  /** Supplier's own product code / SKU (Bokun's activity externalId). */
-  externalId?: string
 }
 
 type BokunSearchResponse = { items?: BokunActivity[]; totalHits?: number }
@@ -139,7 +137,6 @@ function mapActivity(activity: BokunActivity): Tour {
     tag: pickTag(activity.activityCategories),
     operatorId: activity.vendor?.id ?? null,
     operator: activity.vendor?.title?.trim() || null,
-    supplierSku: activity.externalId?.trim() || null,
     bokunCategories: activity.activityCategories ?? [],
     lat: activity.googlePlace?.geoLocationCenter?.lat ?? null,
     lng: activity.googlePlace?.geoLocationCenter?.lng ?? null,

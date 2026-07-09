@@ -261,8 +261,12 @@ export type MergedTour = Tour & {
   gallery: GalleryImage[]
   difficulty: string | null
   groupSize: string | null
-  /** Supplier SKU / product code from Bokun (activity externalId; null when unset). */
-  supplierSku: string | null
+  /**
+   * SEO-friendly, locale-stable URL slug derived from the tour's canonical
+   * (English) title, e.g. "glymur-waterfall-hike". Unique across tours: on a
+   * collision the Bokun id is appended so the slug always resolves to one tour.
+   */
+  slug: string
   /** Primary category (first assigned), used for the card badge. */
   categoryId: number | null
   categoryName: string | null
@@ -353,10 +357,16 @@ export async function getMergedTours(
     arr.sort((a, b) => (locationOrder.get(a) ?? 0) - (locationOrder.get(b) ?? 0))
   }
 
-  return tours.map((t) => {
+  const merged = tours.map((t) => {
     const bokunId = String(t.id)
     const o = overrideMap.get(bokunId)
     const byLang = translationMap.get(bokunId)
+    // Canonical slug base: English title (translation → override → Bokun) so the
+    // URL is stable regardless of the viewing locale. Deduped in a pass below.
+    const slugBase =
+      slugify(
+        byLang?.en?.title?.trim() || o?.title?.trim() || t.title || "",
+      ) || `tour-${bokunId}`
     const categoryIds = linksByTour.get(bokunId) ?? []
     const categoryNames = categoryIds
       .map((id) => categoryMap.get(id))
@@ -409,8 +419,8 @@ export async function getMergedTours(
       gallery: parseGallery(o?.gallery),
       difficulty: o?.difficulty ?? null,
       groupSize: o?.groupSize ?? null,
-      // SKU comes straight from Bokun (activity externalId), never editable.
-      supplierSku: t.supplierSku ?? null,
+      // Canonical slug (deduped after the map below).
+      slug: slugBase,
       // Tours are unpublished (draft) by default. A tour only becomes visible
       // on the public site once an admin explicitly publishes it, so anything
       // newly synced from Bokun stays hidden until reviewed.
@@ -429,6 +439,20 @@ export async function getMergedTours(
       updatedAt: o?.updatedAt ?? null,
     }
   })
+
+  // Ensure slugs are unique: when two tours share a base slug, append the Bokun
+  // id so every slug resolves to exactly one tour.
+  const slugCounts = new Map<string, number>()
+  for (const m of merged) {
+    slugCounts.set(m.slug, (slugCounts.get(m.slug) ?? 0) + 1)
+  }
+  for (const m of merged) {
+    if ((slugCounts.get(m.slug) ?? 0) > 1) {
+      m.slug = `${m.slug}-${m.bokunId}`
+    }
+  }
+
+  return merged
 }
 
 /** Visible, sorted tours for the public site in the given locale. */
@@ -656,11 +680,17 @@ export async function refreshTourAvailability(): Promise<{
 
 /** A single visible tour by its Bokun id, or null if missing/hidden. */
 export async function getTourById(
-  bokunId: string,
+  idOrSlug: string,
   locale: Locale = DEFAULT_LOCALE,
 ): Promise<MergedTour | null> {
   const tours = await getMergedTours(locale)
-  return tours.find((t) => t.bokunId === bokunId && t.visible) ?? null
+  // Resolve by canonical slug first, then fall back to the raw Bokun id (which
+  // keeps older /tours/<id> links working; the page 301s them to the slug).
+  return (
+    tours.find((t) => t.slug === idOrSlug && t.visible) ??
+    tours.find((t) => t.bokunId === idOrSlug && t.visible) ??
+    null
+  )
 }
 
 export type FullTour = MergedTour & {
@@ -693,12 +723,15 @@ export type FullTour = MergedTour & {
  * (gallery, price, location, etc.). Editable content always wins over Bokun.
  */
 export async function getFullTour(
-  bokunId: string,
+  idOrSlug: string,
   locale: Locale = DEFAULT_LOCALE,
 ): Promise<FullTour | null> {
-  const tour = await getTourById(bokunId, locale)
+  const tour = await getTourById(idOrSlug, locale)
   if (!tour) return null
 
+  // Always use the resolved Bokun id for downstream lookups — the incoming
+  // param may be a slug.
+  const bokunId = tour.bokunId
   const [detail, rows] = await Promise.all([
     fetchTourDetail(bokunId),
     db.select().from(tourTranslation).where(eq(tourTranslation.bokunId, bokunId)),

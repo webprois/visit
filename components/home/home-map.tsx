@@ -28,6 +28,8 @@ import { Price } from "@/components/price"
 /** A single tour plotted on the homepage map. Fully serializable (from RSC). */
 export type MapTourPoint = {
   id: number
+  /** SEO-friendly URL slug used for the tour detail link. */
+  slug: string
   title: string
   lat: number
   lng: number
@@ -208,7 +210,7 @@ function TourPopupCard({ point, labels }: { point: MapTourPoint; labels: Labels 
             </span>
           </div>
           <Link
-            href={`/tours/${point.id}`}
+            href={`/tours/${point.slug}`}
             className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
           >
             {labels.viewTour}
