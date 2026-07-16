@@ -687,7 +687,7 @@ export async function translateTourContent(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
     system:
       `You are a professional translator for an Icelandic travel/tours website. ` +
       `Translate the provided tour content from English into ${languageName}. ` +
@@ -828,7 +828,7 @@ export async function generateTourExcerpt(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
       system:
         `You write short, enticing marketing summaries for an Icelandic ` +
         `travel/tours website. Given the details of a single tour, write ONE ` +
@@ -944,7 +944,7 @@ export async function generateFullTourContent(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
       system:
         `You write complete marketing content for an Icelandic travel/tours ` +
         `website. Given the details of a single tour, write a full draft ` +
@@ -1034,7 +1034,7 @@ export async function generateTourItinerary(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
       system:
         `You write itineraries for an Icelandic travel/tours website. Given the ` +
         `details of a single tour, write a sensible ordered itinerary in ` +
@@ -1190,7 +1190,7 @@ export async function generateTourField(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
       system:
         `You write marketing content for an Icelandic travel/tours website. ` +
         `Given the details of a single tour, write content for ONE ` +
@@ -1293,7 +1293,7 @@ export async function generateTourStops(
     // Abort just under the route maxDuration so a slow generation fails as a
     // clean, catchable error (surfaced as a toast) instead of the whole
     // server-action request timing out at the platform level.
-    abortSignal: AbortSignal.timeout(55_000),
+    abortSignal: AbortSignal.timeout(45_000),
       system:
         `You map out the physical route of an Icelandic tour. Given a tour's ` +
         `details, itinerary, and original Bokun data, identify the real, named ` +
