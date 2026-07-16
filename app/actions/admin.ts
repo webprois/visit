@@ -1137,6 +1137,15 @@ function aiErrorMessage(err: unknown): string {
   ) {
     return "The request timed out. Please try again — this can happen on longer generations."
   }
+  // AI Gateway rate limit / quota. The raw message includes a long URL-encoded
+  // link that reads badly in a toast, so surface a clean, actionable message.
+  if (
+    err instanceof Error &&
+    (err.name === "GatewayRateLimitError" ||
+      /rate.?limit|free tier|quota|insufficient credit|429/i.test(err.message))
+  ) {
+    return "AI usage limit reached on the current AI Gateway plan. Add credits to your Vercel AI Gateway account (Vercel dashboard → AI Gateway → Billing), then try again."
+  }
   if (err instanceof Error && err.message) return err.message
   if (typeof err === "string" && err) return err
   return "AI generation failed. Please try again."
