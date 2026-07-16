@@ -679,6 +679,15 @@ export async function translateTourContent(
 
   const { output } = await generateText({
     model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
     system:
       `You are a professional translator for an Icelandic travel/tours website. ` +
       `Translate the provided tour content from English into ${languageName}. ` +
@@ -811,6 +820,15 @@ export async function generateTourExcerpt(
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
       system:
         `You write short, enticing marketing summaries for an Icelandic ` +
         `travel/tours website. Given the details of a single tour, write ONE ` +
@@ -918,6 +936,15 @@ export async function generateFullTourContent(
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
       system:
         `You write complete marketing content for an Icelandic travel/tours ` +
         `website. Given the details of a single tour, write a full draft ` +
@@ -999,6 +1026,15 @@ export async function generateTourItinerary(
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
       system:
         `You write itineraries for an Icelandic travel/tours website. Given the ` +
         `details of a single tour, write a sensible ordered itinerary in ` +
@@ -1091,10 +1127,20 @@ export type AiResult<T> =
 
 /** Turn any caught value into a readable message for the admin UI. */
 function aiErrorMessage(err: unknown): string {
+  // A timeout/abort (from the request budget running out) has a cryptic native
+  // message, so translate it into something the admin can act on.
+  if (
+    err instanceof Error &&
+    (err.name === "TimeoutError" ||
+      err.name === "AbortError" ||
+      /abort|timed? ?out/i.test(err.message))
+  ) {
+    return "The request timed out. Please try again — this can happen on longer generations."
+  }
   if (err instanceof Error && err.message) return err.message
   if (typeof err === "string" && err) return err
   return "AI generation failed. Please try again."
-}
+  }
 
 /**
  * Generate a single content field for a tour from its basic
@@ -1136,6 +1182,15 @@ export async function generateTourField(
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
       system:
         `You write marketing content for an Icelandic travel/tours website. ` +
         `Given the details of a single tour, write content for ONE ` +
@@ -1230,6 +1285,15 @@ export async function generateTourStops(
 
     const { output } = await generateText({
       model: "openai/gpt-5.4-mini",
+    // Cap reasoning effort: gpt-5 reasoning models are slow and highly variable
+    // at the default effort, and the heavier "generate all content" call could
+    // exceed the route's maxDuration and get killed (the "This page couldn't
+    // load" crash). "low" keeps quality while cutting latency and variance.
+    providerOptions: { openai: { reasoningEffort: "low" } },
+    // Abort just under the route maxDuration so a slow generation fails as a
+    // clean, catchable error (surfaced as a toast) instead of the whole
+    // server-action request timing out at the platform level.
+    abortSignal: AbortSignal.timeout(55_000),
       system:
         `You map out the physical route of an Icelandic tour. Given a tour's ` +
         `details, itinerary, and original Bokun data, identify the real, named ` +
