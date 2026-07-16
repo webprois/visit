@@ -40,6 +40,12 @@ async function bokunRequest<T>(method: "GET" | "POST", path: string, body?: unkn
       // Raw payloads exceed Next's 2MB data-cache limit, so don't cache here.
       // We cache the small, mapped result instead (see getTours).
       cache: "no-store",
+      // Hard timeout: without this a slow/hung Bokun response keeps the whole
+      // request open indefinitely. Inside a server action (e.g. the admin
+      // "generate all content" flow) that stalls the request until the preview
+      // proxy gives up and shows "This page couldn't load". Bounding each call
+      // lets callers fail fast / fall back instead of hanging.
+      signal: AbortSignal.timeout(12_000),
     })
 
     if (!res.ok) {
@@ -49,7 +55,11 @@ async function bokunRequest<T>(method: "GET" | "POST", path: string, body?: unkn
 
     return (await res.json()) as T
   } catch (err) {
-    console.log("[v0] Bokun request error:", (err as Error).message)
+    const message =
+      err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")
+        ? `timed out after 12s (${path})`
+        : (err as Error).message
+    console.log("[v0] Bokun request error:", message)
     return null
   }
 }
